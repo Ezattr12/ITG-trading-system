@@ -53,7 +53,17 @@ export default async function CertificatesPage() {
           routine and review requirements are all met.
         </p>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4">
+        <section
+          className={`hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6 ${
+            !configured || !eligibility
+              ? ""
+              : alreadyIssued
+                ? "card-glow-emerald"
+                : eligibility.eligible
+                  ? "card-glow-amber"
+                  : "card-glow-blue"
+          }`}
+        >
           <h2 className="section-title">
             {monthLabel(currentMonth)} — eligibility
           </h2>
@@ -65,10 +75,10 @@ export default async function CertificatesPage() {
             </p>
           ) : (
             <>
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-4 list-divider">
                 {eligibility.criteria.map((c) => (
-                  <li key={c.key} className="flex items-start gap-2 text-sm">
-                    <span aria-hidden>{c.met ? "✓" : "○"}</span>
+                  <li key={c.key} className="flex items-start gap-2 py-2 text-sm">
+                    <span aria-hidden className={c.met ? "text-emerald-400" : "text-muted-foreground"}>{c.met ? "✓" : "○"}</span>
                     <span>
                       <span className="font-medium">{c.label}</span>
                       <span className="text-muted-foreground"> — {c.detail}</span>
@@ -107,15 +117,25 @@ export default async function CertificatesPage() {
               {certificates.map((c) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-3 card-surface p-4"
+                  className="list-row-premium flex flex-wrap items-center justify-between gap-3 card-surface p-4 sm:p-5"
                 >
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium tnum">
                       {monthLabel(c.month)} — {c.certificate_id}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Status: {c.status}
-                      {c.issued_at ? ` · Issued ${c.issued_at.slice(0, 10)}` : ""}
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
+                          c.status === "issued"
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                            : c.status === "revoked"
+                              ? "border-red-500/40 bg-red-500/10 text-red-300"
+                              : "border-border bg-muted/60 text-muted-foreground"
+                        }`}
+                      >
+                        {c.status}
+                      </span>
+                      {c.issued_at ? <span>Issued {c.issued_at.slice(0, 10)}</span> : null}
                     </p>
                   </div>
                   {c.status === "issued" ? (

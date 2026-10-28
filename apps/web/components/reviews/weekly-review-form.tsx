@@ -32,7 +32,7 @@ export function WeeklyReviewForm({ defaultWeekStart }: { defaultWeekStart: strin
           type="date"
           defaultValue={defaultWeekStart}
           required
-          className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div>
@@ -45,7 +45,7 @@ export function WeeklyReviewForm({ defaultWeekStart }: { defaultWeekStart: strin
           rows={5}
           required
           placeholder="What went well, what went wrong, and why?"
-          className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div>
@@ -58,7 +58,7 @@ export function WeeklyReviewForm({ defaultWeekStart }: { defaultWeekStart: strin
           type="text"
           maxLength={500}
           placeholder="e.g. Chased a breakout without confirmation"
-          className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div>
@@ -71,7 +71,7 @@ export function WeeklyReviewForm({ defaultWeekStart }: { defaultWeekStart: strin
           type="text"
           maxLength={500}
           placeholder="e.g. Wait for confirmation on every entry"
-          className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <Button type="submit" disabled={pending}>

@@ -47,7 +47,7 @@ export default async function AdminSettingsPage() {
     <>
         <h1 className="page-title">Settings</h1>
 
-        <section className="mt-6 card-surface p-4">
+        <section className="mt-6 card-surface-raised p-4 sm:p-6">
           <h2 className="section-title">AI Coach configuration</h2>
           <dl className="mt-3 space-y-1 text-sm">
             <div className="flex justify-between gap-4">
@@ -81,7 +81,7 @@ export default async function AdminSettingsPage() {
                 const meta = SETTING_META[s.key];
                 if (!meta) return null;
                 return (
-                  <li key={s.key} className="card-surface p-4">
+                  <li key={s.key} className="card-surface p-4 sm:p-5">
                     <SettingForm
                       settingKey={s.key}
                       value={settingValue(s.value)}

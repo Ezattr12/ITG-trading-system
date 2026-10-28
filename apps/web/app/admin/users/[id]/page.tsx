@@ -50,26 +50,26 @@ export default async function AdminUserDetailPage({
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="card-surface p-4">
+          <div className="card-surface-raised p-4 sm:p-5">
             <p className="text-sm text-muted-foreground">Level</p>
             <p className="mt-1 font-semibold">
               {detail.level_name ?? "Not calculated yet"}
-              {detail.level_score !== null ? ` (${detail.level_score})` : ""}
+              {detail.level_score !== null ? <span className="tnum"> ({detail.level_score})</span> : ""}
             </p>
           </div>
-          <div className="card-surface p-4">
+          <div className="card-surface p-4 sm:p-5">
             <p className="text-sm text-muted-foreground">Trades / Certificates</p>
-            <p className="mt-1 font-semibold">
+            <p className="mt-1 font-semibold tnum">
               {detail.trade_count} / {detail.certificate_count}
             </p>
           </div>
-          <div className="card-surface p-4">
+          <div className="card-surface p-4 sm:p-5">
             <p className="text-sm text-muted-foreground">Active goals</p>
-            <p className="mt-1 font-semibold">{detail.active_goal_count}</p>
+            <p className="mt-1 font-semibold tnum">{detail.active_goal_count}</p>
           </div>
         </div>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4">
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
           <h2 className="section-title">Financial data — private by default</h2>
           {financials ? (
             <dl className="mt-3 space-y-1 text-sm">
@@ -107,13 +107,13 @@ export default async function AdminUserDetailPage({
         </section>
 
         <section className="mt-6 sm:mt-8 grid gap-6 md:grid-cols-2">
-          <div className="card-surface p-4">
+          <div className="card-surface p-4 sm:p-6">
             <h2 className="section-title">Change role</h2>
             <div className="mt-4">
               <RoleForm userId={id} currentRole={detail.role} />
             </div>
           </div>
-          <div className="card-surface p-4">
+          <div className="card-surface p-4 sm:p-6">
             <h2 className="section-title">Change verification</h2>
             <div className="mt-4">
               <VerificationForm userId={id} currentStatus={detail.verification_status} />

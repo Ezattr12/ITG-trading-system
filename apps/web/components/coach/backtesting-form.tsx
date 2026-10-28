@@ -30,7 +30,7 @@ export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
           type="date"
           defaultValue={defaultDate}
           required
-          className="mt-1 block rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div>
@@ -45,7 +45,7 @@ export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
           max={10}
           defaultValue={1}
           required
-          className="mt-1 block w-24 rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 w-24 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <Button type="submit" disabled={pending}>

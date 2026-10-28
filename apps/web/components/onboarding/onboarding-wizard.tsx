@@ -91,7 +91,7 @@ export function OnboardingWizard({
 
   if (done) {
     return (
-      <section className="card-surface p-4 sm:p-6 text-center">
+      <section className="hero-card card-surface-raised card-glow-emerald p-4 sm:p-6 text-center">
         <h2 className="section-title">Onboarding complete</h2>
         <p className="mt-2 text-muted-foreground">
           Your profile is set up. Anything marked “Not Provided” can be added later from your profile — nothing was invented.
@@ -119,7 +119,7 @@ export function OnboardingWizard({
         </span>
         <span>{progress}% complete</span>
       </div>
-      <div className="mb-6 h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+      <div className="card-surface-inset mb-6 h-2 overflow-hidden rounded-full" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
         <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
       </div>
 

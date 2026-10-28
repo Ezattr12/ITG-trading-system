@@ -43,10 +43,10 @@ export default async function OnboardingPage({
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-12">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="eyebrow">
           ITG — Institutional Trading Group
         </p>
-        <h1 className="mt-2 text-3xl font-bold">Set up your trader profile</h1>
+        <h1 className="page-title mt-2">Set up your trader profile</h1>
         <p className="mt-2 text-base text-muted-foreground">
           Five short steps. Anything you don&apos;t have, leave as “Not provided” — we never
           ask you to invent experience, profit or capital.
@@ -57,7 +57,7 @@ export default async function OnboardingPage({
           Onboarding saved. You can finish it from your dashboard at any time.
         </p>
       )}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6">
+      <section className="hero-card card-surface-raised card-glow-blue mt-6 p-4 sm:mt-8 sm:p-6">
         <OnboardingWizard initialStep={initialStep} initialAnswers={merged} />
       </section>
       <p className="mt-4 text-center text-xs text-muted-foreground">

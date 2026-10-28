@@ -77,7 +77,7 @@ export default async function PlanPage() {
           </p>
         )}
 
-        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Your plan">
+        <section className="hero-card mt-6 sm:mt-8 card-surface-raised card-glow-blue p-4 sm:p-6" aria-label="Your plan">
           <h2 className="section-title">Your plan</h2>
           <div className="mt-4">
             <TradingPlanForm plan={plan} setups={setups} />
@@ -96,28 +96,34 @@ export default async function PlanPage() {
               have journaled trades.
             </p>
           ) : (
-            <div className="mt-4 overflow-x-auto rounded-xl border">
+            <div className="mt-4 overflow-x-auto card-surface">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-muted-foreground">
+                  <tr className="border-b bg-muted/40 text-left text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Area</th>
                     <th className="px-3 py-2 font-medium">Planned</th>
                     <th className="px-3 py-2 font-medium">Actual</th>
                     <th className="px-3 py-2 font-medium">On plan?</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="list-divider">
                   {rows.map((row) => (
-                    <tr key={row.label} className="border-b last:border-0">
+                    <tr key={row.label} className="list-row-premium">
                       <td className="px-3 py-2 font-medium">{row.label}</td>
                       <td className="px-3 py-2">{row.planned}</td>
                       <td className="px-3 py-2">{row.actual}</td>
                       <td className="px-3 py-2">
-                        {row.onTrack === null
-                          ? "—"
-                          : row.onTrack
-                            ? "Yes"
-                            : "No"}
+                        {row.onTrack === null ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : row.onTrack ? (
+                          <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-300">
+                            No
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

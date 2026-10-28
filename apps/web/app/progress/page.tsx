@@ -7,7 +7,7 @@ import { displayOrNotProvided } from "@/lib/onboarding/completion";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
 import { mondayOf, periodPnl, psychologySummary } from "@/lib/analytics/analytics";
 import { XpHistoryChart } from "@/components/analytics/charts";
-import { ProgressBar, StatCard } from "@/components/analytics/stat-card";
+import { Money, ProgressBar, StatCard } from "@/components/analytics/stat-card";
 
 export const metadata = { title: "Progress — ITG TraderOS" };
 
@@ -18,6 +18,24 @@ export const metadata = { title: "Progress — ITG TraderOS" };
  * real rows (trades, xp_transactions, goal_progress,
  * daily_activity). With no history yet, the page says so.
  */
+
+const STATUS_LABEL: Record<string, string> = {
+  active: "Active",
+  completed: "Completed",
+  paused: "Paused",
+  failed: "Failed",
+};
+
+// Goal status pills (Phase 18). The tint follows the real
+// status — completed is a win, active is in progress, paused
+// is a warning, failed is a loss. Unknown statuses fall back
+// to a neutral pill showing the raw status string.
+const STATUS_PILL_CLASS: Record<string, string> = {
+  completed: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
+  active: "border-blue-500/40 bg-blue-500/10 text-blue-400",
+  paused: "border-amber-500/40 bg-amber-500/10 text-amber-400",
+  failed: "border-red-500/40 bg-red-500/10 text-red-400",
+};
 
 const EMPTY_BUNDLE: AnalyticsBundle = {
   trades: [],
@@ -90,12 +108,14 @@ export default async function ProgressPage() {
         </p>
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level and XP">
-          <StatCard label="Trader level" value={displayOrNotProvided(bundle.levelName)} hint={bundle.levelScore === null ? "No score yet — journal a trade to start building your level." : `Multi-dimensional score: ${bundle.levelScore.toFixed(1)} / 100 — discipline, risk, journaling, goals, psychology, strategy, consistency and performance.`} />
-          <StatCard label="Total XP" value={`${bundle.xpTotal} XP`} hint="Earned for journaling, goals, reviews and discipline." />
-          <StatCard label="Journal completion" value={`${psych.journalCompletionPct.toFixed(0)}%`} hint="Share of closed trades with psychology or a lesson." />
+          <StatCard label="Trader level" glow={bundle.levelName ? "amber" : undefined} value={displayOrNotProvided(bundle.levelName)} hint={bundle.levelScore === null ? "No score yet — journal a trade to start building your level." : `Multi-dimensional score: ${bundle.levelScore.toFixed(1)} / 100 — discipline, risk, journaling, goals, psychology, strategy, consistency and performance.`} />
+          <StatCard label="Total XP" glow={bundle.xpTotal > 0 ? "violet" : undefined} value={`${bundle.xpTotal} XP`} hint="Earned for journaling, goals, reviews and discipline." />
+          <StatCard label="Journal completion" glow="cyan" value={`${psych.journalCompletionPct.toFixed(0)}%`} hint="Share of closed trades with psychology or a lesson." />
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
+        {/* XP history is the hero of this page — raised surface,
+            violet XP glow, violet gradient chart. */}
+        <section className="mt-6 sm:mt-8 card-surface-raised card-glow-violet p-4 sm:p-6" aria-label="XP history">
           <h2 className="section-title">XP over time</h2>
           {bundle.xpHistory.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
@@ -121,8 +141,12 @@ export default async function ProgressPage() {
             <div className="mt-4 space-y-4">
               {bundle.goals.map((g) => (
                 <div key={g.id}>
-                  <p className="text-sm font-medium">
-                    {g.title} <span className="text-muted-foreground">· {g.period} · {g.status}</span>
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                    {g.title}
+                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_PILL_CLASS[g.status] ?? "border-border bg-secondary text-muted-foreground"}`}>
+                      {STATUS_LABEL[g.status] ?? g.status}
+                    </span>
+                    <span className="font-normal text-muted-foreground">· {g.period}</span>
                   </p>
                   <div className="mt-2">
                     <ProgressBar
@@ -144,7 +168,7 @@ export default async function ProgressPage() {
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="text-muted-foreground">
+                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">Week starting</th>
                     <th className="py-2 pr-4 font-medium">Trades</th>
                     <th className="py-2 pr-4 font-medium">P&amp;L</th>
@@ -153,11 +177,11 @@ export default async function ProgressPage() {
                 </thead>
                 <tbody>
                   {weeklyRows.map((w) => (
-                    <tr key={w.label} className="border-t">
-                      <td className="py-2 pr-4">{w.label}</td>
-                      <td className="py-2 pr-4">{w.trades}</td>
-                      <td className="py-2 pr-4">{w.pnl.toFixed(2)}</td>
-                      <td className="py-2">{w.journaledPct.toFixed(0)}%</td>
+                    <tr key={w.label} className="border-t border-border transition-colors hover:bg-accent/40">
+                      <td className="py-2.5 pr-4">{w.label}</td>
+                      <td className="py-2.5 pr-4 tabular-nums">{w.trades}</td>
+                      <td className="py-2.5 pr-4"><Money value={w.pnl} /></td>
+                      <td className="py-2.5 tabular-nums">{w.journaledPct.toFixed(0)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -174,7 +198,7 @@ export default async function ProgressPage() {
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="text-muted-foreground">
+                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">Month</th>
                     <th className="py-2 pr-4 font-medium">Trades</th>
                     <th className="py-2 pr-4 font-medium">Discipline “Good”</th>
@@ -183,13 +207,13 @@ export default async function ProgressPage() {
                 </thead>
                 <tbody>
                   {monthlyRows.map((row) => (
-                    <tr key={row.month} className="border-t">
-                      <td className="py-2 pr-4">{row.month}</td>
-                      <td className="py-2 pr-4">{row.trades}</td>
-                      <td className="py-2 pr-4">
+                    <tr key={row.month} className="border-t border-border transition-colors hover:bg-accent/40">
+                      <td className="py-2.5 pr-4">{row.month}</td>
+                      <td className="py-2.5 pr-4 tabular-nums">{row.trades}</td>
+                      <td className="py-2.5 pr-4 tabular-nums">
                         {row.goodDisciplinePct === null ? "—" : `${row.goodDisciplinePct.toFixed(0)}%`}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2.5 tabular-nums">
                         {row.avgConfidence === null ? "—" : `${row.avgConfidence.toFixed(1)} / 5`}
                       </td>
                     </tr>

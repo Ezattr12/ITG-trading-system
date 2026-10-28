@@ -23,7 +23,7 @@ import {
   PeriodPnlChart,
   RDistributionChart,
 } from "@/components/analytics/charts";
-import { Money, Pct, StatCard } from "@/components/analytics/stat-card";
+import { Money, Pct, StatCard, type StatCardGlow } from "@/components/analytics/stat-card";
 
 export const metadata = { title: "Analytics — ITG TraderOS" };
 
@@ -54,13 +54,18 @@ function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }
       </section>
     );
   }
+  // The best-P&L group gets a small pill (Phase 18) — derived
+  // from the real rows, shown only when there is more than one
+  // group to compare. It is a reading aid, not a judgement:
+  // the "best" group can still be a losing one.
+  const best = rows.length > 1 ? rows.reduce((m, r) => (r.pnl > m.pnl ? r : m), rows[0]) : null;
   return (
     <section className="card-surface p-4 sm:p-6">
       <h2 className="section-title">{title}</h2>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="text-muted-foreground">
+            <tr className="text-xs uppercase tracking-wide text-muted-foreground">
               <th className="py-2 pr-4 font-medium">Group</th>
               <th className="py-2 pr-4 font-medium">Trades</th>
               <th className="py-2 pr-4 font-medium">P&amp;L</th>
@@ -71,13 +76,20 @@ function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.key} className="border-t">
-                <td className="py-2 pr-4 font-medium">{r.label}</td>
-                <td className="py-2 pr-4">{r.trades}</td>
-                <td className="py-2 pr-4"><Money value={r.pnl} /></td>
-                <td className="py-2 pr-4"><Pct value={r.winRate} /></td>
-                <td className="py-2 pr-4">{r.avgR === null ? "—" : `${r.avgR.toFixed(2)}R`}</td>
-                <td className="py-2">
+              <tr key={r.key} className="border-t border-border transition-colors hover:bg-accent/40">
+                <td className="py-2.5 pr-4 font-medium">
+                  {r.label}
+                  {best !== null && r.key === best.key ? (
+                    <span className="ml-2 whitespace-nowrap rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                      Best P&amp;L
+                    </span>
+                  ) : null}
+                </td>
+                <td className="py-2.5 pr-4 tabular-nums">{r.trades}</td>
+                <td className="py-2.5 pr-4"><Money value={r.pnl} /></td>
+                <td className="py-2.5 pr-4"><Pct value={r.winRate} /></td>
+                <td className="py-2.5 pr-4">{r.avgR === null ? "—" : `${r.avgR.toFixed(2)}R`}</td>
+                <td className="py-2.5 tabular-nums">
                   {formatMoney(r.avgWin)} / {formatMoney(r.avgLoss)}
                 </td>
               </tr>
@@ -112,6 +124,23 @@ export default async function AnalyticsPage({
   const rDist = rDistribution(bundle.trades);
   const psych = psychologySummary(bundle.trades);
   const hasTrades = bundle.trades.length > 0;
+  // Value-driven glows (Phase 18): the P&L and profit-factor
+  // cards follow their real sign; max drawdown is a risk
+  // figure, so it carries the red risk glow when it exists.
+  const totalPnlGlow: StatCardGlow | undefined =
+    !hasTrades || summary.totalPnl === 0
+      ? undefined
+      : summary.totalPnl > 0
+        ? "emerald"
+        : "danger";
+  const profitFactorGlow: StatCardGlow | undefined =
+    summary.profitFactor === null
+      ? undefined
+      : summary.profitFactor > 1
+        ? "emerald"
+        : summary.profitFactor < 1
+          ? "danger"
+          : undefined;
 
   return (
     <AppShell email={user.email}>
@@ -123,23 +152,27 @@ export default async function AnalyticsPage({
         </p>
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Performance summary">
-          <StatCard label="Total P&L" value={<Money value={hasTrades ? summary.totalPnl : null} />} />
+          <StatCard label="Total P&L" glow={totalPnlGlow} value={<Money value={hasTrades ? summary.totalPnl : null} />} />
           <StatCard label="Win rate / loss rate" value={<><Pct value={summary.winRate} /> / <Pct value={summary.lossRate} /></>} />
           <StatCard label="Average win / loss" value={<>{formatMoney(summary.avgWin)} / {formatMoney(summary.avgLoss)}</>} />
-          <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null && hasTrades ? "No losing trades yet — the factor is unbounded." : undefined} />
+          <StatCard label="Profit factor" glow={profitFactorGlow} value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null && hasTrades ? "No losing trades yet — the factor is unbounded." : undefined} />
           <StatCard label="Expectancy (per trade)" value={<Money value={summary.expectancy} />} />
-          <StatCard label="Max drawdown" value={<Money value={hasTrades ? summary.maxDrawdown : null} />} />
+          <StatCard label="Max drawdown" glow={hasTrades ? "danger" : undefined} value={<Money value={hasTrades ? summary.maxDrawdown : null} />} />
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Equity curve">
-          <h2 className="section-title">Equity curve</h2>
+        {/* Performance hero (Phase 18): the equity curve is the
+            hero of this page — hero surface, blue performance
+            glow, chart in its inset panel, data table below. */}
+        <section className="hero-card card-surface-raised card-glow-blue mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Equity curve">
+          <p className="eyebrow text-xs font-semibold uppercase tracking-widest">Performance</p>
+          <h2 className="section-title mt-1">Equity curve</h2>
           {hasTrades ? (
             <>
               <div className="mt-4"><EquityChart data={equity} /></div>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="text-muted-foreground">
+                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="py-2 pr-4 font-medium">Date closed</th>
                       <th className="py-2 pr-4 font-medium">Cumulative P&amp;L</th>
                       <th className="py-2 font-medium">Drawdown</th>
@@ -147,10 +180,10 @@ export default async function AnalyticsPage({
                   </thead>
                   <tbody>
                     {equity.map((p) => (
-                      <tr key={`${p.date}-${p.trades}`} className="border-t">
-                        <td className="py-2 pr-4">{p.date}</td>
-                        <td className="py-2 pr-4"><Money value={p.equity} /></td>
-                        <td className="py-2"><Money value={p.drawdown} /></td>
+                      <tr key={`${p.date}-${p.trades}`} className="border-t border-border transition-colors hover:bg-accent/40">
+                        <td className="py-2.5 pr-4">{p.date}</td>
+                        <td className="py-2.5 pr-4"><Money value={p.equity} /></td>
+                        <td className="py-2.5"><Money value={p.drawdown} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -162,7 +195,9 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Drawdown">
+        {/* Drawdown is a risk view, so it carries the red risk
+            glow when there is real drawdown data to show. */}
+        <section className={`mt-6 sm:mt-8 card-surface p-4 sm:p-6${hasTrades ? " card-glow-danger" : ""}`} aria-label="Drawdown">
           <h2 className="section-title">Drawdown</h2>
           {hasTrades ? (
             <div className="mt-4">
@@ -184,7 +219,7 @@ export default async function AnalyticsPage({
                 key={p}
                 href={`/analytics?period=${p}`}
                 aria-current={period === p ? "true" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1 text-sm ${period === p ? "bg-secondary font-medium" : "text-muted-foreground"}`}
+                className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1 text-sm transition-colors ${period === p ? "border-primary/60 bg-primary/15 font-medium text-foreground" : "text-muted-foreground hover:border-primary/40 hover:text-foreground"}`}
               >
                 {PERIOD_LABELS[p]}
               </Link>
@@ -196,7 +231,7 @@ export default async function AnalyticsPage({
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="text-muted-foreground">
+                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="py-2 pr-4 font-medium">Period</th>
                       <th className="py-2 pr-4 font-medium">P&amp;L</th>
                       <th className="py-2 pr-4 font-medium">Trades</th>
@@ -205,11 +240,11 @@ export default async function AnalyticsPage({
                   </thead>
                   <tbody>
                     {periods.map((p) => (
-                      <tr key={p.label} className="border-t">
-                        <td className="py-2 pr-4">{p.label}</td>
-                        <td className="py-2 pr-4"><Money value={p.pnl} /></td>
-                        <td className="py-2 pr-4">{p.trades}</td>
-                        <td className="py-2">{p.wins}</td>
+                      <tr key={p.label} className="border-t border-border transition-colors hover:bg-accent/40">
+                        <td className="py-2.5 pr-4">{p.label}</td>
+                        <td className="py-2.5 pr-4"><Money value={p.pnl} /></td>
+                        <td className="py-2.5 pr-4 tabular-nums">{p.trades}</td>
+                        <td className="py-2.5 tabular-nums">{p.wins}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -236,16 +271,16 @@ export default async function AnalyticsPage({
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="text-muted-foreground">
+                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="py-2 pr-4 font-medium">R bucket</th>
                       <th className="py-2 font-medium">Trades</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rDist.buckets.map((b) => (
-                      <tr key={b.label} className="border-t">
-                        <td className="py-2 pr-4">{b.label}</td>
-                        <td className="py-2">{b.count}</td>
+                      <tr key={b.label} className="border-t border-border transition-colors hover:bg-accent/40">
+                        <td className="py-2.5 pr-4">{b.label}</td>
+                        <td className="py-2.5 tabular-nums">{b.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -273,7 +308,7 @@ export default async function AnalyticsPage({
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="text-muted-foreground">
+                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">Emotion</th>
                     <th className="py-2 pr-4 font-medium">Trades</th>
                     <th className="py-2 pr-4 font-medium">P&amp;L</th>
@@ -282,11 +317,11 @@ export default async function AnalyticsPage({
                 </thead>
                 <tbody>
                   {psych.byEmotion.map((row) => (
-                    <tr key={row.emotion} className="border-t">
-                      <td className="py-2 pr-4 font-medium capitalize">{row.emotion}</td>
-                      <td className="py-2 pr-4">{row.trades}</td>
-                      <td className="py-2 pr-4"><Money value={row.pnl} /></td>
-                      <td className="py-2"><Pct value={row.winRate} /></td>
+                    <tr key={row.emotion} className="border-t border-border transition-colors hover:bg-accent/40">
+                      <td className="py-2.5 pr-4 font-medium capitalize">{row.emotion}</td>
+                      <td className="py-2.5 pr-4 tabular-nums">{row.trades}</td>
+                      <td className="py-2.5 pr-4"><Money value={row.pnl} /></td>
+                      <td className="py-2.5"><Pct value={row.winRate} /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -113,7 +113,11 @@ export function AdvancedReviewForm({
             <Options labels={DISCIPLINE_LABELS} />
           </select>
         </div>
-        <div className="space-y-2 sm:col-span-2">
+      {/* Lesson and notes sit in an inset panel — the reflective
+          part of the review, set into the form rather than
+          floating on it. */}
+      <div className="card-surface-inset space-y-4 p-4 sm:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="lesson">What did I learn?</Label>
           <textarea
             id="lesson"
@@ -123,10 +127,11 @@ export function AdvancedReviewForm({
             className={textareaClass}
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <textarea id="notes" name="notes" placeholder="Anything else about this trade." defaultValue={trade.notes ?? ""} className={textareaClass} />
         </div>
+      </div>
       </div>
     </ActionForm>
   );

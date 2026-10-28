@@ -60,11 +60,29 @@ export default async function ProfilePage() {
     levelName = levels?.name ?? null;
   }
 
+  const verificationLabel =
+    p?.verification_status === "verified"
+      ? "Verified"
+      : p?.verification_status === "partial"
+        ? "Partially Verified"
+        : "Not Provided";
+  const verificationStyle =
+    p?.verification_status === "verified"
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+      : p?.verification_status === "partial"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+        : "border-border bg-muted/60 text-muted-foreground";
+
   return (
     <AppShell email={user.email} narrow>
         <h1 className="page-title">Your profile</h1>
-        <p className="page-lede">
-          {displayOrNotProvided(p?.full_name)} · {displayOrNotProvided(p?.verification_status === "verified" ? "Verified" : p?.verification_status === "partial" ? "Partially Verified" : "Not Provided")}
+        <p className="page-lede flex flex-wrap items-center gap-2">
+          <span>{displayOrNotProvided(p?.full_name)}</span>
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${verificationStyle}`}
+          >
+            {verificationLabel}
+          </span>
         </p>
         {!configured && (
           <p role="alert" className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
@@ -76,7 +94,7 @@ export default async function ProfilePage() {
           <h2 className="section-title">Profile photo</h2>
           {p?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.avatar_url} alt="Your profile photo" className="mt-4 h-24 w-24 rounded-full object-cover" />
+            <img src={p.avatar_url} alt="Your profile photo" className="mt-4 h-24 w-24 rounded-full object-cover shadow-elevation-2 ring-2 ring-border" />
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">No photo yet.</p>
           )}
@@ -135,11 +153,11 @@ export default async function ProfilePage() {
         </section>
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Progress">
-          <article className="card-surface p-4">
+          <article className="hero-card card-surface-raised card-glow-amber p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Level</h2>
-            <p className="mt-2 font-semibold">{displayOrNotProvided(levelName)}</p>
+            <p className={`mt-2 font-semibold ${levelName ? "text-gradient-gold" : ""}`}>{displayOrNotProvided(levelName)}</p>
           </article>
-          <article className="card-surface p-4">
+          <article className="card-surface p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Achievements</h2>
             {achievements.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">No achievements yet. (Phase 7)</p>
@@ -147,7 +165,7 @@ export default async function ProfilePage() {
               <ul className="mt-2 list-disc pl-4 text-sm">{achievements.map((a) => <li key={a.name}>{a.name}</li>)}</ul>
             )}
           </article>
-          <article className="card-surface p-4">
+          <article className="card-surface p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Certificates</h2>
             {certificates.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">No certificates yet. (Phase 8)</p>

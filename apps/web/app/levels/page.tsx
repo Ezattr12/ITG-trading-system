@@ -76,7 +76,7 @@ export default async function LevelsPage() {
             real trades once the database is connected. Nothing here is estimated.
           </p>
         ) : bundle.score.score === null ? (
-          <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
+          <section className="hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6">
             <h2 className="section-title">No level yet</h2>
             <p className="mt-2 text-muted-foreground">
               Journal your first trade, set your risk rules and create a goal — your
@@ -92,25 +92,26 @@ export default async function LevelsPage() {
         ) : (
           <>
             <section className="motion-reveal mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
-              <article className="card-surface p-4">
+              {/* Current level is the hero of this page: raised,
+                  gold glow, gradient level name — premium status
+                  earned from real multi-dimensional scoring. */}
+              <article className="hero-card card-surface-raised card-glow-amber p-4 sm:p-5">
                 <h2 className="text-sm font-medium text-muted-foreground">Current level</h2>
-                <p className="mt-2 text-xl font-semibold">{bundle.score.levelName}</p>
+                <p className="metric-hero text-gradient-gold mt-2">{bundle.score.levelName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Score <CountUpDecimal value={bundle.score.score} decimals={1} /> / 100
                 </p>
               </article>
-              <article className="card-surface p-4">
+              <article className="card-surface p-4 sm:p-5">
                 <h2 className="text-sm font-medium text-muted-foreground">Next level</h2>
-                <p className="mt-2 text-xl font-semibold">
-                  {progress?.nextLevel ?? "Top level reached"}
-                </p>
+                <p className="mt-2 text-xl font-semibold">{progress?.nextLevel ?? "Top level reached"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {progress?.pointsToNext === null
                     ? "You hold the highest level."
                     : `${progress?.pointsToNext} points to go`}
                 </p>
               </article>
-              <article className="card-surface p-4">
+              <article className="card-surface p-4 sm:p-5">
                 <h2 className="text-sm font-medium text-muted-foreground">Total XP</h2>
                 {/* XP counts up (Phase 16) — XP rewards discipline,
                     journaling and reviews, and the count-up marks
@@ -151,14 +152,14 @@ export default async function LevelsPage() {
                       <th className="py-2 font-medium">Weight</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="list-divider">
                     {bundle.score.dimensions.map((d) => (
-                      <tr key={d.key} className="border-t">
+                      <tr key={d.key} className="list-row-premium">
                         <td className="py-2 pr-4">{d.label}</td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 tnum">
                           {d.value === null ? "No data yet" : `${d.value.toFixed(0)} / 100`}
                         </td>
-                        <td className="py-2">{(d.weight * 100).toFixed(0)}%</td>
+                        <td className="py-2 tnum">{(d.weight * 100).toFixed(0)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -174,7 +175,9 @@ export default async function LevelsPage() {
                 </p>
               ) : (
                 <div className="mt-4">
-                  <XpHistoryChart data={bundle.xpHistory} />
+                  <div className="chart-panel">
+                    <XpHistoryChart data={bundle.xpHistory} />
+                  </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     Cumulative XP from your xp_transactions. Each point is one XP event.
                   </p>
@@ -184,18 +187,26 @@ export default async function LevelsPage() {
 
             <section className="motion-reveal motion-reveal-4 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="All levels">
               <h2 className="section-title">Levels</h2>
-              <ul className="mt-3 space-y-2 text-sm">
-                {bundle.levels.map((level) => (
-                  <li key={level.id} className="flex justify-between gap-4">
-                    <span>
-                      <strong>{level.name}</strong>
-                      {level.description ? ` — ${level.description}` : ""}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {level.min_score}–{level.max_score === null ? "∞" : level.max_score}
-                    </span>
-                  </li>
-                ))}
+              <ul className="mt-3 list-divider text-sm">
+                {bundle.levels.map((level) => {
+                  const isCurrent = level.name === bundle?.score.levelName;
+                  return (
+                    <li key={level.id} className="list-row-premium flex flex-wrap items-center justify-between gap-2 py-2">
+                      <span>
+                        <strong className={isCurrent ? "text-gradient-gold" : ""}>{level.name}</strong>
+                        {isCurrent ? (
+                          <span className="ml-2 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+                            Current
+                          </span>
+                        ) : null}
+                        {level.description ? ` — ${level.description}` : ""}
+                      </span>
+                      <span className="text-muted-foreground tnum">
+                        {level.min_score}–{level.max_score === null ? "∞" : level.max_score}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="mt-3 text-xs text-muted-foreground">
                 Thresholds and weights are configurable by an admin in the levels table.

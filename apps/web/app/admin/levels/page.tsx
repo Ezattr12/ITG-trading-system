@@ -33,10 +33,14 @@ export default async function AdminLevelsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {levels.map((level) => (
-              <li key={level.id} className="card-surface p-4">
+              <li key={level.id} className="list-row-premium card-surface p-4 sm:p-5">
                 <p className="font-medium">
-                  {level.name} · score {level.min_score}
-                  {level.max_score === null ? "+" : `–${level.max_score}`}
+                  <span className={level.name === "Platinum" ? "text-gradient-gold" : ""}>{level.name}</span>
+                  {" · score "}
+                  <span className="tnum">
+                    {level.min_score}
+                    {level.max_score === null ? "+" : `–${level.max_score}`}
+                  </span>
                 </p>
                 {level.description ? (
                   <p className="mt-1 text-sm text-muted-foreground">{level.description}</p>

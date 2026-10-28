@@ -65,7 +65,7 @@ export function TradingPlanForm({
                 name="sessions"
                 value={s.value}
                 defaultChecked={(plan?.sessions ?? []).includes(s.value)}
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary"
               />
               {s.label}
             </label>
@@ -133,7 +133,7 @@ export function TradingPlanForm({
                   name="preferredSetupIds"
                   value={s.id}
                   defaultChecked={(plan?.preferred_setup_ids ?? []).includes(s.id)}
-                  className="h-4 w-4"
+                  className="h-4 w-4 accent-primary"
                 />
                 {s.strategyName ? `${s.strategyName} — ${s.name}` : s.name}
               </label>
@@ -149,7 +149,7 @@ export function TradingPlanForm({
           rows={3}
           placeholder="e.g. No trading during major news, no trading after 2 losses in a row"
           defaultValue={plan?.no_trade_conditions ?? ""}
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div className="space-y-2">
@@ -160,7 +160,7 @@ export function TradingPlanForm({
           rows={3}
           placeholder="e.g. Stop after feeling FOMO, review the journal before the next session"
           defaultValue={plan?.psychology_rules ?? ""}
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <div className="space-y-2">

@@ -31,7 +31,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b py-2 last:border-0">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+      <dd className="text-right font-medium tnum">{value}</dd>
     </div>
   );
 }
@@ -105,9 +105,9 @@ export default async function TradeDetailPage({
           <h1 className="page-title">
             {trade.pair} · <span className="capitalize">{trade.direction}</span>
           </h1>
-          <span className="rounded-full border px-3 py-1 text-xs capitalize">{trade.status}</span>
-          {trade.is_win === true && <span className="rounded-full border border-emerald-500/40 px-3 py-1 text-xs text-emerald-400">Win</span>}
-          {trade.is_win === false && <span className="rounded-full border border-red-500/40 px-3 py-1 text-xs text-red-400">Loss</span>}
+          <span className="rounded-full border px-3 py-1 text-xs capitalize shadow-elevation-1">{trade.status}</span>
+          {trade.is_win === true && <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-400 shadow-elevation-1">Win</span>}
+          {trade.is_win === false && <span className="rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-xs text-red-400 shadow-elevation-1">Loss</span>}
         </div>
         <p className="page-lede">
           Opened {new Date(trade.opened_at).toLocaleString()}
@@ -137,37 +137,77 @@ export default async function TradeDetailPage({
           </p>
         )}
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Performance">
-          <article className="card-surface p-4">
-            <h2 className="text-sm text-muted-foreground">P&amp;L</h2>
-            <p className={`mt-1 text-xl font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}>
-              {formatMoney(trade.pnl)}
-            </p>
-          </article>
-          <article className="card-surface p-4">
-            <h2 className="text-sm text-muted-foreground">ROI</h2>
-            <p className="mt-1 text-xl font-semibold">{trade.roi_pct === null ? "—" : `${trade.roi_pct.toFixed(2)}%`}</p>
-          </article>
-          <article className="card-surface p-4">
-            <h2 className="text-sm text-muted-foreground">R multiple</h2>
-            <p className="mt-1 text-xl font-semibold">{trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}</p>
-          </article>
+        {/* Trade result hero (Phase 18): the real outcome first —
+            large tabular P&L and R, with a semantic glow driven by
+            the real result — emerald for a win, red for a loss,
+            calm blue while the trade is still open. The remaining
+            facts (risk/reward, duration, leverage) sit below in
+            smaller stat cards; no value is dropped. */}
+        <section
+          className={`hero-card mt-6 card-surface-raised p-4 sm:p-6 ${
+            trade.is_win === true
+              ? "card-glow-emerald"
+              : trade.is_win === false
+                ? "card-glow-danger"
+                : "card-glow-blue"
+          }`}
+          aria-label="Trade result"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="eyebrow">Trade result</h2>
+              <p
+                className={`metric-hero mt-1 tnum ${
+                  trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""
+                }`}
+              >
+                {trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {trade.status === "open"
+                  ? "Still open — P&L is calculated when the trade closes."
+                  : trade.is_win === true
+                    ? "Winning trade"
+                    : trade.is_win === false
+                      ? "Losing trade"
+                      : "Closed trade"}
+                {trade.closed_at ? ` · Closed ${new Date(trade.closed_at).toLocaleDateString()}` : ""}
+              </p>
+            </div>
+            <div className="flex gap-6 sm:gap-8">
+              <div>
+                <p className="text-sm text-muted-foreground">R multiple</p>
+                <p className="metric-value tnum mt-1">
+                  {trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">ROI</p>
+                <p className="metric-value tnum mt-1">
+                  {trade.roi_pct === null ? "—" : `${trade.roi_pct.toFixed(2)}%`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-4 grid gap-4 sm:grid-cols-3" aria-label="Trade facts">
           <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Risk / reward</h2>
-            <p className="mt-1 text-xl font-semibold">{trade.risk_reward === null ? "—" : `1 : ${trade.risk_reward.toFixed(2)}`}</p>
+            <p className="mt-1 text-xl font-semibold tnum">{trade.risk_reward === null ? "—" : `1 : ${trade.risk_reward.toFixed(2)}`}</p>
           </article>
           <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Duration</h2>
-            <p className="mt-1 text-xl font-semibold">{formatDuration(trade.duration_seconds)}</p>
+            <p className="mt-1 text-xl font-semibold tnum">{formatDuration(trade.duration_seconds)}</p>
           </article>
           <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Leverage</h2>
-            <p className="mt-1 text-xl font-semibold">{trade.leverage}x</p>
+            <p className="mt-1 text-xl font-semibold tnum">{trade.leverage}x</p>
           </article>
         </section>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <section className="card-surface p-4 sm:p-6" aria-label="Trade data">
+          <section className="motion-reveal card-surface p-4 sm:p-6" aria-label="Trade data">
             <h2 className="section-title">Trade data</h2>
             <dl className="mt-3 text-sm">
               <Row label="Entry" value={trade.entry_price} />
@@ -184,7 +224,7 @@ export default async function TradeDetailPage({
             </dl>
           </section>
 
-          <section className="card-surface p-4 sm:p-6" aria-label="Psychology and lesson">
+          <section className="motion-reveal motion-reveal-1 card-surface p-4 sm:p-6" aria-label="Psychology and lesson">
             <h2 className="section-title">Psychology &amp; lesson</h2>
             <dl className="mt-3 text-sm">
               <Row label="Confidence" value={detail.psychology?.confidence ? `${detail.psychology.confidence} / 5` : "—"} />
@@ -215,14 +255,14 @@ export default async function TradeDetailPage({
           </section>
         </div>
 
-        <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Screenshots">
+        <section className="motion-reveal motion-reveal-2 mt-6 card-surface p-4 sm:p-6" aria-label="Screenshots">
           <h2 className="section-title">Screenshots</h2>
           {detail.screenshots.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No screenshots attached to this trade yet.</p>
           ) : (
             <ul className="mt-4 space-y-4">
               {detail.screenshots.map((shot) => (
-                <li key={shot.id} className="rounded-lg border p-3">
+                <li key={shot.id} className="card-surface-inset p-3">
                   <p className="text-sm font-medium">{shot.file_name ?? shot.storage_path}</p>
                   <p className="text-xs text-muted-foreground">
                     OCR: {shot.ocr_status === "not_applicable" ? "not applicable — no OCR service is connected yet" : shot.ocr_status}
@@ -248,7 +288,7 @@ export default async function TradeDetailPage({
           </div>
         </section>
 
-        <section className="mt-6 card-surface p-4 sm:p-6" aria-label="AI insight">
+        <section className="motion-reveal motion-reveal-3 mt-6 card-surface card-glow-violet p-4 sm:p-6" aria-label="AI insight">
           <h2 className="section-title">AI insight</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Not available yet. The AI Coach arrives in Phase 9 and will analyse your real trades — performance,
@@ -258,15 +298,15 @@ export default async function TradeDetailPage({
         </section>
 
         {related.length > 0 && (
-          <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Related trades">
+          <section className="motion-reveal motion-reveal-4 mt-6 card-surface p-4 sm:p-6" aria-label="Related trades">
             <h2 className="section-title">Related trades — {trade.pair}</h2>
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className="mt-3 list-divider text-sm">
               {related.map(({ trade: rel }) => (
-                <li key={rel.id} className="flex justify-between gap-4">
+                <li key={rel.id} className="list-row-premium flex justify-between gap-4 py-2">
                   <Link href={`/trades/${rel.id}`} className="underline">
                     {rel.pair} · {rel.direction} · {new Date(rel.opened_at).toLocaleDateString()}
                   </Link>
-                  <span className={rel.pnl === null ? "" : rel.pnl > 0 ? "text-emerald-400" : rel.pnl < 0 ? "text-red-400" : ""}>
+                  <span className={`tnum ${rel.pnl === null ? "" : rel.pnl > 0 ? "text-emerald-400" : rel.pnl < 0 ? "text-red-400" : ""}`}>
                     {formatMoney(rel.pnl)}
                   </span>
                 </li>
@@ -277,7 +317,7 @@ export default async function TradeDetailPage({
 
         {editable && (
           <>
-            <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Advanced review">
+            <section className="motion-reveal motion-reveal-5 mt-6 card-surface p-4 sm:p-6" aria-label="Advanced review">
               <h2 className="section-title">Advanced review</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Strategy, psychology, lesson and notes are optional — add them now or any time later.
@@ -287,7 +327,7 @@ export default async function TradeDetailPage({
               </div>
             </section>
 
-            <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Correct trade">
+            <section className="motion-reveal motion-reveal-5 mt-6 card-surface p-4 sm:p-6" aria-label="Correct trade">
               <h2 className="section-title">Correct this trade</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Corrections never overwrite the original: saving a correction creates a new trade and marks this
@@ -306,7 +346,7 @@ export default async function TradeDetailPage({
         )}
 
         {trade.status === "open" && (
-          <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Cancel trade">
+          <section className="motion-reveal motion-reveal-6 mt-6 card-surface p-4 sm:p-6" aria-label="Cancel trade">
             <h2 className="section-title">Cancel this trade</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Only an open trade can be cancelled. A closed trade is a financial fact — correct it with a reversal

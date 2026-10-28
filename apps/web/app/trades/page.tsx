@@ -89,7 +89,7 @@ export default async function TradesPage({
           </div>
           <Link
             href="/trades/new"
-            className="inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-elevation-1 transition-all duration-fast ease-standard hover:shadow-elevation-2"
           >
             + Add trade
           </Link>
@@ -100,7 +100,7 @@ export default async function TradesPage({
         </div>
 
         {page.total === 0 ? (
-          <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="No trades">
+          <section className="mt-6 sm:mt-8 hero-card card-surface-raised p-4 sm:p-6" aria-label="No trades">
             <h2 className="section-title">No trades match</h2>
             <p className="mt-2 text-muted-foreground">
               {items.length === 0
@@ -115,41 +115,56 @@ export default async function TradesPage({
           <>
             {/* Mobile: one card per trade — a 720px table squeezed
                 into a phone is not a mobile list. Desktop keeps the
-                table, which fits there and stays sortable by eye. */}
+                table, which fits there and stays sortable by eye.
+                The card leads with what matters when scanning:
+                pair, direction, P&L, R, date. */}
             <ul className="mt-6 space-y-3 md:hidden" aria-label="Trades">
-              {page.items.map(({ trade }) => (
-                <li key={trade.id} className="card-surface p-4">
+              {page.items.map(({ trade, strategyName }) => (
+                <li key={trade.id} className="trade-card card-surface p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <Link href={`/trades/${trade.id}`} className="min-h-11 text-base font-semibold underline underline-offset-4">
-                      {trade.pair}
-                    </Link>
+                    <div className="min-w-0">
+                      <Link href={`/trades/${trade.id}`} className="min-h-11 text-base font-semibold underline underline-offset-4">
+                        {trade.pair}
+                      </Link>
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.direction === "long" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : "border-orange-500/40 bg-orange-500/10 text-orange-300"}`}
+                        >
+                          {trade.direction}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.status === "open" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : trade.status === "reversed" ? "border-amber-500/40 bg-amber-500/10 text-amber-200" : "border-border bg-muted/60 text-muted-foreground"}`}
+                        >
+                          {trade.status}
+                        </span>
+                        {strategyName ? (
+                          <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            {strategyName}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
                     <span
-                      className={`text-base font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}
+                      className={`tnum shrink-0 text-base font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}
                     >
                       {trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    <span className="capitalize">{trade.direction}</span>
-                    {" · "}
-                    {new Date(trade.opened_at).toLocaleDateString()}
-                    {" · "}
-                    {trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}
-                    {" · "}
-                    <span className="capitalize">{trade.status}</span>
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Entry {trade.entry_price} · Exit {trade.exit_price ?? "—"}
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <span className="tnum">{new Date(trade.opened_at).toLocaleDateString()}</span>
+                    <span className="tnum">{trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}</span>
+                    <span>Entry {trade.entry_price} · Exit {trade.exit_price ?? "—"}</span>
                   </p>
                 </li>
               ))}
             </ul>
-            <div className="mt-6 sm:mt-8 hidden overflow-x-auto rounded-xl border md:block">
-              <table className="w-full min-w-[720px] text-sm">
+            <div className="mt-6 sm:mt-8 hidden overflow-x-auto card-surface md:block">
+              <table className="w-full min-w-[800px] text-sm">
                 <thead>
-                  <tr className="border-b text-left text-muted-foreground">
+                  <tr className="border-b bg-muted/40 text-left text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Pair</th>
                     <th className="px-3 py-2 font-medium">Direction</th>
+                    <th className="px-3 py-2 font-medium">Strategy</th>
                     <th className="px-3 py-2 font-medium">Opened</th>
                     <th className="px-3 py-2 text-right font-medium">Entry</th>
                     <th className="px-3 py-2 text-right font-medium">Exit</th>
@@ -158,29 +173,50 @@ export default async function TradesPage({
                     <th className="px-3 py-2 font-medium">Status</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {page.items.map(({ trade }) => (
-                    <tr key={trade.id} className="border-b last:border-0 hover:bg-accent/50">
+                <tbody className="list-divider">
+                  {page.items.map(({ trade, strategyName }) => (
+                    <tr key={trade.id} className="list-row-premium hover:bg-accent/50">
                       <td className="px-3 py-2">
                         <Link href={`/trades/${trade.id}`} className="font-medium underline">
                           {trade.pair}
                         </Link>
                       </td>
-                      <td className="px-3 py-2 capitalize">{trade.direction}</td>
-                      <td className="px-3 py-2">{new Date(trade.opened_at).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-right">{trade.entry_price}</td>
-                      <td className="px-3 py-2 text-right">{trade.exit_price ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.direction === "long" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : "border-orange-500/40 bg-orange-500/10 text-orange-300"}`}
+                        >
+                          {trade.direction}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {strategyName ? (
+                          <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            {strategyName}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 tnum">{new Date(trade.opened_at).toLocaleDateString()}</td>
+                      <td className="px-3 py-2 text-right tnum">{trade.entry_price}</td>
+                      <td className="px-3 py-2 text-right tnum">{trade.exit_price ?? "—"}</td>
                       <td
-                        className={`px-3 py-2 text-right font-medium ${
+                        className={`px-3 py-2 text-right font-medium tnum ${
                           trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""
                         }`}
                       >
                         {formatMoney(trade.pnl)}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right tnum">
                         {trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}
                       </td>
-                      <td className="px-3 py-2 capitalize">{trade.status}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.status === "open" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : trade.status === "reversed" ? "border-amber-500/40 bg-amber-500/10 text-amber-200" : "border-border bg-muted/60 text-muted-foreground"}`}
+                        >
+                          {trade.status}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -193,12 +229,12 @@ export default async function TradesPage({
               </p>
               <div className="flex gap-2">
                 {page.page > 1 && (
-                  <Link href={pageHref(page.page - 1)} className="inline-flex min-h-11 items-center rounded-md border px-3 py-2">
+                  <Link href={pageHref(page.page - 1)} className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-2 shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
                     Previous
                   </Link>
                 )}
                 {page.page < page.totalPages && (
-                  <Link href={pageHref(page.page + 1)} className="inline-flex min-h-11 items-center rounded-md border px-3 py-2">
+                  <Link href={pageHref(page.page + 1)} className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-2 shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
                     Next
                   </Link>
                 )}

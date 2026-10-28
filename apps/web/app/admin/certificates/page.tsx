@@ -34,10 +34,24 @@ export default async function AdminCertificatesPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {certificates.map((c) => (
-              <li key={c.id} className="card-surface p-4">
-                <p className="font-medium">
-                  {c.certificate_id} · {c.trader_name ?? "Name not provided"} ·{" "}
-                  {c.month.slice(0, 7)} · {c.status}
+              <li key={c.id} className="list-row-premium card-surface p-4 sm:p-5">
+                <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                  <span className="tnum">{c.certificate_id}</span>
+                  <span>·</span>
+                  <span>{c.trader_name ?? "Name not provided"}</span>
+                  <span>·</span>
+                  <span className="tnum">{c.month.slice(0, 7)}</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
+                      c.status === "issued"
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                        : c.status === "revoked"
+                          ? "border-red-500/40 bg-red-500/10 text-red-300"
+                          : "border-border bg-muted/60 text-muted-foreground"
+                    }`}
+                  >
+                    {c.status}
+                  </span>
                 </p>
                 {c.status === "issued" ? (
                   <div className="mt-4 max-w-md">

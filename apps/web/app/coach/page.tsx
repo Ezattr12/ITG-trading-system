@@ -46,16 +46,29 @@ function InsightCard({ insight, index = 0 }: { insight: AiInsightRow; index?: nu
     evidence.push(`journal completion ${s.journalCompletionPct}%`);
   if (s.criticalRiskEvents !== undefined) evidence.push(`${s.criticalRiskEvents} critical risk events`);
   if (s.goalsTotal !== undefined) evidence.push(`goals ${s.goalsCompleted ?? 0}/${s.goalsTotal}`);
+  const severityStyle =
+    s.severity === "high"
+      ? "border-red-500/40 bg-red-500/10 text-red-300"
+      : s.severity === "medium"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+        : s.severity === "positive"
+          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+          : "border-border bg-muted/60 text-muted-foreground";
   return (
     // Insights reveal one after another (Phase 16), 60ms apart.
     <article
-      className="motion-reveal card-surface p-4"
+      className="motion-reveal card-surface p-4 sm:p-5"
       style={{ animationDelay: `${Math.min(index, 5) * 60}ms` }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">{insight.summary}</h3>
-        <span className="text-xs text-muted-foreground">
-          {SEVERITY_LABEL[s.severity] ?? s.severity} · {insight.insight_type.replaceAll("_", " ")}
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${severityStyle}`}>
+            {SEVERITY_LABEL[s.severity] ?? s.severity}
+          </span>
+          <span className="text-xs capitalize text-muted-foreground">
+            {insight.insight_type.replaceAll("_", " ")}
+          </span>
         </span>
       </div>
       {evidence.length > 0 && (
@@ -127,7 +140,10 @@ export default async function CoachPage() {
           stored trades, not a language model.
         </p>
 
-        <section className="motion-reveal mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="This week's analysis">
+        {/* AI intelligence hero (Phase 18): the week's analysis
+            leads in a raised card with the violet AI glow — the
+            one place violet is the accent. */}
+        <section className="hero-card motion-reveal mt-6 sm:mt-8 card-surface-raised card-glow-violet p-4 sm:p-6" aria-label="This week's analysis">
           <h2 className="section-title flex items-center gap-2">
             {/* AI status indicator (Phase 16): a soft purple pulse.
                 Decorative only — the text beside it carries the
@@ -170,7 +186,9 @@ export default async function CoachPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Log the backtesting sessions you completed. Each session earns +15 XP.
           </p>
-          <BacktestingForm defaultDate={today} />
+          <div className="card-surface-inset mt-4 p-4">
+            <BacktestingForm defaultDate={today} />
+          </div>
         </section>
 
         <section className="mt-6 sm:mt-8" aria-label="Insight history">

@@ -96,6 +96,16 @@ export default async function GoalsPage() {
     today,
   );
 
+  // Hero goal (Phase 18): the active, measurable goal closest
+  // to completion leads the page as a raised hero card — the
+  // most important goal is also the most prominent. It is
+  // picked from the already-resolved goals, so no new data
+  // is computed and the goal still appears exactly once.
+  const heroGoal = resolved
+    .filter((r) => r.goal.status === "active" && r.measurable && r.percent !== null)
+    .sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0))[0];
+  const listedGoals = heroGoal ? resolved.filter((r) => r !== heroGoal) : resolved;
+
   return (
     <AppShell email={user.email}>
         <h1 className="page-title">Goals &amp; discipline</h1>
@@ -105,9 +115,39 @@ export default async function GoalsPage() {
         </p>
 
         {motivation ? (
-          <blockquote className="mt-6 card-surface p-4 text-sm italic text-muted-foreground">
+          <blockquote className="glass-surface mt-6 card-surface p-4 text-sm italic text-muted-foreground">
             “{motivation.message}”
           </blockquote>
+        ) : null}
+
+        {heroGoal && heroGoal.percent !== null && heroGoal.currentValue !== null ? (
+          <section className="hero-card mt-6 sm:mt-8 card-surface-raised card-glow-blue p-4 sm:p-6" aria-label="Goal closest to completion">
+            <p className="eyebrow">Closest to completion</p>
+            <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold">{heroGoal.goal.title}</h2>
+              <span className="text-sm text-muted-foreground">
+                {PERIOD_LABEL[heroGoal.goal.period] ?? heroGoal.goal.period} ·{" "}
+                {STATUS_LABEL[heroGoal.goal.status] ?? heroGoal.goal.status}
+              </span>
+            </div>
+            <p className="metric-hero tnum mt-2 text-gradient-blue">
+              {heroGoal.percent.toFixed(0)}%
+            </p>
+            <div className="mt-3">
+              <ProgressBar
+                percent={heroGoal.percent}
+                label={`${heroGoal.goal.title}: ${heroGoal.currentValue} / ${heroGoal.goal.target_value} (${heroGoal.percent.toFixed(0)}%)`}
+              />
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {heroGoal.currentValue} / {heroGoal.goal.target_value}
+              {heroGoal.goal.target_unit ? ` ${heroGoal.goal.target_unit}` : ""}
+              {heroGoal.source === "manual" ? " — recorded by you" : " — measured from your data"}
+              {heroGoal.percent >= 100
+                ? " — target reached, mark it complete when you're ready."
+                : ""}
+            </p>
+          </section>
         ) : null}
 
         <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Create a goal">
@@ -126,13 +166,27 @@ export default async function GoalsPage() {
             </p>
           ) : (
             <ul className="mt-4 space-y-4">
-              {resolved.map((r) => (
-                <li key={r.goal.id} className="card-surface p-4">
+              {listedGoals.map((r) => (
+                <li key={r.goal.id} className="card-surface p-4 sm:p-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="font-semibold">{r.goal.title}</h3>
-                    <span className="text-sm text-muted-foreground">
-                      {PERIOD_LABEL[r.goal.period] ?? r.goal.period} ·{" "}
-                      {STATUS_LABEL[r.goal.status] ?? r.goal.status}
+                    <span className="flex flex-wrap items-center gap-1.5 text-sm">
+                      <span className="text-muted-foreground">
+                        {PERIOD_LABEL[r.goal.period] ?? r.goal.period}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+                          r.goal.status === "active"
+                            ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
+                            : r.goal.status === "completed"
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                              : r.goal.status === "failed"
+                                ? "border-red-500/40 bg-red-500/10 text-red-300"
+                                : "border-border bg-muted/60 text-muted-foreground"
+                        }`}
+                      >
+                        {STATUS_LABEL[r.goal.status] ?? r.goal.status}
+                      </span>
                     </span>
                   </div>
                   {r.measurable && r.percent !== null && r.currentValue !== null ? (
@@ -185,13 +239,13 @@ export default async function GoalsPage() {
               reminder. Nothing here is ever shaming.
             </p>
           ) : (
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className="mt-3 list-divider text-sm">
               {events.map((e) => (
-                <li key={e.id} className="flex justify-between gap-4">
+                <li key={e.id} className="list-row-premium flex justify-between gap-4 py-2">
                   <span>
                     Day {e.level} reminder · {e.message}
                   </span>
-                  <span className="shrink-0 text-muted-foreground">{e.event_date}</span>
+                  <span className="shrink-0 text-muted-foreground tnum">{e.event_date}</span>
                 </li>
               ))}
             </ul>

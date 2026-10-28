@@ -109,7 +109,7 @@ export function QuickTradeForm({
           </div>
         ) : null}
       </div>
-      <details className="rounded-lg border bg-muted/40 p-4">
+      <details className="card-surface-inset p-4">
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           More details (optional)
         </summary>

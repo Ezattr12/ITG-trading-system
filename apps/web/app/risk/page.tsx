@@ -75,8 +75,24 @@ export default async function RiskPage() {
           </p>
         )}
 
-        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Today's status">
-          <h2 className="text-sm font-medium text-muted-foreground">Today&apos;s status</h2>
+        {/* Today's status is the hero of this page (Phase 18).
+            The glow follows the real risk state: red while a
+            breach is active, amber for warnings only, emerald
+            when every rule is within limits, calm blue when no
+            rules are set yet. */}
+        <section
+          className={`hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6 ${
+            rules === null
+              ? "card-glow-blue"
+              : activeChecks.length === 0
+                ? "card-glow-emerald"
+                : activeChecks.some((c) => c.severity === "critical")
+                  ? "card-glow-danger"
+                  : "card-glow-amber"
+          }`}
+          aria-label="Today's status"
+        >
+          <h2 className="eyebrow">Today&apos;s status</h2>
           {rules === null ? (
             <p className="mt-2 text-sm">
               No risk rules set yet — set limits below and the engine
@@ -103,22 +119,24 @@ export default async function RiskPage() {
           <dl className="mt-4 grid grid-cols-3 gap-4 text-sm">
             <div>
               <dt className="text-muted-foreground">Trades today</dt>
-              <dd className="section-title">{day.tradesToday}</dd>
+              <dd className="section-title tnum">{day.tradesToday}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Today&apos;s P&amp;L</dt>
-              <dd className="section-title">
+              <dd
+                className={`section-title tnum ${day.dayPnl === null ? "" : day.dayPnl > 0 ? "text-emerald-400" : day.dayPnl < 0 ? "text-red-400" : ""}`}
+              >
                 {day.dayPnl === null ? "—" : day.dayPnl.toFixed(2)}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Consecutive losses</dt>
-              <dd className="section-title">{day.consecutiveLosses}</dd>
+              <dd className={`section-title tnum ${day.consecutiveLosses > 0 ? "text-red-400" : ""}`}>{day.consecutiveLosses}</dd>
             </div>
           </dl>
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Risk rules">
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Risk rules">
           <h2 className="section-title">Your risk rules</h2>
           <div className="mt-4">
             <RiskRulesForm rules={rules} />
@@ -137,7 +155,7 @@ export default async function RiskPage() {
               {events.map((e) => (
                 <li
                   key={e.id}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${SEVERITY_STYLE[e.severity] ?? ""}`}
+                  className={`list-row-premium flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm shadow-elevation-1 ${SEVERITY_STYLE[e.severity] ?? ""}`}
                 >
                   <div>
                     <p>

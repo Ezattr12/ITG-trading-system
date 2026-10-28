@@ -58,7 +58,7 @@ export default async function NotificationsPage() {
         </div>
 
         {items.length === 0 ? (
-          <p className="mt-6 sm:mt-8 card-surface p-4 sm:p-6 text-muted-foreground">
+          <p className="hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6 text-muted-foreground">
             Nothing here yet. Goal completions, discipline reminders
             and risk warnings will appear here when they happen.
           </p>
@@ -67,15 +67,27 @@ export default async function NotificationsPage() {
             {items.map((n, i) => (
               <li
                 key={n.id}
-                className={`motion-reveal card-surface p-4 transition-opacity duration-base ease-standard ${n.is_read ? "opacity-70" : ""}`}
+                className={`motion-reveal list-row-premium card-surface p-4 sm:p-5 transition-opacity duration-base ease-standard ${n.is_read ? "opacity-70" : "card-glow-blue"}`}
                 style={{ animationDelay: `${Math.min(i, 7) * 50}ms` }}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {TYPE_LABEL[n.type] ?? n.type} ·{" "}
-                      {new Date(n.created_at).toLocaleString()}
-                      {n.is_read ? "" : " · Unread"}
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${
+                          n.type === "risk_warning" || n.type === "discipline_warning"
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                            : n.type === "achievement" || n.type === "level_up"
+                              ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                              : "border-border bg-muted/60 text-muted-foreground"
+                        }`}
+                      >
+                        {TYPE_LABEL[n.type] ?? n.type}
+                      </span>
+                      <span>
+                        {new Date(n.created_at).toLocaleString()}
+                        {n.is_read ? "" : " · Unread"}
+                      </span>
                     </p>
                     <h2 className="mt-1 font-semibold">{n.title}</h2>
                     {n.body ? (

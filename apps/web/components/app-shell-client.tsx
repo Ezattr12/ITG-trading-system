@@ -31,6 +31,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { signOutAction } from "@/lib/auth/actions";
+import { AmbientBackground } from "@/components/ambient-background";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,19 @@ import { cn } from "@/lib/utils";
  * Dashboard, Trades, Analytics, Risk, Trading Plan, Psychology,
  * Calendar, Progress, Goals, Levels, Achievements, Certificates,
  * Reports, Weekly Review, AI Coach, Notifications, Profile, Admin.
- */
+ *
+ * Depth (Phase 18 Aurora): the shell root is transparent over
+ * one fixed `.app-ambient` layer (deep purple / violet /
+ * magenta wisp / aurora blue orbs), the sidebar / header are
+ * Standard glass and the drawer / bottom dock are Elevated
+ * glass, the ITG tile and the centre Add action are violet ->
+ * indigo gradients, active nav items get a violet indicator
+ * bar and light-violet text (the small-text-readable violet,
+ * not the darker --primary), and the bottom bar floats as a
+ * rounded glass dock inset from the screen edges. The dock
+ * is translucent dark glass with blur, a subtle white border,
+ * a deep shadow and a violet active glow — it floats above
+ * the app, it is not a flat footer. No behaviour changed. */
 
 type NavItem = { href: string; label: string; icon: LucideIcon; admin?: boolean };
 
@@ -111,7 +124,7 @@ function NavLink({
         "hover:bg-accent hover:text-accent-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active
-          ? "bg-primary/15 text-primary"
+          ? "bg-gradient-to-r from-primary/20 to-primary/5 text-violet ring-1 ring-inset ring-primary/20"
           : "text-muted-foreground",
         collapsed && "justify-center px-0",
       )}
@@ -122,7 +135,7 @@ function NavLink({
       <span
         aria-hidden="true"
         className={cn(
-          "absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-all duration-base ease-standard",
+          "absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-gradient-to-b from-violet to-indigo transition-all duration-base ease-standard",
           active ? "scale-y-100 opacity-100" : "scale-y-50 opacity-0",
         )}
       />
@@ -228,7 +241,12 @@ export function AppShellClient({
   }, [drawerOpen]);
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
+    <div className="min-h-screen lg:flex">
+      {/* Ambient depth (Phase 18): one fixed layer of soft orbs
+          and a faint grid under every signed-in page. The shell
+          root is transparent so the ambient shows through; the
+          body carries the layered base gradients. */}
+      <AmbientBackground />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
@@ -241,18 +259,18 @@ export function AppShellClient({
       <aside
         aria-label="Primary"
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r bg-card/60 shadow-elevation-1 transition-[width] duration-base ease-standard lg:flex",
+          "glass-surface sticky top-0 hidden h-screen shrink-0 flex-col border-r shadow-elevation-1 transition-[width] duration-base ease-standard lg:flex",
           collapsed ? "w-20" : "w-64",
         )}
       >
         <div className={cn("flex h-14 items-center gap-2 border-b px-3", collapsed && "justify-center px-0")}>
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground" aria-hidden="true">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-ai text-base font-bold text-white shadow-elevation-1 ring-1 ring-white/15" aria-hidden="true">
               ITG
             </span>
             {!collapsed && (
               <span className="truncate text-base font-bold leading-tight">
-                ITG TraderOS
+                ITG <span className="text-gradient-blue">TraderOS</span>
               </span>
             )}
           </Link>
@@ -310,12 +328,12 @@ export function AppShellClient({
           />
           <div
             className={cn(
-              "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-elevation-3 transition-transform duration-base ease-standard",
+              "glass-surface-elevated absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col shadow-elevation-3 transition-transform duration-base ease-standard",
               drawerEntered ? "translate-x-0" : "-translate-x-full",
             )}
           >
             <div className="flex h-14 items-center justify-between border-b px-4">
-              <span className="text-base font-bold">ITG TraderOS</span>
+              <span className="text-base font-bold">ITG <span className="text-gradient-blue">TraderOS</span></span>
               <button
                 type="button"
                 ref={closeButtonRef}
@@ -353,7 +371,7 @@ export function AppShellClient({
 
       {/* Content column: top header + main. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+        <header className="glass-surface sticky top-0 z-40 border-b">
           <div className="flex h-14 items-center gap-1 px-4 sm:gap-2 sm:px-6">
             <button
               type="button"
@@ -365,10 +383,10 @@ export function AppShellClient({
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
             <Link href="/dashboard" className="text-base font-bold lg:hidden">
-              ITG TraderOS
+              ITG <span className="text-gradient-blue">TraderOS</span>
             </Link>
             <div className="min-w-0 flex-1" />
-            <Button asChild size="sm" className="shrink-0">
+            <Button asChild size="sm" className="shrink-0 shadow-elevation-1">
               <Link href="/trades/new">
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Add trade</span>
@@ -378,7 +396,7 @@ export function AppShellClient({
             <Link
               href="/notifications"
               aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-muted-foreground shadow-elevation-1 ring-1 ring-white/15 backdrop-blur-md transition-colors hover:bg-white/[0.12] hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Bell className="h-5 w-5" aria-hidden="true" />
               {unread > 0 ? (
@@ -412,16 +430,22 @@ export function AppShellClient({
       </div>
 
       {/* Mobile bottom tab bar — Home, Trades, a raised Add
-          Trade action, Analytics, Goals (Phase 17). The
-          centre action is the most important workflow in the
-          app, so it is a raised primary circle above the bar,
-          like the prominent centre button in the references —
-          not a fifth equal tab. "More" (the full navigation)
+          Trade action, Analytics, Goals (Phase 17). Phase 18
+          Aurora: the bar floats as a glass dock — Elevated
+          glass (translucent, blurred, subtle white border,
+          deep shadow + faint violet glow), inset from the
+          screen edges with a 24px radius, never a flat footer
+          glued to the bottom edge. The active tab's icon sits
+          in a soft violet-tinted pill with a violet gradient
+          dot, and the centre action is a raised violet ->
+          indigo gradient circle. "More" (the full navigation)
           stays one tap away in the top header menu, which
-          already opens the drawer. */}
+          already opens the drawer. The existing pb-24 content
+          clearance still covers the floating bar (56px bar +
+          12px offset < 96px). */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 shadow-elevation-2 backdrop-blur lg:hidden"
+        className="glass-surface-elevated fixed inset-x-3 bottom-3 z-40 shadow-elevation-3 lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="grid grid-cols-5">
@@ -435,16 +459,23 @@ export function AppShellClient({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  active ? "text-violet" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-fast ease-standard",
+                    active && "bg-primary/15 shadow-elevation-1 ring-1 ring-primary/25",
+                  )}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
                 {/* Active indicator (Phase 16): a dot that scales
                     in under the icon. Transform only. */}
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "h-1 w-1 rounded-full bg-primary transition-all duration-base ease-standard",
+                    "h-1 w-1 rounded-full bg-gradient-to-r from-violet to-indigo transition-all duration-base ease-standard",
                     active ? "scale-100 opacity-100" : "scale-0 opacity-0",
                   )}
                 />
@@ -456,7 +487,7 @@ export function AppShellClient({
             <Link
               href="/trades/new"
               aria-label="Add trade"
-              className="flex h-14 w-14 -translate-y-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevation-3 ring-4 ring-background transition-transform duration-fast ease-standard hover:bg-primary/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-14 w-14 -translate-y-4 items-center justify-center rounded-full bg-gradient-primary text-white shadow-elevation-3 ring-4 ring-background transition-all duration-fast ease-standard hover:brightness-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Plus className="h-6 w-6" aria-hidden="true" />
             </Link>
@@ -474,14 +505,21 @@ export function AppShellClient({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  active ? "text-violet" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-fast ease-standard",
+                    active && "bg-primary/15 shadow-elevation-1 ring-1 ring-primary/25",
+                  )}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "h-1 w-1 rounded-full bg-primary transition-all duration-base ease-standard",
+                    "h-1 w-1 rounded-full bg-gradient-to-r from-violet to-indigo transition-all duration-base ease-standard",
                     active ? "scale-100 opacity-100" : "scale-0 opacity-0",
                   )}
                 />

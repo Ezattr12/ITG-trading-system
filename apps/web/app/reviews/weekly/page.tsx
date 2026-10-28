@@ -43,7 +43,7 @@ export default async function WeeklyReviewPage() {
           from your journal.
         </p>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4">
+        <section className="hero-card mt-6 sm:mt-8 card-surface-raised card-glow-blue p-4 sm:p-6">
           <h2 className="section-title">New weekly review</h2>
           {!configured ? (
             <p className="mt-2 text-muted-foreground">
@@ -64,11 +64,20 @@ export default async function WeeklyReviewPage() {
           ) : (
             <ul className="mt-4 space-y-3">
               {reviews.map((r) => (
-                <li key={r.id} className="card-surface p-4">
+                <li key={r.id} className="list-row-premium card-surface p-4 sm:p-5">
                   <p className="font-medium">
                     Week of {r.week_start_date} — {r.trades_count} trades
-                    {r.total_pnl !== null ? ` · P&L ${r.total_pnl.toFixed(2)}` : ""}
-                    {r.win_rate_pct !== null ? ` · Win rate ${r.win_rate_pct.toFixed(1)}%` : ""}
+                    {r.total_pnl !== null ? (
+                      <>
+                        {" · P&L "}
+                        <span className={`tnum ${r.total_pnl > 0 ? "text-emerald-400" : r.total_pnl < 0 ? "text-red-400" : ""}`}>
+                          {r.total_pnl.toFixed(2)}
+                        </span>
+                      </>
+                    ) : ""}
+                    {r.win_rate_pct !== null ? (
+                      <span className="tnum"> · Win rate {r.win_rate_pct.toFixed(1)}%</span>
+                    ) : ""}
                   </p>
                   {r.best_strategy && (
                     <p className="text-sm text-muted-foreground">

@@ -33,7 +33,7 @@ export default async function NewTradePage() {
         <p className="page-lede">
           Quick entry — just the trade. Psychology, lesson and screenshots can be added afterwards.
         </p>
-        <section className="card-surface mt-6 p-4 sm:p-6" aria-label="Quick trade entry">
+        <section className="hero-card card-surface-raised card-glow-blue mt-6 p-4 sm:p-6" aria-label="Quick trade entry">
           <QuickTradeForm action={createTradeAction} submitLabel="Save trade" strategies={strategies} />
         </section>
         <p className="mt-4 text-sm">

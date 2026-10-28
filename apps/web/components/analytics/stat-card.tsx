@@ -7,20 +7,41 @@ import { formatMoney } from "@/lib/trades/calculations";
  * Cards use the shared card surface, a clear label, a large primary
  * metric (24-32px) and small supporting context — never tiny
  * compressed cards. `raised` (Phase 17) lifts one card per view —
- * the primary KPI — onto the hero level of the elevation scale. */
+ * the primary KPI — onto the hero level of the elevation scale.
+ *
+ * `glow` (Phase 18) adds one of the shared `.card-glow-*`
+ * modifiers. The glow is always driven by the REAL value passed
+ * by the page — emerald when a profit metric is positive, red
+ * when it is negative, blue for a performance rate — never
+ * hard-coded to a sign. Omit it (or pass undefined) and the card
+ * stays neutral. */
+export type StatCardGlow = "blue" | "cyan" | "violet" | "emerald" | "danger" | "amber";
+
+export const STAT_CARD_GLOW_CLASS: Record<StatCardGlow, string> = {
+  blue: "card-glow-blue",
+  cyan: "card-glow-cyan",
+  violet: "card-glow-violet",
+  emerald: "card-glow-emerald",
+  danger: "card-glow-danger",
+  amber: "card-glow-amber",
+};
+
 export function StatCard({
   label,
   value,
   hint,
   raised = false,
+  glow,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
   raised?: boolean;
+  glow?: StatCardGlow;
 }) {
+  const glowClass = glow ? ` ${STAT_CARD_GLOW_CLASS[glow]}` : "";
   return (
-    <article className={raised ? "card-surface-raised p-4 sm:p-5" : "card-surface p-4 sm:p-5"}>
+    <article className={raised ? `card-surface-raised p-4 sm:p-5${glowClass}` : `card-surface p-4 sm:p-5${glowClass}`}>
       <h2 className="section-label">{label}</h2>
       <p className="metric-value">{value}</p>
       {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
@@ -67,7 +88,7 @@ export function ProgressBar({ percent, label }: { percent: number; label: string
         aria-label={label}
       >
         <div
-          className="h-full rounded-full bg-emerald-400 transition-[width] duration-500 ease-standard"
+          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-[width] duration-500 ease-standard"
           style={{ width: `${mounted ? shown : 0}%` }}
         />
       </div>

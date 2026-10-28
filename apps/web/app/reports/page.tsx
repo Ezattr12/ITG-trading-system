@@ -73,7 +73,7 @@ export default async function ReportsPage({
             {summary ? (
               <Link
                 href={pdfHref}
-                className="inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 text-sm font-medium"
+                className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2"
               >
                 Download PDF
               </Link>
@@ -86,7 +86,7 @@ export default async function ReportsPage({
             <Link
               key={t}
               href={`/reports?type=${t}&date=${anchor}`}
-              className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 ${t === type ? "bg-muted font-medium" : ""}`}
+              className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 shadow-elevation-1 transition-all duration-fast ease-standard hover:shadow-elevation-2 ${t === type ? "bg-primary font-medium text-primary-foreground" : "bg-card hover:bg-accent"}`}
             >
               {REPORT_TYPE_LABELS[t]}
             </Link>
@@ -101,9 +101,9 @@ export default async function ReportsPage({
               type="date"
               name="date"
               defaultValue={anchor}
-              className="h-11 rounded-md border bg-background px-2 py-1.5 text-base"
+              className="h-11 rounded-md border border-input bg-background px-2 py-1.5 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-            <button type="submit" className="inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 text-sm font-medium">
+            <button type="submit" className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
               Show
             </button>
           </form>
@@ -123,7 +123,7 @@ export default async function ReportsPage({
           <>
             <section className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <StatCard label="Trades" value={summary.tradesCount} />
-              <StatCard label="Total P&L" value={<Money value={summary.totalPnl} />} />
+              <StatCard label="Total P&L" value={<Money value={summary.totalPnl} />} raised />
               <StatCard label="Win rate" value={<Pct value={summary.winRate} />} />
               <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} />
               <StatCard label="Expectancy" value={<Money value={summary.expectancy} />} />
@@ -136,58 +136,62 @@ export default async function ReportsPage({
             </section>
 
             {summary.byStrategy.length > 0 && (
-              <section className="mt-6 sm:mt-8">
+              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
                 <h2 className="section-title">By strategy</h2>
-                <table className="mt-2 w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="py-1">Strategy</th>
-                      <th className="py-1">Trades</th>
-                      <th className="py-1">Wins</th>
-                      <th className="py-1">P&L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.byStrategy.map((r) => (
-                      <tr key={r.name} className="border-t">
-                        <td className="py-1">{r.name}</td>
-                        <td className="py-1">{r.trades}</td>
-                        <td className="py-1">{r.wins}</td>
-                        <td className="py-1"><Money value={r.totalPnl} /></td>
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Strategy</th>
+                        <th className="py-2 pr-3 font-medium">Trades</th>
+                        <th className="py-2 pr-3 font-medium">Wins</th>
+                        <th className="py-2 font-medium">P&amp;L</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="list-divider">
+                      {summary.byStrategy.map((r) => (
+                        <tr key={r.name} className="list-row-premium">
+                          <td className="py-2 pr-3">{r.name}</td>
+                          <td className="py-2 pr-3 tnum">{r.trades}</td>
+                          <td className="py-2 pr-3 tnum">{r.wins}</td>
+                          <td className="py-2 tnum"><Money value={r.totalPnl} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             )}
 
             {summary.byEmotion.length > 0 && (
-              <section className="mt-6 sm:mt-8">
+              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
                 <h2 className="section-title">Psychology vs performance</h2>
-                <table className="mt-2 w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="py-1">Emotion</th>
-                      <th className="py-1">Trades</th>
-                      <th className="py-1">Win rate</th>
-                      <th className="py-1">P&L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.byEmotion.map((r) => (
-                      <tr key={r.name} className="border-t">
-                        <td className="py-1 capitalize">{r.name}</td>
-                        <td className="py-1">{r.trades}</td>
-                        <td className="py-1"><Pct value={r.winRate} /></td>
-                        <td className="py-1"><Money value={r.totalPnl} /></td>
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Emotion</th>
+                        <th className="py-2 pr-3 font-medium">Trades</th>
+                        <th className="py-2 pr-3 font-medium">Win rate</th>
+                        <th className="py-2 font-medium">P&amp;L</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="list-divider">
+                      {summary.byEmotion.map((r) => (
+                        <tr key={r.name} className="list-row-premium">
+                          <td className="py-2 pr-3 capitalize">{r.name}</td>
+                          <td className="py-2 pr-3 tnum">{r.trades}</td>
+                          <td className="py-2 pr-3 tnum"><Pct value={r.winRate} /></td>
+                          <td className="py-2 tnum"><Money value={r.totalPnl} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             )}
 
-            <section className="mt-6 sm:mt-8 card-surface p-4">
+            <section className="mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6">
               <h2 className="section-title">Recommendations</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Rule-based observations from this period&apos;s own data — not

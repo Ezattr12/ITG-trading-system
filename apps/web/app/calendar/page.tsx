@@ -61,6 +61,9 @@ export default async function CalendarPage({
   const monthWins = monthTrades.filter((t) => t.pnl > 0).length;
   const monthJournaled = monthTrades.filter((t) => t.journaled).length;
   const weeks = buildMonthGrid(year, month, days);
+  // Today gets a ring in the grid (Phase 18) — a real calendar
+  // always shows where "now" is.
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   return (
     <AppShell email={user.email}>
@@ -69,26 +72,27 @@ export default async function CalendarPage({
           Trading days, P&amp;L and journal completion — spot your patterns over time.
         </p>
 
-        <div className="mt-6 flex items-center gap-4">
-          <Link href={`/calendar?month=${shiftMonth(year, month, -1)}`} className="rounded-md border px-3 py-1 text-sm">
+        <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
+          <Link href={`/calendar?month=${shiftMonth(year, month, -1)}`} className="inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-foreground">
             ← Previous
           </Link>
           <h2 className="section-title">
             {MONTH_NAMES[month - 1]} {year}
           </h2>
-          <Link href={`/calendar?month=${shiftMonth(year, month, 1)}`} className="rounded-md border px-3 py-1 text-sm">
+          <Link href={`/calendar?month=${shiftMonth(year, month, 1)}`} className="inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-foreground">
             Next →
           </Link>
-          <Link href="/calendar" className="text-sm text-muted-foreground underline">
+          <Link href="/calendar" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
             This month
           </Link>
         </div>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Month summary">
           <StatCard label="Trades this month" value={monthTrades.length} />
-          <StatCard label="P&L this month" value={<Money value={monthTrades.length === 0 ? null : monthPnl} />} />
+          <StatCard label="P&L this month" glow={monthTrades.length === 0 || monthPnl === 0 ? undefined : monthPnl > 0 ? "emerald" : "danger"} value={<Money value={monthTrades.length === 0 ? null : monthPnl} />} />
           <StatCard
             label="Journal completion"
+            glow={monthTrades.length === 0 ? undefined : "cyan"}
             value={monthTrades.length === 0 ? "—" : `${((monthJournaled / monthTrades.length) * 100).toFixed(0)}%`}
             hint={`${monthJournaled} of ${monthTrades.length} trades journaled · ${monthWins} wins`}
           />
@@ -113,9 +117,12 @@ export default async function CalendarPage({
                   }
                   const hasTrades = (cell.data?.trades ?? 0) > 0;
                   const pnl = cell.data?.pnl ?? 0;
+                  const isToday = cell.date === todayKey;
                   const content = (
                     <div
-                      className={`flex min-h-14 flex-col rounded-md border p-1 text-left text-xs leading-tight sm:min-h-16 ${
+                      className={`flex min-h-14 flex-col rounded-lg border p-1.5 text-left text-xs leading-tight transition-shadow hover:shadow-elevation-1 sm:min-h-16 ${
+                        isToday ? "ring-2 ring-primary/60" : ""
+                      } ${
                         hasTrades
                           ? pnl > 0
                             ? "border-emerald-500/40 bg-emerald-500/10"
@@ -151,8 +158,16 @@ export default async function CalendarPage({
                 })}
               </div>
             ))}
-            <p className="mt-3 text-xs text-muted-foreground">
-              Green = winning day, red = losing day. Select a trading day to see its trades. Days with no trades are blank — they are not zero-P&amp;L days.
+            <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                Winning day
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-full bg-red-400" aria-hidden="true" />
+                Losing day
+              </span>
+              <span>Select a trading day to see its trades. Days with no trades are blank — they are not zero-P&amp;L days.</span>
             </p>
           </section>
         )}

@@ -18,7 +18,7 @@ export function TradeSavedBanner() {
   return (
     <div
       role="status"
-      className="motion-fade-in mt-4 flex items-start gap-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+      className="motion-fade-in mt-4 flex items-start gap-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 shadow-elevation-2"
     >
       <svg
         aria-hidden="true"

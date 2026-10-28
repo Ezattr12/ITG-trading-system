@@ -3,47 +3,129 @@
 @tailwind utilities;
 
 /*
- * ITG TraderOS design tokens (Phase 15).
+ * ITG TraderOS design tokens (Phase 18 Aurora).
  *
- * Premium institutional fintech: dark navy/charcoal foundation
- * (never pure black), off-white primary text, muted secondary
- * text, one blue/indigo brand accent, and semantic colours only
- * for profit (green), risk/loss (red), warning (amber) and AI
- * (purple). No other accent colours. Every page reads these
- * tokens through Tailwind — colours are never hard-coded per page.
+ * Premium glassmorphism over a dark aurora environment: a
+ * purple-black page base (#100020), violet as the primary
+ * accent, blue-cyan as the secondary, magenta as a small
+ * atmospheric whisper only, gold for premium/earned marks
+ * only, and semantic colours only for profit (green),
+ * risk/loss (red) and warning (amber). Surfaces are
+ * translucent glass — the aurora stays faintly visible
+ * through them — never opaque navy panels. Text stays
+ * off-white and high-contrast; every accent value below
+ * was checked against the purple-black background (see
+ * docs/phase-18-aurora.md for the contrast table).
+ *
+ * Token names are unchanged from Phase 18 — other code
+ * depends on them; only VALUES changed.
  */
 @layer base {
   :root {
-    /* Surfaces */
-    --background: 222 33% 9%;
-    --foreground: 210 30% 94%;
-    --card: 222 28% 13%;
-    --card-foreground: 210 30% 94%;
-    --popover: 222 28% 13%;
-    --popover-foreground: 210 30% 94%;
-    /* Brand / action — blue/indigo, restrained */
-    --primary: 217 91% 60%;
+    /* Surfaces — purple-black glass, not navy */
+    --background: 270 100% 6%;
+    --foreground: 272 25% 94%;
+    --card: 272 40% 14%;
+    --card-foreground: 272 25% 94%;
+    --popover: 272 40% 14%;
+    --popover-foreground: 272 25% 94%;
+    /*
+     * Brand / action — violet. TWO violets, on purpose: no
+     * single violet can be both white-text-readable (solid
+     * buttons) and dark-background-readable (small text) —
+     * WCAG needs L <= 0.183 for the first and L >= 0.195
+     * for the second, which is impossible. So:
+     * --primary is the darker action violet (262 83% 58%):
+     * white text on it is 5.67:1, so the solid bg-primary
+     * buttons in trades/reports and the skip link stay
+     * readable. Small violet text on the dark background
+     * uses --violet / --ai (262 83% 68%, 5.49:1) instead —
+     * the shell's active nav states and .action-link do
+     * exactly that. See docs/phase-18-aurora.md.
+     */
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
-    /* Secondary surfaces and text */
-    --secondary: 222 24% 18%;
-    --secondary-foreground: 210 25% 90%;
-    --muted: 222 24% 17%;
-    --muted-foreground: 215 18% 72%;
-    --accent: 222 24% 18%;
-    --accent-foreground: 210 25% 90%;
+    /* Secondary surfaces and text — purple-tinted darks */
+    --secondary: 272 30% 17%;
+    --secondary-foreground: 272 20% 90%;
+    --muted: 272 28% 16%;
+    --muted-foreground: 270 15% 70%;
+    --accent: 272 30% 17%;
+    --accent-foreground: 272 20% 90%;
     /* Risk */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    /* Lines and inputs */
-    --border: 222 20% 21%;
-    --input: 222 20% 24%;
-    --ring: 217 91% 60%;
+    /*
+     * Lines and inputs — translucent white, NOT a solid
+     * grey-blue. Borders read as a subtle reflection /
+     * highlight on the glass, never a harsh 1px line. The
+     * alpha lives inside the token, so hsl(var(--border))
+     * still works everywhere it is used.
+     */
+    --border: 0 0% 100% / 0.16;
+    --input: 0 0% 100% / 0.22;
+    --ring: 262 83% 68%;
     --radius: 0.75rem;
-    /* Semantic colours — the only other accents in the system */
+    /* Semantic colours — unchanged from Phase 18 */
     --success: 152 69% 42%;
     --warning: 38 92% 50%;
-    --info: 217 91% 60%;
+    --info: 221 78% 55%;
     --ai: 262 83% 68%;
+    /*
+     * Phase 18 Aurora — supplied palette, hex -> HSL.
+     * #100020 -> 270 100% 6%  (page base)
+     * #340266 -> 270 96% 20%  (midnight purple, --background-2)
+     * #492282 -> 264 59% 32%  (deep violet, hero bases)
+     * #8B60C7 -> 265 48% 58%  (violet accent; as text it is
+     *   4.41:1, just under AA, so small text uses the
+     *   lightened --violet 262 83% 68% instead; #8B60C7 is
+     *   the gradient / glow anchor, where white on it is
+     *   4.57:1)
+     * #430574 -> 274 92% 24%  (aurora deep purple)
+     * #501E7D -> 272 61% 30%  (aurora violet)
+     * #6C448D -> 273 35% 41%  (aurora soft violet)
+     * #81268E -> 293 58% 35%  (magenta — atmospheric only)
+     * #2971A4 -> 205 60% 40%  (aurora blue; --cyan is the
+     *   lightened 205 60% 55% so data accents read, 6.41:1)
+     * #346CE6 -> 221 78% 55%  (blue-cyan secondary, --info)
+     * #0F4CCC -> 221 86% 43%  (deep blue, gradients)
+     * #BD935F -> 33 42% 56%   (gold — premium only)
+     * Hierarchy: purple-black background / violet primary /
+     * blue-cyan secondary / magenta whisper / gold premium.
+     */
+    --background-2: 270 96% 20%;
+    --background-3: 272 30% 13%;
+    --cyan: 205 60% 55%;
+    --violet: 262 83% 68%;
+    --indigo: 232 80% 60%;
+    --gold: 33 42% 56%;
+    --magenta: 293 58% 35%;
+    /*
+     * Phase 18 Aurora — glow shadows. Violet is the primary
+     * glow now; blue is the #346CE6 secondary glow; cyan is
+     * the #2971A4 aurora blue. Soft, low-opacity, two-layer
+     * as before — a glow marks one focal surface per view.
+     */
+    --glow-primary: 0 0 24px rgb(167 139 250 / 0.32), 0 0 64px rgb(167 139 250 / 0.1);
+    --glow-blue: 0 0 24px rgb(52 108 230 / 0.3), 0 0 64px rgb(52 108 230 / 0.1);
+    --glow-cyan: 0 0 24px rgb(41 113 164 / 0.32), 0 0 64px rgb(41 113 164 / 0.1);
+    --glow-violet: 0 0 24px rgb(167 139 250 / 0.3), 0 0 64px rgb(167 139 250 / 0.1);
+    --glow-success: 0 0 24px rgb(52 211 153 / 0.28), 0 0 64px rgb(52 211 153 / 0.1);
+    --glow-danger: 0 0 24px rgb(239 68 68 / 0.28), 0 0 64px rgb(239 68 68 / 0.1);
+    --glow-warning: 0 0 24px rgb(245 158 11 / 0.28), 0 0 64px rgb(245 158 11 / 0.1);
+    /*
+     * Phase 18 Aurora — gradients. Primary is violet ->
+     * indigo (white text 5.67:1 / 6.47:1 on the stops);
+     * AI starts at the supplied #8B60C7; gold is the
+     * supplied #BD935F family (black text 7.32:1); the hero
+     * gradient is an aurora sweep — midnight purple to
+     * purple-black to aurora blue — not a flat colour.
+     */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(232 80% 55%));
+    --gradient-cyan: linear-gradient(135deg, hsl(221 78% 55%), hsl(205 60% 45%));
+    --gradient-ai: linear-gradient(135deg, hsl(265 48% 58%), hsl(232 80% 55%));
+    --gradient-gold: linear-gradient(135deg, hsl(33 42% 56%), hsl(33 40% 45%));
+    --gradient-hero: linear-gradient(160deg, hsl(270 96% 20% / 0.9), hsl(270 100% 6% / 0.9) 55%, hsl(205 60% 40% / 0.7));
     /* Elevation scale (Phase 17). Depth comes from layered
        borders + soft shadows, never from colour or neon.
        Level 1 is the resting card, level 2 is a lifted/hero
@@ -156,6 +238,20 @@
     stroke-dashoffset: 0;
   }
 }
+/*
+ * Phase 18 — ambient orb drift. Transform-only, very slow
+ * (70s+), small range, alternating — the backdrop breathes
+ * without ever pulling the eye from the content. Killed by
+ * the reduced-motion block below.
+ */
+@keyframes motion-orb-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(32px, -24px, 0);
+  }
+}
 
 @layer base {
   * {
@@ -171,10 +267,28 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Phase 18 — one font family for the whole app. Inter is
+       loaded via next/font/google in layout.tsx and exposed as
+       --font-sans; the system stack below is the fallback if
+       the variable is ever missing. */
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 1rem;
     line-height: 1.55;
     overflow-x: clip;
+    /*
+     * Phase 18 Aurora — the page background is never a flat
+     * solid. Four faint radial aurora tints (deep purple
+     * top-left, violet right, aurora blue bottom, a magenta
+     * whisper bottom-right) sit over the purple-black base.
+     * At 10-22% opacity they add depth without touching
+     * readability; text contrast is unchanged from Phase 15
+     * (foreground 17.27:1, muted 8.81:1 on #100020).
+     */
+    background-image:
+      radial-gradient(900px 480px at 12% -8%, hsl(274 92% 24% / 0.22), transparent 60%),
+      radial-gradient(800px 500px at 95% 0%, hsl(272 61% 30% / 0.18), transparent 60%),
+      radial-gradient(900px 600px at 50% 115%, hsl(205 60% 40% / 0.14), transparent 60%),
+      radial-gradient(600px 400px at 82% 108%, hsl(293 58% 35% / 0.1), transparent 60%);
   }
   /*
    * Form controls stay at 16px everywhere. Below 16px iOS zooms
@@ -214,73 +328,118 @@
   .section-label {
     @apply text-sm font-medium text-muted-foreground;
   }
+  /*
+   * Phase 18 Aurora — glass card surfaces. Every card is
+   * translucent white over the purple-black aurora, never
+   * an opaque panel: the background stays faintly visible
+   * through the glass. Borders are a translucent white
+   * highlight, not a hard line. The top edge carries a
+   * soft light reflection (inset 0 1px 0 white/8%) and the
+   * shadow underneath is deep — frosted glass, not chrome.
+   *
+   * BLUR BUDGET (see docs/phase-18-aurora.md): ordinary
+   * content cards get the translucent gradient WITHOUT
+   * backdrop-filter — a blur on every card is a per-frame
+   * repaint cost on mobile. backdrop-filter lives only on
+   * the floating surfaces: .glass-surface* (header,
+   * sidebar, drawer, bottom dock), .card-surface-glass
+   * (auth card), .hero-card, and modals. The @supports
+   * fallback at the end of this file covers browsers
+   * without backdrop-filter.
+   */
   .card-surface {
-    @apply rounded-xl border bg-card;
+    @apply rounded-[1.25rem] border;
+    /* Translucent glass, no blur (blur budget): the aurora
+       shows through faintly, and text stays readable
+       because the orbs behind are dark and low-opacity. */
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.05)
+    );
+    border-color: rgb(255 255 255 / 0.14);
     /* Resting elevation (Phase 17): a soft shadow plus a 1px
        light top edge, so the card reads as a raised plane.
        Hover lifts it one level — border and shadow only,
        never a translate, so nothing shifts. */
-    box-shadow: var(--elevation-highlight), var(--elevation-1);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1);
     transition:
       border-color var(--motion-duration-fast) var(--motion-ease-standard),
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
   }
   .card-surface:hover {
-    border-color: hsl(222 22% 30%);
-    box-shadow: var(--elevation-highlight), var(--elevation-2);
+    border-color: rgb(255 255 255 / 0.22);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2);
   }
   /* Hero / lifted card (Phase 17). One card per view at most
      carries this — the primary KPI, the main chart — so the
      most important information is also the most prominent.
-     Slightly lighter surface, brighter edge, level-2 shadow. */
+     Slightly stronger glass, brighter edge, level-2 shadow. */
   .card-surface-raised {
-    @apply rounded-xl border;
-    background: hsl(222 26% 16%);
-    border-color: hsl(222 22% 28%);
-    box-shadow: var(--elevation-highlight), var(--elevation-2);
+    @apply rounded-[1.25rem] border;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.1),
+      rgb(255 255 255 / 0.06)
+    );
+    border-color: rgb(255 255 255 / 0.18);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2);
     transition:
       border-color var(--motion-duration-fast) var(--motion-ease-standard),
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
   }
   .card-surface-raised:hover {
-    border-color: hsl(222 22% 34%);
-    box-shadow: var(--elevation-highlight), var(--elevation-3);
+    border-color: rgb(255 255 255 / 0.26);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), var(--elevation-3);
   }
   /* Inset panel (Phase 17). A surface set *into* a card —
      darker than the card, no shadow — for the content that
-     sits inside a card, like a chart. The contrast between
-     the raised card and the inset panel is the layered depth
-     the reference images get from cards-within-cards. */
+     sits inside a card, like a chart. Aurora version: a
+     translucent purple-black pool, so the inset reads
+     deeper than the glass above it. */
   .card-surface-inset {
     @apply rounded-lg border;
-    background: hsl(222 30% 10.5%);
-    border-color: hsl(222 20% 19%);
+    background: linear-gradient(
+      180deg,
+      rgb(16 0 32 / 0.45),
+      rgb(16 0 32 / 0.35)
+    );
+    border-color: rgb(255 255 255 / 0.1);
   }
   /* Chart panel (Phase 17). The inset surface a chart sits
      on, with breathing room around the chart itself. */
   .chart-panel {
     @apply rounded-lg border p-3 sm:p-4;
-    background: hsl(222 30% 10.5%);
-    border-color: hsl(222 20% 19%);
-  }
-  /* Glass surface (Phase 17). The auth card only: a
-     translucent, blurred layer floating over the login
-     backdrop, with a brighter top edge and a level-3
-     shadow. The form inside is unchanged; the depth is
-     in the surface, not the interaction. */
-  .card-surface-glass {
-    @apply rounded-xl border;
     background: linear-gradient(
       180deg,
-      hsl(222 28% 15% / 0.94),
-      hsl(222 28% 12% / 0.9)
+      rgb(16 0 32 / 0.45),
+      rgb(16 0 32 / 0.35)
     );
-    border-color: hsl(222 22% 30%);
+    border-color: rgb(255 255 255 / 0.1);
+  }
+  /*
+   * Hero glass (Phase 18 Aurora). The strongest glass in
+   * the system — the auth card. Translucent white at 0.12,
+   * 24px backdrop blur, a 0.25 white border, a clear top
+   * reflection, radius 24px, level-3 shadow. The form
+   * inside is unchanged; the depth is in the surface, not
+   * the interaction. See .glass-surface* below for the
+   * three-level system this belongs to.
+   */
+  .card-surface-glass {
+    @apply border;
+    border-radius: 1.5rem;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.12),
+      rgb(255 255 255 / 0.07)
+    );
+    border-color: rgb(255 255 255 / 0.25);
     box-shadow:
-      var(--elevation-highlight),
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
       var(--elevation-3);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
   }
   /* Separated list rows (Phase 17). Lists inside cards get
      hairline dividers and a quiet hover surface, like the
@@ -288,6 +447,343 @@
      without becoming separate cards. */
   .list-divider {
     @apply divide-y divide-border;
+  }
+
+  /*
+   * Phase 18 Aurora — ambient background (CONTRACT: other
+   * workers use `.app-ambient` and the `AmbientBackground`
+   * component; do not rename). A fixed layer behind the
+   * content (z-index -1, so it never covers text) with four
+   * large radial-gradient orbs — deep purple, violet, a
+   * small magenta wisp, aurora blue — plus an extremely
+   * subtle grid, over the near-black purple base. Depth
+   * comes from gradient falloff, NOT filter: blur on huge
+   * elements: blur is a per-frame repaint cost on mobile,
+   * while a radial gradient that fades to transparent is
+   * painted once. The orbs drift on transform only (see
+   * .motion-orb-drift); the grid is static. Render
+   * <AmbientBackground /> once, as the first child of the
+   * app shell, with aria-hidden.
+   */
+  .app-ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .app-ambient-orb {
+    position: absolute;
+    width: 42rem;
+    height: 42rem;
+    border-radius: 9999px;
+    will-change: transform;
+  }
+  /* Deep purple aurora, top-left — the largest light. */
+  .app-ambient-orb-purple {
+    top: -14rem;
+    left: -10rem;
+    background: radial-gradient(circle, hsl(274 92% 24% / 0.3) 0%, transparent 62%);
+  }
+  /* Violet aurora, top-right. */
+  .app-ambient-orb-violet {
+    top: -16rem;
+    right: -12rem;
+    background: radial-gradient(circle, hsl(272 61% 30% / 0.22) 0%, transparent 62%);
+  }
+  /*
+   * Magenta wisp — small and atmospheric only, never a
+   * primary surface. Half the size of the main orbs and
+   * the faintest of the four, so it reads as a colour in
+   * the light, not a pink panel.
+   */
+  .app-ambient-orb-magenta {
+    bottom: -8rem;
+    right: 18%;
+    width: 26rem;
+    height: 26rem;
+    background: radial-gradient(circle, hsl(293 58% 35% / 0.14) 0%, transparent 62%);
+  }
+  /* Aurora blue, bottom — the secondary accent in the light. */
+  .app-ambient-orb-blue {
+    bottom: -18rem;
+    left: 28%;
+    background: radial-gradient(circle, hsl(205 60% 40% / 0.18) 0%, transparent 62%);
+  }
+  .app-ambient-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    /* The grid fades out toward the bottom so it reads as
+       atmosphere at the top of the page, not graph paper. */
+    mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, black 25%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, black 25%, transparent 78%);
+  }
+  /* Very slow orb drift: 70s, transform only, alternating. */
+  .motion-orb-drift {
+    animation: motion-orb-drift 70s ease-in-out infinite alternate;
+  }
+  .motion-orb-drift-slow {
+    animation-duration: 95s;
+    animation-delay: -30s;
+  }
+
+  /*
+   * Phase 18 Aurora — the glass system. Three levels, one
+   * language: translucent white + a subtle violet highlight
+   * + a soft top reflection + a deep shadow underneath.
+   * Premium frosted glass, NOT chrome or mirror.
+   *
+   * Standard (.glass-surface): white 0.08, blur 20px,
+   * border white 0.15, radius 20px. Floating panels,
+   * header, sidebar.
+   * Elevated (.glass-surface-elevated): white 0.10, blur
+   * 20px, border white 0.20, radius 24px, stronger shadow
+   * + a faint violet glow. Bottom dock, drawer, anything
+   * that must read as floating above the page.
+   * Hero (.card-surface-glass, above): white 0.12, blur
+   * 24px, border white 0.25, radius 24px, clearest
+   * highlight, deepest shadow. The auth card only.
+   *
+   * Ordinary content cards (.card-surface /
+   * .card-surface-raised) use the same translucent
+   * gradient WITHOUT backdrop-filter — see the blur-budget
+   * note on .card-surface. Small controls (inputs,
+   * buttons, pills) keep their existing radius; glass
+   * radius is for surfaces, not for everything.
+   */
+  .glass-surface {
+    @apply border;
+    border-radius: 1.25rem;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.05)
+    );
+    border-color: rgb(255 255 255 / 0.15);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      var(--elevation-2);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-surface-elevated {
+    @apply border;
+    border-radius: 1.5rem;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.1),
+      rgb(255 255 255 / 0.06)
+    );
+    border-color: rgb(255 255 255 / 0.2);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      var(--elevation-3),
+      0 0 32px rgb(139 96 199 / 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /*
+   * Phase 18 Aurora — card glow modifiers. Use WITH
+   * .card-surface or .card-surface-raised (e.g.
+   * class="card-surface card-glow-blue"). Each layers a
+   * tinted gradient wash OVER the glass base gradient, so
+   * the card keeps its translucency, and adds a matching
+   * edge and a soft outer glow in one accent. One glowing
+   * card per view at most — the glow marks the focal card,
+   * and a glow on every card is just noise. Hover keeps
+   * the glow (the grouped rules below) and lifts the
+   * shadow one level, matching .card-surface:hover.
+   *
+   * "Blue" is the blue-cyan secondary (#346CE6) and "cyan"
+   * is the aurora blue (#2971A4, lightened for the wash);
+   * violet is the primary accent, reserved for AI and the
+   * focal hero. Emerald / danger / amber stay semantic.
+   */
+  .card-glow-blue {
+    --card-glow: var(--glow-blue);
+    border-color: hsl(221 78% 55% / 0.35);
+    background:
+      linear-gradient(180deg, hsl(221 78% 55% / 0.1), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-glow-cyan {
+    --card-glow: var(--glow-cyan);
+    border-color: hsl(205 60% 55% / 0.32);
+    background:
+      linear-gradient(180deg, hsl(205 60% 55% / 0.09), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-glow-violet {
+    --card-glow: var(--glow-violet);
+    border-color: hsl(262 83% 68% / 0.38);
+    background:
+      linear-gradient(180deg, hsl(262 83% 68% / 0.1), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-glow-emerald {
+    --card-glow: var(--glow-success);
+    border-color: hsl(152 69% 42% / 0.35);
+    background:
+      linear-gradient(180deg, hsl(152 69% 42% / 0.09), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-glow-danger {
+    --card-glow: var(--glow-danger);
+    border-color: hsl(0 72% 51% / 0.38);
+    background:
+      linear-gradient(180deg, hsl(0 72% 51% / 0.09), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-glow-amber {
+    --card-glow: var(--glow-warning);
+    border-color: hsl(38 92% 50% / 0.35);
+    background:
+      linear-gradient(180deg, hsl(38 92% 50% / 0.09), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1), var(--card-glow);
+  }
+  .card-surface.card-glow-blue:hover,
+  .card-surface-raised.card-glow-blue:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-blue);
+  }
+  .card-surface.card-glow-cyan:hover,
+  .card-surface-raised.card-glow-cyan:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-cyan);
+  }
+  .card-surface.card-glow-violet:hover,
+  .card-surface-raised.card-glow-violet:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-violet);
+  }
+  .card-surface.card-glow-emerald:hover,
+  .card-surface-raised.card-glow-emerald:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-success);
+  }
+  .card-surface.card-glow-danger:hover,
+  .card-surface-raised.card-glow-danger:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-danger);
+  }
+  .card-surface.card-glow-amber:hover,
+  .card-surface-raised.card-glow-amber:hover {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2), var(--glow-warning);
+  }
+
+  /*
+   * Phase 18 Aurora — hero card. The strongest depth in
+   * the system: an aurora wash (violet -> midnight purple
+   * -> aurora blue) over hero glass, 20px backdrop blur,
+   * a 0.25 white border, a clear top reflection, a violet
+   * glow and elevation-3. One focal card per screen (the
+   * balance/P&L hero, the level hero) — it is the card the
+   * eye lands on first. The hover rule keeps the glow when
+   * .card-surface-raised:hover would otherwise drop it.
+   */
+  .hero-card {
+    @apply border;
+    border-radius: 1.5rem;
+    background:
+      linear-gradient(160deg, rgb(139 96 199 / 0.22), rgb(52 2 102 / 0.3) 55%, rgb(41 113 164 / 0.18)),
+      linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.07));
+    border-color: rgb(255 255 255 / 0.25);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      var(--elevation-3),
+      var(--glow-violet);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .hero-card:hover {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      var(--elevation-3),
+      var(--glow-violet);
+  }
+
+  /*
+   * Phase 18 — typography helpers. .metric-hero is the single
+   * biggest number on a screen (the hero card balance/P&L):
+   * extrabold, tabular figures so money never wobbles as it
+   * counts. Gradient text is for short display words only
+   * (a headline word, a level name) — never body copy, never
+   * on a gradient background. .eyebrow is the small uppercase
+   * label above a title or metric.
+   */
+  .metric-hero {
+    @apply text-4xl font-extrabold tabular-nums tracking-tight sm:text-5xl;
+  }
+  .text-gradient-blue {
+    /*
+     * Aurora: the name is kept for compatibility (shell,
+     * auth, landing all use it), but the gradient it
+     * renders is now the violet primary gradient — violet
+     * is the brand accent, blue-cyan the secondary.
+     */
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-ai {
+    background: var(--gradient-ai);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  /*
+   * Phase 18 — trade card and premium list row. .trade-card is
+   * the mobile one-card-per-trade base (the trades list below
+   * md): pair, P&L, direction, date, R, status, entry/exit.
+   * .list-row-premium is a single row inside a card list: a
+   * quiet hover surface with a 1px lift, like the history rows
+   * in the references.
+   */
+  .trade-card {
+    @apply rounded-[1.25rem] border p-4;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.08),
+      rgb(255 255 255 / 0.05)
+    );
+    border-color: rgb(255 255 255 / 0.14);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--elevation-1);
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .trade-card:hover {
+    border-color: rgb(255 255 255 / 0.22);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), var(--elevation-2);
+  }
+  .list-row-premium {
+    @apply flex items-center gap-3 rounded-lg px-3 py-3;
+    transition:
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .list-row-premium:hover {
+    background: rgb(255 255 255 / 0.06);
+    box-shadow: var(--elevation-1);
+    transform: translateY(-1px);
   }
   /*
    * Motion utilities (Phase 16). `.motion-reveal` is the section
@@ -357,13 +853,28 @@
   .metric-value {
     @apply mt-2 text-2xl font-bold tabular-nums sm:text-3xl;
   }
-  /* Native selects share the Input look: 44px minimum, 16px text. */
+  /* Native selects share the Input look: 44px minimum, 16px text.
+     Phase 18: layered gradient surface and a focus glow (ring +
+     soft primary glow) matching the Input component. */
   .input-select {
-    @apply flex min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex min-h-11 w-full rounded-md border border-input px-3 py-2 text-base shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:shadow-glow-primary disabled:cursor-not-allowed disabled:opacity-50;
+    background: linear-gradient(180deg, hsl(272 32% 14%), hsl(272 32% 11.5%));
   }
-  /* Links that act as actions inside cards and lists. */
+  /* Shared layered input surface (Phase 18). A barely-there
+     vertical gradient — lighter at the top edge — so inputs
+     read as inset panels rather than flat boxes. Used by the
+     Input component and .input-select above. Aurora: the
+     gradient is purple-tinted, matching the glass. */
+  .input-surface {
+    background: linear-gradient(180deg, hsl(272 32% 14%), hsl(272 32% 11.5%));
+  }
+  /* Links that act as actions inside cards and lists.
+     Aurora: violet text, not --primary — the light violet
+     (262 83% 68%, 5.49:1 on the purple-black base) is the
+     small-text-readable violet; the darker --primary is
+     reserved for white text on solid fills. */
   .action-link {
-    @apply inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline;
+    @apply inline-flex min-h-11 items-center text-sm font-medium text-violet underline-offset-4 hover:underline;
   }
   /* Tabular figures for money and percentages. */
   .tnum {
@@ -393,9 +904,36 @@
   .motion-ai-dot,
   .motion-login-glow,
   .motion-login-grid,
+  .motion-orb-drift,
   .skeleton {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/*
+ * Phase 18 Aurora — backdrop-filter fallback. Browsers
+ * without backdrop-filter (old Safari, some embedded
+ * webviews) would render the blurred glass surfaces as
+ * near-transparent washes, which hurts readability. The
+ * fallback gives every blurred surface a much more opaque
+ * purple fill instead, so the glass stays readable — the
+ * aurora behind it is sacrificed, the content is not.
+ * Ordinary cards (.card-surface / .card-surface-raised)
+ * need no fallback: they carry no backdrop-filter, and
+ * their translucent gradient composites over the body
+ * background in every browser.
+ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-surface,
+  .glass-surface-elevated {
+    background: linear-gradient(180deg, hsl(272 45% 19% / 0.96), hsl(272 45% 15% / 0.96));
+  }
+  .card-surface-glass {
+    background: linear-gradient(180deg, hsl(272 45% 20% / 0.97), hsl(272 45% 16% / 0.97));
+  }
+  .hero-card {
+    background: linear-gradient(160deg, hsl(270 60% 22% / 0.97), hsl(270 100% 8% / 0.97) 55%, hsl(205 50% 25% / 0.97));
   }
 }

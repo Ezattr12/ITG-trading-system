@@ -37,23 +37,23 @@ function BreakdownTable({
           a trade&apos;s Advanced Review and it will appear here.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-xl border">
+        <div className="mt-4 overflow-x-auto card-surface">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-muted-foreground">
+              <tr className="border-b bg-muted/40 text-left text-muted-foreground">
                 <th className="px-3 py-2 font-medium">Group</th>
                 <th className="px-3 py-2 font-medium">Trades</th>
                 <th className="px-3 py-2 font-medium">P&amp;L</th>
                 <th className="px-3 py-2 font-medium">Win rate</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="list-divider">
               {rows.map((row) => (
-                <tr key={row.label} className="border-b last:border-0">
+                <tr key={row.label} className="list-row-premium">
                   <td className="px-3 py-2 font-medium capitalize">{row.label}</td>
-                  <td className="px-3 py-2">{row.trades}</td>
-                  <td className="px-3 py-2">{formatMoney(row.pnl)}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 tnum">{row.trades}</td>
+                  <td className={`px-3 py-2 tnum ${row.pnl > 0 ? "text-emerald-400" : row.pnl < 0 ? "text-red-400" : ""}`}>{formatMoney(row.pnl)}</td>
+                  <td className="px-3 py-2 tnum">
                     {row.winRate === null ? "—" : `${row.winRate.toFixed(1)}%`}
                   </td>
                 </tr>
@@ -105,22 +105,22 @@ export default async function PsychologyPage() {
         )}
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Psychology summary">
-          <article className="card-surface p-4">
+          <article className="card-surface p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Average confidence</h2>
-            <p className="mt-2 text-xl font-semibold">
+            <p className="mt-2 text-xl font-semibold tnum">
               {psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}
             </p>
           </article>
-          <article className="card-surface p-4">
+          <article className="card-surface p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Good discipline</h2>
-            <p className="mt-2 text-xl font-semibold">
+            <p className="mt-2 text-xl font-semibold tnum">
               {psych.goodDisciplinePct === null ? "—" : `${psych.goodDisciplinePct.toFixed(0)}%`}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">Share of rated trades with good discipline.</p>
           </article>
-          <article className="card-surface p-4">
+          <article className="card-surface p-4 sm:p-5">
             <h2 className="text-sm font-medium text-muted-foreground">Journal completion</h2>
-            <p className="mt-2 text-xl font-semibold">
+            <p className="mt-2 text-xl font-semibold tnum">
               {psych.journalCompletionPct.toFixed(0)}%
             </p>
             <p className="mt-1 text-xs text-muted-foreground">Closed trades with a psychology record or lesson.</p>

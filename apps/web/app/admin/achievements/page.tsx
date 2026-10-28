@@ -29,7 +29,7 @@ export default async function AdminAchievementsPage() {
           taken away.
         </p>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4">
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
           <h2 className="section-title">Create achievement</h2>
           <div className="mt-4">
             <AchievementForm />
@@ -43,9 +43,18 @@ export default async function AdminAchievementsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {achievements.map((a) => (
-              <li key={a.id} className="card-surface p-4">
-                <p className="font-medium">
-                  {a.name} · {a.slug} · {a.category} · {a.xp_reward} XP
+              <li key={a.id} className="list-row-premium card-surface p-4 sm:p-5">
+                <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                  <span>{a.name}</span>
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {a.slug}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {a.category}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300 tnum">
+                    {a.xp_reward} XP
+                  </span>
                 </p>
                 {a.description ? (
                   <p className="mt-1 text-sm text-muted-foreground">{a.description}</p>

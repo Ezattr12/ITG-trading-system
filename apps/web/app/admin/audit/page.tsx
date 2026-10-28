@@ -31,7 +31,7 @@ export default async function AdminAuditPage() {
         ) : (
           <ul className="mt-6 space-y-2">
             {logs.map((row) => (
-              <li key={row.id} className="card-surface p-3 text-sm">
+              <li key={row.id} className="list-row-premium card-surface p-3 sm:p-4 text-sm">
                 <p className="font-medium">{row.action}</p>
                 <p className="text-muted-foreground">
                   {row.entity_type}

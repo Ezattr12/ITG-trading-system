@@ -16,11 +16,11 @@ export const metadata = { title: "Admin — ITG TraderOS" };
  * and never aggregated on an admin screen.
  */
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
   return (
-    <div className="card-surface p-4">
+    <div className={`card-surface p-4 sm:p-5 ${alert ? "card-glow-danger" : ""}`}>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 page-title">{value}</p>
+      <p className={`mt-1 page-title tnum ${alert ? "text-red-400" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -61,7 +61,7 @@ export default async function AdminDashboardPage() {
           <Stat label="Certificates issued" value={stats.certificates_issued} />
           <Stat label="Certificates revoked" value={stats.certificates_revoked} />
           <Stat label="Active goals" value={stats.active_goals} />
-          <Stat label="Open risk events" value={stats.open_risk_events} />
+          <Stat label="Open risk events" value={stats.open_risk_events} alert={stats.open_risk_events > 0} />
           <Stat label="Unread notifications" value={stats.unread_notifications} />
           <Stat label="Discipline events (7 days)" value={stats.discipline_events_7d} />
           <Stat label="AI Coach insights (7 days)" value={stats.ai_insights_7d} />
@@ -72,9 +72,9 @@ export default async function AdminDashboardPage() {
           {recentAudit.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No admin actions recorded yet.</p>
           ) : (
-            <ul className="mt-2 space-y-2">
+            <ul className="mt-2 list-divider">
               {recentAudit.map((row) => (
-                <li key={row.id} className="card-surface p-3 text-sm">
+                <li key={row.id} className="list-row-premium py-3 text-sm">
                   <span className="font-medium">{row.action}</span>{" "}
                   <span className="text-muted-foreground">
                     on {row.entity_type}

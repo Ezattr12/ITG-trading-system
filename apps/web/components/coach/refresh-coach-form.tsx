@@ -30,7 +30,7 @@ export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: strin
           type="date"
           defaultValue={defaultWeekStart}
           required
-          className="mt-1 block rounded-md border bg-background px-3 py-2 text-sm"
+          className="mt-1 block h-11 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
       <Button type="submit" disabled={pending} aria-busy={pending}>

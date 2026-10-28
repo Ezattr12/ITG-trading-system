@@ -12,8 +12,8 @@ import {
   psychologySummary,
   summarizeTrades,
 } from "@/lib/analytics/analytics";
-import { EquityChart } from "@/components/analytics/charts";
-import { Money, Pct, ProgressBar, StatCard } from "@/components/analytics/stat-card";
+import { EquityChart, EquitySparkline } from "@/components/analytics/charts";
+import { Money, Pct, ProgressBar, StatCard, STAT_CARD_GLOW_CLASS, type StatCardGlow } from "@/components/analytics/stat-card";
 import { CountUpDecimal, CountUpMoney, CountUpPct } from "@/components/analytics/count-up";
 import { ensureDisciplineReminderLogged } from "@/lib/discipline/actions";
 import { getLatestCoachInsights } from "@/lib/coach/queries";
@@ -118,6 +118,41 @@ export default async function DashboardPage() {
     today,
   );
 
+  // P&L hero glow (Phase 18): follows the REAL cumulative P&L —
+  // emerald when positive, red when negative, blue when there is
+  // nothing to judge yet (no trades, or exactly break-even).
+  const pnlGlow: StatCardGlow =
+    summary.tradeCount === 0 || summary.totalPnl === 0
+      ? "blue"
+      : summary.totalPnl > 0
+        ? "emerald"
+        : "danger";
+  // Value-driven KPI glows: profit factor and average R are
+  // emerald above break-even and red below it; the streak
+  // follows its real direction. Null values get no glow.
+  const profitFactorGlow: StatCardGlow | undefined =
+    summary.profitFactor === null
+      ? undefined
+      : summary.profitFactor > 1
+        ? "emerald"
+        : summary.profitFactor < 1
+          ? "danger"
+          : undefined;
+  const avgRGlow: StatCardGlow | undefined =
+    summary.avgR === null
+      ? undefined
+      : summary.avgR > 0
+        ? "emerald"
+        : summary.avgR < 0
+          ? "danger"
+          : undefined;
+  const streakGlow: StatCardGlow | undefined =
+    summary.currentStreak > 0
+      ? "emerald"
+      : summary.currentStreak < 0
+        ? "danger"
+        : undefined;
+
   return (
     <AppShell email={user.email}>
       {/* 1. Welcome / current trading status.
@@ -134,24 +169,70 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* 2. KPI row — the five numbers that matter most, first.
-          Numeric KPIs count up over 700ms (Phase 16); a null
-          still renders "—", never 0. */}
-      <section className="motion-reveal motion-reveal-1 mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5" aria-label="Key performance indicators">
-        <StatCard raised label="Current P&L" value={summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
-        <StatCard label="Win rate" value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
-        <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
-        <StatCard label="Average R" value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
-        <div className="col-span-2 sm:col-span-1">
-          <StatCard label="Current streak" value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
+      {/* 2. P&L hero (Phase 18) — the focal point of the dashboard.
+          The cumulative P&L is a large tabular hero number on the
+          hero surface, with the real context that explains it
+          (closed trades, wins, max drawdown) and a subtle
+          sparkline of the equity curve. On mobile the number
+          comes first and the sparkline sits below it, so the
+          hero reads as a mobile-first balance card, like the
+          reference fintech screens — not a compressed desktop. */}
+      <section className={`hero-card card-surface-raised ${STAT_CARD_GLOW_CLASS[pnlGlow]} motion-reveal motion-reveal-1 mt-6 p-5 sm:mt-8 sm:p-6`} aria-label="Current profit and loss">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+          <div className="min-w-0">
+            <p className="eyebrow text-xs font-semibold uppercase tracking-widest">Current P&amp;L</p>
+            <p className="metric-hero mt-2 text-4xl font-bold tabular-nums sm:text-5xl">
+              {summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {summary.tradeCount === 0
+                ? "Cumulative P&L of closed trades — add your first trade and it will be calculated from it."
+                : `Cumulative P&L of ${summary.tradeCount} closed trades.`}
+            </p>
+            <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3">
+              <div>
+                <dt className="text-xs text-muted-foreground">Closed trades</dt>
+                <dd className="mt-0.5 text-base font-semibold tabular-nums">{summary.tradeCount}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Wins</dt>
+                <dd className="mt-0.5 text-base font-semibold tabular-nums">{summary.wins}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Max drawdown</dt>
+                <dd className="mt-0.5 text-base font-semibold tabular-nums">
+                  <Money value={summary.tradeCount === 0 ? null : summary.maxDrawdown} />
+                </dd>
+              </div>
+            </dl>
+          </div>
+          {equity.length > 0 ? (
+            <div className="w-full shrink-0 sm:w-60 lg:w-80">
+              <EquitySparkline data={equity} />
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* 3. Main performance / equity curve — the hero chart
+      {/* 3. KPI row — the four supporting numbers. Numeric KPIs
+          count up over 700ms (Phase 16); a null still renders
+          "—", never 0. Glows are value-driven (see above); win
+          rate is a performance rate, so it carries the blue
+          performance glow. */}
+      <section className="motion-reveal motion-reveal-1 mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4 sm:gap-4" aria-label="Key performance indicators">
+        <StatCard label="Win rate" glow="blue" value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
+        <StatCard label="Profit factor" glow={profitFactorGlow} value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
+        <StatCard label="Average R" glow={avgRGlow} value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
+        <div className="col-span-2 sm:col-span-1">
+          <StatCard label="Current streak" glow={streakGlow} value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
+        </div>
+      </section>
+
+      {/* 4. Main performance / equity curve — the hero chart
           sits on the raised card level (Phase 17), so the most
           important visual in the app is also the most
           prominent surface. */}
-      <section className="motion-reveal motion-reveal-2 card-surface-raised mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
+      <section className="motion-reveal motion-reveal-2 card-surface-raised card-glow-blue mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
         <h2 className="section-title">Performance</h2>
         {equity.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -169,7 +250,7 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* 4. Risk & discipline + 5. Goal progress. */}
+      {/* 5. Risk & discipline + 6. Goal progress. */}
       <section className="motion-reveal motion-reveal-3 mt-6 grid gap-4 sm:mt-8 lg:grid-cols-2" aria-label="Risk, discipline and goals">
         <article className="card-surface p-4 sm:p-6">
           <h2 className="section-title">Risk &amp; discipline</h2>
@@ -241,7 +322,7 @@ export default async function DashboardPage() {
         </article>
       </section>
 
-      {/* 6. Psychology. */}
+      {/* 7. Psychology. */}
       <section className="motion-reveal motion-reveal-4 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Psychology">
         <h2 className="section-title">Psychology</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -280,7 +361,7 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      {/* 7. Recent trades. */}
+      {/* 8. Recent trades. */}
       <section className="motion-reveal motion-reveal-5 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent trades">
         <h2 className="section-title">Recent trades</h2>
         {recentTrades.length === 0 ? (
@@ -306,8 +387,9 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* 8. AI Coach insights. */}
-      <section className="motion-reveal motion-reveal-6 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="AI insights">
+      {/* 9. AI Coach insights — the one violet accent on the
+          dashboard, marking the AI surface. */}
+      <section className="motion-reveal motion-reveal-6 card-surface card-glow-violet mt-6 p-4 sm:mt-8 sm:p-6" aria-label="AI insights">
         <h2 className="section-title">AI Coach insights</h2>
         {latestInsights.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -332,7 +414,7 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      {/* 9. Recent activity — real notifications only, never invented. */}
+      {/* 10. Recent activity — real notifications only, never invented. */}
       <section className="motion-reveal motion-reveal-6 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent activity">
         <h2 className="section-title">Recent activity</h2>
         {recentActivity.length === 0 ? (

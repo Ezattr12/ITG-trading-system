@@ -80,17 +80,23 @@ export default async function AchievementsPage() {
           </p>
         ) : (
           <>
-            <p className="mt-6 text-sm text-muted-foreground">
-              {unlockedIds.size} of {bundle.achievements.length} unlocked ·{" "}
-              {bundle.xpTotal} XP total
-            </p>
-            <section className="mt-4 grid gap-4 sm:grid-cols-2" aria-label="Achievements">
+            <section className="hero-card mt-6 card-surface-raised card-glow-amber p-4 sm:p-6" aria-label="Achievement summary">
+              <p className="eyebrow">Your collection</p>
+              <p className="metric-hero tnum mt-1">
+                <span className="text-gradient-gold">{unlockedIds.size}</span>
+                <span className="text-muted-foreground"> of {bundle.achievements.length} unlocked</span>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {bundle.xpTotal} XP total from achievements
+              </p>
+            </section>
+            <section className="mt-6 grid gap-4 sm:grid-cols-2" aria-label="Achievements">
               {bundle.achievements.map((achievement, i) => {
                 const unlocked = unlockedIds.has(achievement.id);
                 return (
                   <article
                     key={achievement.id}
-                    className={`motion-reveal card-surface p-4 ${unlocked ? "" : "opacity-70"}`}
+                    className={`motion-reveal card-surface p-4 sm:p-5 ${unlocked ? "card-glow-amber" : "opacity-70"}`}
                     style={{ animationDelay: `${Math.min(i, 7) * 50}ms` }}
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -107,16 +113,18 @@ export default async function AchievementsPage() {
                         )}
                         {achievement.name}
                       </h2>
-                      <span className="shrink-0 text-sm text-muted-foreground">
+                      <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-sm font-medium text-amber-300 tnum">
                         +{achievement.xp_reward} XP
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {achievement.description ?? "No description."}
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {CATEGORY_LABELS[achievement.category] ?? achievement.category} ·{" "}
-                      {describeCriteria(achievement.criteria)}
+                    <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 font-medium">
+                        {CATEGORY_LABELS[achievement.category] ?? achievement.category}
+                      </span>
+                      <span>{describeCriteria(achievement.criteria)}</span>
                     </p>
                     <p className="mt-2 text-xs font-medium">
                       {unlocked
