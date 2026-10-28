@@ -431,21 +431,21 @@ export function AppShellClient({
 
       {/* Mobile bottom tab bar — Home, Trades, a raised Add
           Trade action, Analytics, Goals (Phase 17). Phase 18
-          Aurora: the bar floats as a glass dock — Elevated
-          glass (translucent, blurred, subtle white border,
-          deep shadow + faint violet glow), inset from the
-          screen edges with a 24px radius, never a flat footer
-          glued to the bottom edge. The active tab's icon sits
-          in a soft violet-tinted pill with a violet gradient
-          dot, and the centre action is a raised violet ->
-          indigo gradient circle. "More" (the full navigation)
+          Aurora: the bar floats as a glass dock. Phase 19:
+          the dock and centre action now use Ezat's supplied
+          Aurora Glass values (.itg-bottom-nav /
+          .itg-add-trade in globals.css) — 28px radius, 24px
+          blur, 0.68 dark glass, deeper shadow + violet glow,
+          68px centre action lifted -30px. z-index stays 40
+          (not the supplied 50) so the open drawer (z-50)
+          always covers the dock. "More" (the full navigation)
           stays one tap away in the top header menu, which
           already opens the drawer. The existing pb-24 content
-          clearance still covers the floating bar (56px bar +
-          12px offset < 96px). */}
+          clearance still covers the floating bar (76px bar +
+          14px offset < 96px). */}
       <nav
         aria-label="Primary"
-        className="glass-surface-elevated fixed inset-x-3 bottom-3 z-40 shadow-elevation-3 lg:hidden"
+        className="itg-bottom-nav z-40 lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="grid grid-cols-5">
@@ -487,7 +487,7 @@ export function AppShellClient({
             <Link
               href="/trades/new"
               aria-label="Add trade"
-              className="flex h-14 w-14 -translate-y-4 items-center justify-center rounded-full bg-gradient-primary text-white shadow-elevation-3 ring-4 ring-background transition-all duration-fast ease-standard hover:brightness-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="itg-add-trade focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Plus className="h-6 w-6" aria-hidden="true" />
             </Link>

@@ -12,6 +12,14 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
  * Shows the action's error/message, disables submit while
  * Supabase is not configured, and navigates on `redirectTo`.
  *
+ * `submitClassName` (Phase 19, Add Trade): when set, the
+ * submit renders as a native <button> with that class
+ * instead of the shadcn Button, so a page can use its own
+ * premium button treatment (the gradient Save Trade button
+ * with its light sweep) without fighting Tailwind's
+ * utility cascade. Same pending/disabled behaviour either
+ * way.
+ *
  * Motion (Phase 16): error and success states fade in instead
  * of appearing abruptly, the submit button shows a spinner
  * while pending, and a success state shows a small check that
@@ -23,11 +31,13 @@ export function ActionForm({
   submitLabel,
   children,
   extra,
+  submitClassName,
 }: {
   action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
   children: ReactNode;
   extra?: ReactNode;
+  submitClassName?: string;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(
@@ -54,16 +64,29 @@ export function ActionForm({
         </p>
       )}
       {children}
-      <Button type="submit" className="w-full" disabled={pending || !configured} aria-busy={pending}>
-        {pending ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Please wait…
-          </>
-        ) : (
-          submitLabel
-        )}
-      </Button>
+      {submitClassName ? (
+        <button type="submit" className={submitClassName} disabled={pending || !configured} aria-busy={pending}>
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Please wait…
+            </>
+          ) : (
+            submitLabel
+          )}
+        </button>
+      ) : (
+        <Button type="submit" className="w-full" disabled={pending || !configured} aria-busy={pending}>
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Please wait…
+            </>
+          ) : (
+            submitLabel
+          )}
+        </Button>
+      )}
       {extra}
     </form>
   );

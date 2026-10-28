@@ -139,6 +139,120 @@
     --elevation-2: 0 2px 4px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.26);
     --elevation-3: 0 4px 8px rgb(0 0 0 / 0.35), 0 18px 44px rgb(0 0 0 / 0.35);
     --elevation-highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
+    /*
+     * Phase 19 — Ezat's supplied Aurora Glass tokens
+     * (docs/phase-19-design-reference.css and
+     * docs/phase-19-dashboard-design-reference.css, both
+     * supplied verbatim 2026-10-28). Namespaced `--itg-*`
+     * so they never collide with the Phase 18 tokens above.
+     *
+     * RECONCILIATION (both supplied systems + Phase 18
+     * into ONE token system — see docs/phase-19.md):
+     * - The hexes agree wherever both files name the same
+     *   colour (#100020 = --background, #340266 =
+     *   --background-2, #8B60C7 = the gradient anchor,
+     *   #BD935F = --gold). The Dashboard file adds the
+     *   deeper core (#03040a/#070b20/#0b0620) and the neon
+     *   aurora hexes (#7b2cff/#a855f7/#1677ff/#00cfff/
+     *   #ec2cff) — same aurora family at higher saturation,
+     *   kept as --itg-aurora-* for neon accents.
+     * - Glass opacities: Profile 0.075/0.105/0.135 vs
+     *   Dashboard 0.075/0.12/0.16 → UNIFIED 0.075/0.12/
+     *   0.16 (Dashboard values). Blur: 22px vs 24px → 24px
+     *   everywhere (+ saturate(145%) from the Dashboard).
+     * - Text: Profile #f8f7ff/#c8c5d8/#858197 vs Dashboard
+     *   #ffffff/#d4d5e8/#8589a6 → UNIFIED #f8f7ff/#d4d5e8/
+     *   #8589a6 (softest primary, best-contrast secondary
+     *   and muted).
+     * - Trading: profit #35e6a1 vs #21f3a5 → #21f3a5;
+     *   loss #ff5f72 vs #ff4d72 → #ff4d72 (Dashboard neon
+     *   values; inline text keeps Tailwind emerald-400/
+     *   red-400, the same semantic family).
+     * - Radii 14/20/28/34 agree; Dashboard adds 999px pill.
+     * - FIX: the Profile file's `--font-tabular: "tnum" 1;`
+     *   is not a valid font declaration — it is NOT carried
+     *   over; tabular figures come from
+     *   `font-variant-numeric: tabular-nums` (see .itg-xp /
+     *   .itg-stat-value and the existing .tnum).
+     * - Add Trade (third system) + Analytics (fourth):
+     *   backgrounds #030316/#08051f and #030313 are the
+     *   same near-black purple as the unified base, so no
+     *   new background tokens — the global aurora already
+     *   provides the depth. Glass 0.075/0.12 (Add Trade)
+     *   agrees with the unified values; Analytics
+     *   0.075/0.115 rounds to 0.075/0.12. Blur 24px
+     *   agrees everywhere; the Add Trade form card and
+     *   the Analytics performance hero keep the supplied
+     *   30px blur + saturate(160%/165%) as hero-surface
+     *   exceptions, not a second system. Green #20e6a0
+     *   (Analytics) / #22f3a5 (Add Trade) and red #ff4d70
+     *   (Analytics) round to the unified #21f3a5 /
+     *   #ff4d72; Analytics gold #f4c95d is NOT adopted —
+     *   gold stays the premium-only #bd935f. The
+     *   `--analytics-*` namespaced tokens are mapped to
+     *   `--itg-*`; no `--analytics-*` tokens exist.
+     */
+    --itg-bg: #06030d;
+    --itg-bg-deep: #100020;
+    --itg-bg-purple: #18002f;
+    --itg-black: #03040a;
+    --itg-navy: #070b20;
+    --itg-deep: #0b0620;
+    --itg-violet-deep: #340266;
+    --itg-violet: #492282;
+    --itg-violet-light: #8b60c7;
+    --itg-blue: #2971a4;
+    --itg-blue-bright: #346ce6;
+    --itg-magenta: #81268e;
+    --itg-aurora-purple: #7b2cff;
+    --itg-aurora-violet: #a855f7;
+    --itg-aurora-blue: #1677ff;
+    --itg-aurora-cyan: #00cfff;
+    --itg-aurora-pink: #ec2cff;
+    /* Add Trade + Analytics bright accents (third/fourth
+       supplied systems). --itg-aurora-* already covers the
+       violet/blue/cyan/pink family; these are the exact
+       supplied hexes the form and chart treatments use:
+       #8b35ff (purple), #b42cff (violet), #237cff (blue —
+       named --itg-blue-neon because --itg-neon-blue is
+       already the blue glow shadow token), #00d9ff (cyan),
+       #f12cff (pink). */
+    --itg-purple-bright: #8b35ff;
+    --itg-violet-bright: #b42cff;
+    --itg-blue-neon: #237cff;
+    --itg-cyan-bright: #00d9ff;
+    --itg-pink-bright: #f12cff;
+    --itg-glass-standard: rgba(255, 255, 255, 0.075);
+    --itg-glass-elevated: rgba(255, 255, 255, 0.12);
+    --itg-glass-hero: rgba(255, 255, 255, 0.16);
+    --itg-glass-border: rgba(255, 255, 255, 0.18);
+    --itg-glass-border-bright: rgba(255, 255, 255, 0.28);
+    --itg-glass-highlight: rgba(255, 255, 255, 0.1);
+    --itg-text-primary: #f8f7ff;
+    --itg-text-secondary: #d4d5e8;
+    --itg-text-muted: #8589a6;
+    --itg-profit: #21f3a5;
+    --itg-loss: #ff4d72;
+    --itg-warning: #f5c451;
+    --itg-gold: #bd935f;
+    --itg-bitcoin: #f6b73c;
+    --itg-radius-sm: 14px;
+    --itg-radius-md: 20px;
+    --itg-radius-lg: 28px;
+    --itg-radius-xl: 34px;
+    --itg-radius-pill: 999px;
+    --itg-blur-glass: 24px;
+    --itg-blur-aurora: 80px;
+    --itg-blur-heavy: 60px;
+    --itg-shadow-glass: 0 25px 80px rgba(0, 0, 0, 0.55);
+    --itg-shadow-hero: 0 35px 100px rgba(0, 0, 0, 0.58);
+    --itg-shadow-violet: 0 15px 55px rgba(124, 45, 255, 0.25);
+    --itg-neon-purple: 0 0 40px rgba(123, 44, 255, 0.35);
+    --itg-neon-blue: 0 0 40px rgba(22, 119, 255, 0.3);
+    --itg-ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+    --itg-duration-fast: 180ms;
+    --itg-duration-normal: 320ms;
+    --itg-duration-slow: 600ms;
     /* Motion tokens (Phase 16). One system for the whole app:
        short durations, standard easing, never decorative-slow.
        Durations: instant 80ms (press), fast 150ms (hover/focus),
@@ -209,6 +323,18 @@
   }
   to {
     background-position: -200% 0;
+  }
+}
+/* Phase 19 — Save Trade light sweep: the highlight travels
+   left to right, then rests for most of the 4s cycle. The
+   global reduced-motion block kills it (animation-duration
+   0.01ms), and the disabled button stops it outright. */
+@keyframes itg-button-shine {
+  0%, 65% {
+    left: -100%;
+  }
+  100% {
+    left: 150%;
   }
 }
 @keyframes motion-login-drift {
@@ -709,6 +835,1139 @@
   }
 
   /*
+   * Phase 19 — Ezat's supplied Aurora Glass system
+   * (docs/phase-19-design-reference.css), adapted into the
+   * Phase 18 architecture. These are the Profile/Identity
+   * classes, using Ezat's naming (.itg-*) and his token
+   * values (--itg-* above). They are NOT a second design
+   * system: they sit on the same aurora background, the
+   * same Inter font and the same motion tokens as Phase 18,
+   * and the bottom-nav / Add Trade classes are adopted
+   * app-wide in the shell (see app-shell-client.tsx).
+   *
+   * DEFECT FIXES vs the supplied file (see docs/phase-19.md):
+   * 1. `--font-tabular` was invalid — dropped; tabular
+   *    figures come from font-variant-numeric below.
+   * 2. `.itg-level-ring::after` was absolute with no
+   *    positioned parent — the ring is now
+   *    `position: relative`, and the conic fill is driven
+   *    by the real progress via `--itg-ring-pct` (set
+   *    inline from the computed level progress), not the
+   *    hardcoded 72%.
+   * 3. `.itg-glass::before` is a light wash that paints
+   *    over the card's text by design (a glass reflection);
+   *    it keeps `pointer-events: none`, its strongest stop
+   *    is 0.10 white (supplied 0.13), and white text on the
+   *    washed surface is still ~5.7:1 at worst — AA.
+   * 4. The supplied `.itg-aurora` used `z-index: 0`, which
+   *    would paint the fixed layer over in-flow content.
+   *    It is implemented here at z-index -1 (same as the
+   *    existing .app-ambient), and the app renders ONE
+   *    aurora layer globally (AmbientBackground) — the
+   *    profile page does not add a second one.
+   * 5. The supplied `.itg-bottom-nav` used z-index 50,
+   *    equal to the navigation drawer — the shell keeps it
+   *    at z-40 so the open drawer always covers the dock.
+   *
+   * DASHBOARD RECONCILIATION (docs/phase-19-dashboard-
+   * design-reference.css, see docs/phase-19.md): the two
+   * supplied systems are unified here — glass 0.075/0.12/
+   * 0.16, blur 24px + saturate(145%), hero border 0.28,
+   * ring fill #a855f7, XP gradient #a855f7→#346ce6→
+   * #00cfff, dock 12px/12px + blur 28px, Add Trade 70px /
+   * -32px. Duplicated classes (.itg-level-ring,
+   * .itg-achievement, .itg-floating-nav, .itg-add) exist
+   * once, under the Profile names. Dashboard defect fixes:
+   * 6. `.itg-completion-ring::after` was absolute with no
+   *    positioned parent — the ring is `position: relative`
+   *    (same bug as the level ring).
+   * 7. `.itg-dashboard::before/::after` were fixed with
+   *    z-index 0 — NOT implemented; the single global
+   *    .app-ambient layer (z-index -1) already provides
+   *    the aurora, so no second layer can cover content.
+   * 8. `--xp-progress` / `--completion` are set inline
+   *    from the real computed values (level-band progress
+   *    %, profile completion %) — never hardcoded.
+   * 9. Candlesticks: OMITTED. The supplied CSS itself
+   *    forbids hardcoded fake market candles and ITG has
+   *    no market-data feed — the equity curve (real trade
+   *    data, Recharts) stays the chart of record.
+   */
+  .itg-aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .itg-glass {
+    position: relative;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.035)
+    );
+    backdrop-filter: blur(var(--itg-blur-glass)) saturate(145%);
+    -webkit-backdrop-filter: blur(var(--itg-blur-glass)) saturate(145%);
+    border: 1px solid var(--itg-glass-border);
+    border-radius: var(--itg-radius-lg);
+    box-shadow: var(--itg-shadow-glass);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  /* Subtle glass reflection — a light wash, never a block:
+     pointer-events none, so it can never intercept clicks
+     or text selection. */
+  .itg-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.1),
+      transparent 25%,
+      transparent 65%,
+      rgba(123, 44, 255, 0.08)
+    );
+    pointer-events: none;
+  }
+  .itg-glass-standard {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.035)
+    );
+    border-color: rgba(255, 255, 255, 0.13);
+  }
+  .itg-glass-elevated {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.045)
+    );
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 25px 70px rgba(0, 0, 0, 0.48),
+      0 0 35px rgba(73, 34, 130, 0.12);
+  }
+  /* Hero glass — the strongest surface. `.itg-hero` (Dashboard
+     name) and `.itg-glass-hero` (Profile name) are one class:
+     violet 0.18 / blue 0.10 / white 0.07, 0.28 border, hero
+     shadow + neon violet glow, -4px hover lift. */
+  .itg-glass-hero,
+  .itg-hero {
+    background: linear-gradient(
+      135deg,
+      rgba(123, 44, 255, 0.18),
+      rgba(22, 119, 255, 0.1),
+      rgba(255, 255, 255, 0.07)
+    );
+    border-color: var(--itg-glass-border-bright);
+    box-shadow:
+      var(--itg-shadow-hero),
+      0 0 70px rgba(123, 44, 255, 0.18);
+    transition:
+      transform var(--itg-duration-normal) var(--itg-ease-premium),
+      box-shadow var(--itg-duration-normal) var(--itg-ease-premium);
+  }
+  .itg-glass-hero:hover,
+  .itg-hero:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 40px 110px rgba(0, 0, 0, 0.62),
+      0 0 90px rgba(123, 44, 255, 0.25);
+  }
+  .itg-profile-hero {
+    padding: 28px;
+    transform: translateZ(0);
+    transition:
+      transform var(--itg-duration-normal) var(--itg-ease-premium),
+      box-shadow var(--itg-duration-normal) var(--itg-ease-premium);
+  }
+  .itg-profile-hero:hover {
+    transform: translateY(-3px);
+  }
+  /* Gradient-ring avatar (108px, 86px on mobile). The inner
+     image carries a dark border so the photo reads against
+     the gradient ring; the camera badge is positioned by the
+     AvatarUpload component, which renders inside this ring. */
+  .itg-avatar {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, #346ce6, #8b60c7, #81268e);
+    box-shadow: 0 0 35px rgba(73, 34, 130, 0.45);
+  }
+  .itg-avatar img,
+  .itg-avatar .itg-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid rgba(8, 4, 18, 0.85);
+  }
+  .itg-avatar .itg-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #492282, #2971a4);
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  .itg-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: linear-gradient(
+      135deg,
+      rgba(52, 108, 230, 0.28),
+      rgba(139, 96, 199, 0.18)
+    );
+    border: 1px solid rgba(52, 108, 230, 0.45);
+    box-shadow: 0 0 24px rgba(52, 108, 230, 0.2);
+    color: #e9f4ff;
+    font-weight: 600;
+  }
+  /*
+   * Level ring — FIX: `position: relative` (the supplied
+   * ::after was absolute with no positioned parent) and
+   * the fill is driven by `--itg-ring-pct` (0–100, set
+   * inline from the real level progress) instead of a
+   * hardcoded 72%. The inner content must sit above the
+   * ::after disc: .itg-level-ring-content is positioned
+   * relative with z-index 1.
+   */
+  .itg-level-ring {
+    position: relative;
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(
+      #a855f7 0 calc(var(--itg-ring-pct, 0) * 1%),
+      rgba(255, 255, 255, 0.08) calc(var(--itg-ring-pct, 0) * 1%) 100%
+    );
+    box-shadow: 0 0 35px rgba(168, 85, 247, 0.3);
+  }
+  .itg-level-ring::after {
+    content: "";
+    position: absolute;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(10, 5, 22, 0.88);
+  }
+  .itg-level-ring-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .itg-xp {
+    font-variant-numeric: tabular-nums;
+  }
+  .itg-xp-bar {
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .itg-xp-progress {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #a855f7, #346ce6, #00cfff);
+    box-shadow: 0 0 20px rgba(123, 44, 255, 0.55);
+    transition: width 800ms var(--itg-ease-premium);
+  }
+  /*
+   * Level card + XP track + completion ring (Dashboard).
+   * `.itg-xp-track` / `.itg-xp-fill` are the dashboard's
+   * level-progress bar: the fill width comes from the
+   * `--xp-progress` custom property, set inline from the
+   * real level-band progress (a percentage string) — never
+   * hardcoded. `.itg-completion-ring` is the profile
+   * completion ring: `--completion` is set inline from
+   * the real calcProfileCompletion percent. FIX: the ring
+   * is `position: relative` (the supplied ::after was
+   * absolute with no positioned parent); the centre
+   * content sits above the ::after disc via
+   * .itg-completion-ring-content.
+   */
+  .itg-level {
+    padding: 25px;
+    background: linear-gradient(
+      135deg,
+      rgba(123, 44, 255, 0.15),
+      rgba(255, 255, 255, 0.055)
+    );
+  }
+  .itg-xp-track {
+    height: 9px;
+    border-radius: var(--itg-radius-pill);
+    background: rgba(255, 255, 255, 0.09);
+    overflow: hidden;
+  }
+  .itg-xp-fill {
+    height: 100%;
+    width: var(--xp-progress, 0%);
+    border-radius: inherit;
+    background: linear-gradient(90deg, #a855f7, #346ce6, #00cfff);
+    box-shadow: 0 0 22px rgba(123, 44, 255, 0.6);
+    transition: width 800ms var(--itg-ease-premium);
+  }
+  .itg-completion-ring {
+    position: relative;
+    width: 105px;
+    height: 105px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(
+      #346ce6 var(--completion, 0%),
+      rgba(255, 255, 255, 0.08) 0
+    );
+    box-shadow: 0 0 35px rgba(52, 108, 230, 0.25);
+  }
+  .itg-completion-ring::after {
+    content: "";
+    position: absolute;
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: #0a0a19;
+  }
+  .itg-completion-ring-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  /* Glowing icon tile (Dashboard) — 46px violet/blue tile
+     for stat-card icons. */
+  .itg-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(
+      135deg,
+      rgba(123, 44, 255, 0.35),
+      rgba(22, 119, 255, 0.18)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 25px rgba(123, 44, 255, 0.22);
+    color: #fff;
+  }
+  /*
+   * P&L hero card (Dashboard). A deep mirror panel —
+   * near-opaque navy/purple, not translucent glass — with
+   * a violet ambient glow, used together with .itg-glass
+   * (blur + reflection). The value is the biggest number
+   * in the app: clamp(42px, 9vw, 72px), weight 800,
+   * tabular figures. Its colour is semantic and follows
+   * the REAL cumulative P&L: profit #21f3a5 with a soft
+   * green glow, loss #ff4d72 with a soft red glow, neutral
+   * (no trades / break-even) in the default foreground.
+   * No glow class is hardcoded to a sign.
+   */
+  .itg-pnl {
+    min-height: 230px;
+    padding: 28px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 17, 42, 0.75),
+      rgba(45, 13, 74, 0.42)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow:
+      0 30px 90px rgba(0, 0, 0, 0.55),
+      0 0 60px rgba(123, 44, 255, 0.15);
+  }
+  .itg-pnl-value {
+    font-size: clamp(42px, 9vw, 72px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    z-index: 2;
+  }
+  .itg-pnl-positive {
+    color: var(--itg-profit);
+    text-shadow: 0 0 25px rgba(33, 243, 165, 0.25);
+  }
+  .itg-pnl-negative {
+    color: var(--itg-loss);
+    text-shadow: 0 0 25px rgba(255, 77, 114, 0.25);
+  }
+  /* Stat card (unified Profile + Dashboard values):
+     min-height 150px, 22px padding, 145deg glass gradient,
+     0.14 border, 24px radius, deep shadow, -5px hover lift
+     with a violet border. The glow modifiers layer the
+     shared --glow-* shadows over the base shadow; the glow
+     is always driven by the REAL value (StatCard `glow`
+     prop), never hardcoded to a sign. */
+  .itg-stat {
+    min-height: 150px;
+    padding: 22px;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.095),
+      rgba(255, 255, 255, 0.035)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    transition:
+      transform 220ms var(--itg-ease-premium),
+      border-color 220ms ease;
+  }
+  .itg-stat:hover {
+    transform: translateY(-5px);
+    border-color: rgba(139, 96, 199, 0.4);
+  }
+  .itg-stat-raised {
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 25px 70px rgba(0, 0, 0, 0.48),
+      0 0 35px rgba(73, 34, 130, 0.12);
+  }
+  .itg-stat-glow-blue { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-blue); }
+  .itg-stat-glow-cyan { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-cyan); }
+  .itg-stat-glow-violet { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-violet); }
+  .itg-stat-glow-emerald { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-success); }
+  .itg-stat-glow-danger { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-danger); }
+  .itg-stat-glow-amber { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), var(--glow-warning); }
+  .itg-stat-value {
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 750;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Achievements grid (Dashboard): auto-fitting columns,
+     125px minimum — 2 columns at 320px, more as the
+     viewport grows. */
+  .itg-achievements {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+    gap: 14px;
+  }
+  .itg-achievement {
+    min-width: 120px;
+    padding: 18px;
+    text-align: center;
+    border-radius: var(--itg-radius-md);
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.035)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition:
+      transform 220ms var(--itg-ease-premium),
+      box-shadow 220ms var(--itg-ease-premium);
+  }
+  .itg-achievement:hover {
+    transform: translateY(-5px);
+    box-shadow:
+      0 15px 40px rgba(0, 0, 0, 0.35),
+      0 0 25px rgba(123, 44, 255, 0.18);
+  }
+  /*
+   * Floating glass dock + raised Add Trade button, adopted
+   * app-wide from the supplied systems (Phase 17 dock kept
+   * its behaviour; unified Profile + Dashboard values:
+   * 28px radius, 28px blur + saturate(150%), 0.68 dark
+   * glass, deeper shadow + neon violet glow, 70px centre
+   * action lifted -32px). z-index stays 40 in the shell
+   * (not the supplied 50 / 100), so the navigation drawer
+   * (z-50) always covers the dock.
+   */
+  .itg-bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    min-height: 76px;
+    padding: 8px 12px;
+    border-radius: var(--itg-radius-lg);
+    background: rgba(8, 7, 20, 0.68);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 25px 70px rgba(0, 0, 0, 0.6),
+      0 0 45px rgba(123, 44, 255, 0.18);
+  }
+  .itg-add-trade {
+    width: 70px;
+    height: 70px;
+    margin-top: -32px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, #a855f7, #346ce6);
+    box-shadow:
+      0 15px 40px rgba(52, 108, 230, 0.45),
+      0 0 45px rgba(123, 44, 255, 0.4);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    transition: transform 200ms var(--itg-ease-premium);
+  }
+  .itg-add-trade:hover {
+    transform: translateY(-5px) scale(1.04);
+  }
+  .itg-add-trade:active {
+    transform: translateY(0) scale(0.96);
+  }
+
+  /*
+   * Phase 19 — Add Trade (third supplied system). The form
+   * becomes a premium mirror-glass panel; the title is the
+   * gradient display headline; fields are icon-led; the
+   * direction control is a segmented Long/Short selector;
+   * Save Trade is a gradient button with a light sweep.
+   * Reconciliation (docs/phase-19.md): backgrounds
+   * #030316/#08051f and glass 0.075/0.12 agree with the
+   * unified tokens, so no new background tokens; the form
+   * card keeps the supplied 30px blur + saturate(160%) as
+   * a hero-form exception (stronger frost for the single
+   * hero panel, not a second system); its ::before
+   * reflection is capped at 0.08 white (supplied 0.16) so
+   * text over the card stays readable. The supplied
+   * `.add-trade-header` is NOT implemented: the app shell
+   * header already is the glass header (hamburger, ITG
+   * TraderOS logo, + Trade, notifications bell). The
+   * supplied `.trade-bottom-nav` / `.trade-add-button`
+   * are the unified `.itg-bottom-nav` / `.itg-add-trade`
+   * — one navigation, no duplicate. Candlesticks are
+   * OMITTED: the trader has no market-data feed and the
+   * page loads no trade history, so there is no real data
+   * to render them from; depth comes from the global
+   * aurora instead. Direction semantics follow Ezat's
+   * WRITTEN brief, not the supplied CSS: Long is
+   * green/cyan, Short is red/pink, TP green, SL red —
+   * the supplied purple/blue Long gradient (matching the
+   * reference image) is documented as overridden.
+   */
+  .itg-add-trade-title {
+    margin: 0;
+    font-size: clamp(38px, 9vw, 64px);
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: -0.055em;
+    background: linear-gradient(90deg, #ffffff 15%, #b36cff 50%, #3c9cff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .itg-add-trade-subtitle {
+    max-width: 650px;
+    margin-top: 16px;
+    color: var(--itg-text-secondary);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  /* "Discipline Builds Profit" — the product's own motto
+     from the reference image, shown beside the title on
+     desktop. It is copy, not data; no metric is claimed. */
+  .itg-discipline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--itg-radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+    color: var(--itg-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.35),
+      0 0 25px rgba(139, 53, 255, 0.15);
+  }
+  .itg-discipline-chip svg {
+    color: var(--itg-aurora-violet);
+  }
+  .itg-trade-form {
+    position: relative;
+    margin-top: 35px;
+    padding: 26px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.115),
+      rgba(255, 255, 255, 0.035)
+    );
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 32px;
+    box-shadow:
+      0 35px 100px rgba(0, 0, 0, 0.6),
+      0 0 80px rgba(139, 53, 255, 0.18);
+    overflow: hidden;
+  }
+  .itg-trade-form::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.08),
+      transparent 24%,
+      transparent 70%,
+      rgba(139, 53, 255, 0.08)
+    );
+  }
+  /*
+   * Icon-led fields: the icon tile sits in the label row
+   * (per the reference image), not absolutely inside the
+   * input as the supplied CSS positioned it — the image
+   * shows the icon beside the label, and an absolute icon
+   * inside the 58px input would crowd the field at 320px.
+   * Vertical rhythm comes from the form grid gap (24px),
+   * not per-field margin, so the two-column desktop grid
+   * stays even.
+   */
+  .trade-field {
+    position: relative;
+  }
+  .trade-field-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 53, 255, 0.45),
+      rgba(35, 124, 255, 0.25)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 22px rgba(139, 53, 255, 0.22);
+  }
+  .trade-field.tp .trade-field-icon {
+    color: var(--itg-profit);
+    background: rgba(33, 243, 165, 0.12);
+    box-shadow: 0 0 25px rgba(33, 243, 165, 0.18);
+  }
+  .trade-field.sl .trade-field-icon {
+    color: var(--itg-loss);
+    background: rgba(255, 77, 114, 0.12);
+    box-shadow: 0 0 25px rgba(255, 77, 114, 0.18);
+  }
+  .trade-direction {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 5px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .trade-direction-button {
+    min-height: 50px;
+    border: 0;
+    border-radius: 14px;
+    color: #b7b8d0;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .trade-direction-button:hover {
+    color: var(--itg-text-primary);
+  }
+  .trade-direction-button:focus-visible {
+    outline: 2px solid var(--itg-aurora-violet);
+    outline-offset: 2px;
+  }
+  /*
+   * WRITTEN brief overrides the supplied CSS here: the
+   * supplied `.direction-button.active.long` was a
+   * purple/blue gradient; Long is green/cyan and Short is
+   * red/pink, matching trading semantics and the TP/SL
+   * colour logic.
+   */
+  .trade-direction-button.active.long {
+    color: #fff;
+    background: linear-gradient(135deg, #22f3a5, #00cfff);
+    box-shadow: 0 0 30px rgba(34, 243, 165, 0.35);
+  }
+  .trade-direction-button.active.short {
+    color: #fff;
+    background: linear-gradient(135deg, #ff4d72, #f12cff);
+    box-shadow: 0 0 30px rgba(255, 77, 114, 0.3);
+  }
+  .itg-save-trade {
+    position: relative;
+    width: 100%;
+    min-height: 62px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 19px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(100deg, #8b35ff, #b42cff, #237cff);
+    box-shadow:
+      0 15px 45px rgba(123, 44, 255, 0.35),
+      0 0 40px rgba(35, 124, 255, 0.2);
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .itg-save-trade::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.35),
+      transparent
+    );
+    transform: skewX(-20deg);
+    animation: itg-button-shine 4s ease-in-out infinite;
+  }
+  .itg-save-trade:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 20px 55px rgba(123, 44, 255, 0.45),
+      0 0 55px rgba(35, 124, 255, 0.3);
+  }
+  .itg-save-trade:active {
+    transform: scale(0.97);
+  }
+  .itg-save-trade:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .itg-save-trade:disabled::before {
+    animation: none;
+  }
+
+  /*
+   * Phase 19 — Analytics (fourth supplied system). The
+   * page keeps its Phase 4 calculations and hierarchy;
+   * only the presentation changes: gradient display title,
+   * the 3D perspective grid behind the header (scoped to a
+   * 460px band at the top of the page, clipped by its own
+   * container so the perspective transform can never
+   * cause horizontal overflow), the performance hero card
+   * with the real equity chart, the period range control,
+   * the win/loss ring driven by the real win rate, and
+   * secondary analytics in glass cards. KPI cards reuse
+   * the unified `.itg-stat` (already the Analytics card
+   * since the Dashboard work) — the supplied
+   * `.analytics-kpi` is that card at 25px blur /
+   * saturate(155%), which the unified 24px system
+   * already covers. The supplied `.analytics-page`
+   * wrapper (fixed aurora blobs at z-index 0) is NOT
+   * implemented — the single global `.app-ambient`
+   * layer already provides the aurora behind all content.
+   * The supplied `.analytics-bottom-nav` is the unified
+   * `.itg-bottom-nav`; the supplied `.analytics-nav-active`
+   * is the dock's existing active state (violet, with the
+   * active dot) — one navigation, no duplicate.
+   * Defect fixes (docs/phase-19.md): (1) the supplied
+   * `.analytics-page::marker` is meaningless on a div —
+   * dropped; (2) the win ring is `position: relative`
+   * with its ::after disc absolute (same pattern as
+   * `.itg-level-ring`); the supplied ::after was a grid
+   * item, which would have stacked unpredictably with
+   * the centre label; (3) the chart glow line
+   * (`.itg-analytics-chart::after`) has explicit
+   * `pointer-events: none` and z-index 0, and the
+   * `.chart-panel` inside is positioned with z-index 1,
+   * so the glow can never cover the chart or its glass
+   * tooltip; (4) the fixed aurora blobs are not
+   * implemented at all, so there is no z-index 0 layer
+   * to fight with — content sits in its own stacking
+   * context above the grid band (z-index 1).
+   */
+  .itg-analytics-title {
+    margin: 0;
+    font-size: clamp(38px, 9vw, 64px);
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: -0.055em;
+    background: linear-gradient(100deg, #ffffff 15%, #b967ff 48%, #479dff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .itg-analytics-description {
+    max-width: 720px;
+    margin-top: 16px;
+    color: var(--itg-text-secondary);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  .itg-analytics-grid {
+    position: absolute;
+    top: 0;
+    left: -16px;
+    right: -16px;
+    height: 460px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0.16;
+    z-index: 0;
+  }
+  .itg-analytics-grid-inner {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+    transform: perspective(800px) rotateX(55deg) scale(1.6);
+    transform-origin: center bottom;
+  }
+  .itg-analytics-performance {
+    position: relative;
+    margin-top: 20px;
+    min-height: 370px;
+    padding: 26px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 34px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(139, 53, 255, 0.06),
+      rgba(255, 255, 255, 0.035)
+    );
+    backdrop-filter: blur(30px) saturate(165%);
+    -webkit-backdrop-filter: blur(30px) saturate(165%);
+    box-shadow:
+      0 35px 100px rgba(0, 0, 0, 0.55),
+      0 0 80px rgba(139, 53, 255, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  }
+  .itg-analytics-performance::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.08),
+      transparent 20%,
+      transparent 70%,
+      rgba(35, 124, 255, 0.08)
+    );
+  }
+  .itg-analytics-performance-header {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+  }
+  .itg-analytics-performance-value {
+    margin-top: 7px;
+    font-size: 34px;
+    font-weight: 850;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .itg-analytics-performance-value.itg-pnl-positive {
+    color: var(--itg-profit);
+    text-shadow: 0 0 25px rgba(33, 243, 165, 0.25);
+  }
+  .itg-analytics-performance-value.itg-pnl-negative {
+    color: var(--itg-loss);
+    text-shadow: 0 0 25px rgba(255, 77, 114, 0.25);
+  }
+  /* Period range control (P&L by period): the links carry
+     aria-current when active, so the active style keys off
+     that attribute — no extra class plumbing in the page. */
+  .itg-range {
+    display: flex;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .itg-range a {
+    min-width: 45px;
+    padding: 8px 10px;
+    border-radius: 11px;
+    color: var(--itg-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .itg-range a:hover {
+    color: var(--itg-text-primary);
+  }
+  .itg-range a[aria-current="true"] {
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 53, 255, 0.75),
+      rgba(35, 124, 255, 0.65)
+    );
+    box-shadow: 0 0 22px rgba(139, 53, 255, 0.25);
+  }
+  .itg-analytics-chart {
+    position: relative;
+    margin-top: 25px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: linear-gradient(
+      180deg,
+      rgba(139, 53, 255, 0.06),
+      rgba(0, 0, 0, 0.18)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .itg-analytics-chart::after {
+    content: "";
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    bottom: 20%;
+    height: 2px;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(139, 53, 255, 0.45),
+      rgba(0, 217, 255, 0.35),
+      transparent
+    );
+    filter: blur(8px);
+  }
+  /* The chart panel sits above the decorative glow line,
+     so the glow can never cover the chart or its glass
+     tooltip (the tooltip renders inside the panel). */
+  .itg-analytics-chart .chart-panel {
+    position: relative;
+    z-index: 1;
+  }
+  .itg-analytics-secondary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-top: 20px;
+  }
+  .itg-analytics-secondary-card {
+    position: relative;
+    min-height: 240px;
+    padding: 24px;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.17);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0.035)
+    );
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 25px 65px rgba(0, 0, 0, 0.4);
+  }
+  .itg-win-loss {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-top: 25px;
+  }
+  /* Win ring: the fill comes from the real computed win
+     rate via the --win-rate custom property (a percentage
+     string, e.g. "62%"), set inline by the page — never
+     hardcoded. The ::after disc is absolute over a
+     `position: relative` ring, with the centre label above
+     it (z-index 1). */
+  .itg-win-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--itg-profit) var(--win-rate, 0%),
+      rgba(255, 255, 255, 0.08) 0
+    );
+    box-shadow: 0 0 35px rgba(33, 243, 165, 0.15);
+  }
+  .itg-win-ring::after {
+    content: "";
+    position: absolute;
+    inset: 16px;
+    border-radius: 50%;
+    background: rgba(8, 5, 25, 0.88);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.35);
+  }
+  .itg-win-ring-content {
+    position: relative;
+    z-index: 1;
+    font-size: 22px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+  }
+  .itg-win-stats {
+    flex: 1;
+    min-width: 0;
+  }
+  .itg-stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .itg-stat-row:last-child {
+    border-bottom: 0;
+  }
+  .itg-stat-row-label {
+    color: var(--itg-text-muted);
+  }
+  .itg-stat-row-value {
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+  .itg-analytics-empty {
+    position: relative;
+    margin-top: 25px;
+    padding: 45px 25px;
+    text-align: center;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+  }
+  .itg-analytics-empty-icon {
+    width: 65px;
+    height: 65px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 22px;
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 53, 255, 0.65),
+      rgba(35, 124, 255, 0.55)
+    );
+    box-shadow: 0 0 35px rgba(139, 53, 255, 0.25);
+  }
+  .itg-analytics-empty-title {
+    font-size: 20px;
+    font-weight: 750;
+  }
+  .itg-analytics-empty-text {
+    max-width: 460px;
+    margin: 10px auto 0;
+    color: var(--itg-text-muted);
+    line-height: 1.6;
+  }
+  @media (max-width: 640px) {
+    .itg-add-trade-title {
+      font-size: 40px;
+    }
+    .itg-trade-form {
+      padding: 20px;
+      border-radius: 27px;
+    }
+    .itg-analytics-title {
+      font-size: 40px;
+    }
+    .itg-analytics-description {
+      font-size: 16px;
+    }
+    .itg-analytics-performance {
+      padding: 19px;
+      border-radius: 27px;
+      min-height: 330px;
+    }
+    .itg-analytics-performance-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .itg-win-loss {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  @media (max-width: 800px) {
+    .itg-analytics-secondary {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .itg-profile-hero {
+      padding: 20px;
+    }
+    .itg-avatar {
+      width: 86px;
+      height: 86px;
+    }
+    .itg-stat {
+      min-height: 135px;
+      padding: 17px;
+    }
+    .itg-pnl {
+      min-height: 210px;
+      padding: 22px;
+    }
+    .itg-bottom-nav {
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+    }
+    .itg-add-trade {
+      width: 62px;
+      height: 62px;
+    }
+  }
+
+  /*
    * Phase 18 — typography helpers. .metric-hero is the single
    * biggest number on a screen (the hero card balance/P&L):
    * extrabold, tabular figures so money never wobbles as it
@@ -935,5 +2194,19 @@
   }
   .hero-card {
     background: linear-gradient(160deg, hsl(270 60% 22% / 0.97), hsl(270 100% 8% / 0.97) 55%, hsl(205 50% 25% / 0.97));
+  }
+  /* Phase 19 — supplied fallback for the .itg-* glass
+     surfaces: the same near-opaque purple fill, so the
+     Profile hero and the floating dock stay readable
+     without backdrop-filter. Add Trade form card and the
+     Analytics hero / secondary cards / empty state use
+     the same fill. */
+  .itg-glass,
+  .itg-bottom-nav,
+  .itg-trade-form,
+  .itg-analytics-performance,
+  .itg-analytics-secondary-card,
+  .itg-analytics-empty {
+    background: rgba(18, 10, 35, 0.94);
   }
 }

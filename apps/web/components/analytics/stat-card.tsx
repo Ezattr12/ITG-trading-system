@@ -4,26 +4,30 @@ import { useEffect, useState, type ReactNode } from "react";
 import { formatMoney } from "@/lib/trades/calculations";
 
 /** One dashboard / analytics stat (Phase 15). Null values render "—", never 0.
- * Cards use the shared card surface, a clear label, a large primary
- * metric (24-32px) and small supporting context — never tiny
- * compressed cards. `raised` (Phase 17) lifts one card per view —
- * the primary KPI — onto the hero level of the elevation scale.
+ * Cards use the unified Phase 19 `.itg-stat` surface (docs/
+ * phase-19.md): min-height 150px, 22px padding, 145deg glass
+ * gradient, 24px radius, deep shadow, -5px hover lift with a
+ * violet border — one system for the dashboard and analytics
+ * pages, not a per-page card. The value is large, tabular and
+ * tight-tracked (`.itg-stat-value`).
  *
- * `glow` (Phase 18) adds one of the shared `.card-glow-*`
- * modifiers. The glow is always driven by the REAL value passed
- * by the page — emerald when a profit metric is positive, red
- * when it is negative, blue for a performance rate — never
- * hard-coded to a sign. Omit it (or pass undefined) and the card
- * stays neutral. */
+ * `glow` adds one of the shared `.itg-stat-glow-*` modifiers.
+ * The glow is always driven by the REAL value passed by the
+ * page — emerald when a profit metric is positive, red when
+ * it is negative, blue for a performance rate — never
+ * hard-coded to a sign. Omit it (or pass undefined) and the
+ * card stays neutral. `raised` lifts the card one level
+ * (stronger border + shadow). `icon` renders a glowing
+ * `.itg-icon` tile above the label (dashboard KPI icons). */
 export type StatCardGlow = "blue" | "cyan" | "violet" | "emerald" | "danger" | "amber";
 
 export const STAT_CARD_GLOW_CLASS: Record<StatCardGlow, string> = {
-  blue: "card-glow-blue",
-  cyan: "card-glow-cyan",
-  violet: "card-glow-violet",
-  emerald: "card-glow-emerald",
-  danger: "card-glow-danger",
-  amber: "card-glow-amber",
+  blue: "itg-stat-glow-blue",
+  cyan: "itg-stat-glow-cyan",
+  violet: "itg-stat-glow-violet",
+  emerald: "itg-stat-glow-emerald",
+  danger: "itg-stat-glow-danger",
+  amber: "itg-stat-glow-amber",
 };
 
 export function StatCard({
@@ -32,18 +36,22 @@ export function StatCard({
   hint,
   raised = false,
   glow,
+  icon,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
   raised?: boolean;
   glow?: StatCardGlow;
+  icon?: ReactNode;
 }) {
   const glowClass = glow ? ` ${STAT_CARD_GLOW_CLASS[glow]}` : "";
+  const raisedClass = raised ? " itg-stat-raised" : "";
   return (
-    <article className={raised ? `card-surface-raised p-4 sm:p-5${glowClass}` : `card-surface p-4 sm:p-5${glowClass}`}>
+    <article className={`itg-stat${raisedClass}${glowClass}`}>
+      {icon ? <span className="itg-icon mb-3" aria-hidden="true">{icon}</span> : null}
       <h2 className="section-label">{label}</h2>
-      <p className="metric-value">{value}</p>
+      <p className="itg-stat-value mt-1">{value}</p>
       {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
     </article>
   );

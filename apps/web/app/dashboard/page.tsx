@@ -1,5 +1,7 @@
+import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Flame, Scale, Target, TrendingUp } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -13,10 +15,12 @@ import {
   summarizeTrades,
 } from "@/lib/analytics/analytics";
 import { EquityChart, EquitySparkline } from "@/components/analytics/charts";
-import { Money, Pct, ProgressBar, StatCard, STAT_CARD_GLOW_CLASS, type StatCardGlow } from "@/components/analytics/stat-card";
+import { Money, Pct, ProgressBar, StatCard, type StatCardGlow } from "@/components/analytics/stat-card";
 import { CountUpDecimal, CountUpMoney, CountUpPct } from "@/components/analytics/count-up";
 import { ensureDisciplineReminderLogged } from "@/lib/discipline/actions";
 import { getLatestCoachInsights } from "@/lib/coach/queries";
+import { calcProfileCompletion } from "@/lib/profile/completion";
+import { LevelRing } from "@/components/profile/level-ring";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { motivationContextFor, selectMotivationMessage } from "@/lib/discipline/motivation";
 import {
@@ -74,6 +78,17 @@ export default async function DashboardPage() {
   // Real level/XP (Phase 7): multi-dimensional score from the
   // trader's real trades and goals — not profit alone.
   const nextLevel = progressToNextLevel(bundle.levelScore, bundle.levels);
+  // Real profile completion (Phase 19) for the completion ring.
+  const profileCompletion = calcProfileCompletion({
+    fullName: user.profile?.full_name,
+    fatherName: user.profile?.father_name,
+    dateOfBirth: user.profile?.date_of_birth,
+    country: user.profile?.country,
+    avatarUrl: user.profile?.avatar_url,
+    tradingExperience: user.profile?.trading_experience,
+    tradingEducation: user.profile?.trading_education,
+    employmentStatus: user.profile?.employment_status,
+  });
   const streakLabel =
     summary.currentStreak === 0
       ? "—"
@@ -118,15 +133,17 @@ export default async function DashboardPage() {
     today,
   );
 
-  // P&L hero glow (Phase 18): follows the REAL cumulative P&L —
-  // emerald when positive, red when negative, blue when there is
-  // nothing to judge yet (no trades, or exactly break-even).
-  const pnlGlow: StatCardGlow =
+  // P&L hero value colour (Phase 19): follows the REAL cumulative
+  // P&L — profit green when positive, loss red when negative,
+  // neutral when there is nothing to judge yet (no trades, or
+  // exactly break-even). The class is chosen from the value,
+  // never hardcoded to a sign.
+  const pnlValueClass =
     summary.tradeCount === 0 || summary.totalPnl === 0
-      ? "blue"
+      ? ""
       : summary.totalPnl > 0
-        ? "emerald"
-        : "danger";
+        ? "itg-pnl-positive"
+        : "itg-pnl-negative";
   // Value-driven KPI glows: profit factor and average R are
   // emerald above break-even and red below it; the streak
   // follows its real direction. Null values get no glow.
@@ -169,19 +186,26 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* 2. P&L hero (Phase 18) — the focal point of the dashboard.
-          The cumulative P&L is a large tabular hero number on the
-          hero surface, with the real context that explains it
-          (closed trades, wins, max drawdown) and a subtle
-          sparkline of the equity curve. On mobile the number
-          comes first and the sparkline sits below it, so the
-          hero reads as a mobile-first balance card, like the
-          reference fintech screens — not a compressed desktop. */}
-      <section className={`hero-card card-surface-raised ${STAT_CARD_GLOW_CLASS[pnlGlow]} motion-reveal motion-reveal-1 mt-6 p-5 sm:mt-8 sm:p-6`} aria-label="Current profit and loss">
+      {/* 2. P&L hero (Phase 19 mirror glass) — the focal point of
+          the dashboard. A deep mirror panel (near-opaque
+          navy/purple, violet ambient glow) with the cumulative
+          P&L as the biggest number in the app (clamp 42–72px,
+          tabular, weight 800), coloured by the REAL value,
+          plus the context that explains it (closed trades,
+          wins, max drawdown) and a sparkline of the equity
+          curve. On mobile the number comes first and the
+          sparkline sits below it, so the hero reads as a
+          mobile-first balance card — not a compressed desktop.
+          Candlesticks are deliberately NOT rendered here:
+          ITG has no market-data feed, and the supplied
+          dashboard CSS itself forbids hardcoded fake market
+          candles — the equity curve (real trade data) is the
+          chart of record. */}
+      <section className="itg-glass itg-pnl motion-reveal motion-reveal-1 mt-6 sm:mt-8" aria-label="Current profit and loss">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
           <div className="min-w-0">
             <p className="eyebrow text-xs font-semibold uppercase tracking-widest">Current P&amp;L</p>
-            <p className="metric-hero mt-2 text-4xl font-bold tabular-nums sm:text-5xl">
+            <p className={`itg-pnl-value mt-2 ${pnlValueClass}`}>
               {summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -220,11 +244,11 @@ export default async function DashboardPage() {
           rate is a performance rate, so it carries the blue
           performance glow. */}
       <section className="motion-reveal motion-reveal-1 mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4 sm:gap-4" aria-label="Key performance indicators">
-        <StatCard label="Win rate" glow="blue" value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
-        <StatCard label="Profit factor" glow={profitFactorGlow} value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
-        <StatCard label="Average R" glow={avgRGlow} value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
+        <StatCard label="Win rate" glow="blue" icon={<Target className="h-5 w-5" aria-hidden="true" />} value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
+        <StatCard label="Profit factor" glow={profitFactorGlow} icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />} value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
+        <StatCard label="Average R" glow={avgRGlow} icon={<Scale className="h-5 w-5" aria-hidden="true" />} value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
         <div className="col-span-2 sm:col-span-1">
-          <StatCard label="Current streak" glow={streakGlow} value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
+          <StatCard label="Current streak" glow={streakGlow} icon={<Flame className="h-5 w-5" aria-hidden="true" />} value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
         </div>
       </section>
 
@@ -232,7 +256,7 @@ export default async function DashboardPage() {
           sits on the raised card level (Phase 17), so the most
           important visual in the app is also the most
           prominent surface. */}
-      <section className="motion-reveal motion-reveal-2 card-surface-raised card-glow-blue mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
+      <section className="motion-reveal motion-reveal-2 itg-glass itg-glass-elevated mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
         <h2 className="section-title">Performance</h2>
         {equity.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -281,24 +305,79 @@ export default async function DashboardPage() {
           </div>
         </article>
 
-        <article className="card-surface p-4 sm:p-6">
-          <h2 className="section-title">Goal progress</h2>
-          <p className="mt-3 page-title">{displayOrNotProvided(bundle.levelName)}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {bundle.levelScore === null
-              ? "No score yet — journal a trade to start building your level."
-              : `Score ${bundle.levelScore.toFixed(1)} / 100${nextLevel?.nextLevel ? ` · ${nextLevel.pointsToNext} points to ${nextLevel.nextLevel}` : " · Top level reached"}`}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {bundle.xpTotal} XP · Scored on discipline, risk, journaling, goals,
-            psychology, strategy, consistency and performance — not profit alone.
+        {/* Level & XP + profile completion (Phase 19 mirror glass).
+            The level ring fill (--itg-ring-pct), the XP track
+            (--xp-progress) and the completion ring (--completion)
+            are all set inline from the REAL computed values —
+            level-band progress %, profile completion % — never
+            hardcoded. Level is the multi-dimensional score
+            (Bronze/Silver/Gold/Platinum), not profit alone. */}
+        <article className="itg-glass itg-level p-4 sm:p-6">
+          <h2 className="section-title">Level &amp; XP</h2>
+          <div className="mt-4 flex items-center gap-5">
+            <LevelRing
+              progressPct={nextLevel?.progressPct ?? 0}
+              levelName={bundle.levelName}
+              score={bundle.levelScore}
+            />
+            <div className="min-w-0">
+              <p className="text-xl font-bold">{displayOrNotProvided(bundle.levelName)}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {bundle.levelScore === null
+                  ? "No score yet — journal a trade to start building your level."
+                  : `Score ${bundle.levelScore.toFixed(1)} / 100`}
+              </p>
+              <p className="itg-xp mt-1 text-sm font-semibold">{bundle.xpTotal} XP total</p>
+            </div>
+          </div>
+          <div
+            className="itg-xp-track mt-4"
+            style={{ "--xp-progress": `${nextLevel?.progressPct ?? 0}%` } as CSSProperties}
+            role="progressbar"
+            aria-valuenow={Math.round(nextLevel?.progressPct ?? 0)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Progress to the next level"
+          >
+            <div className="itg-xp-fill" />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {nextLevel === null
+              ? "Journal trades to earn a level."
+              : nextLevel.nextLevel === null
+                ? "Top level reached."
+                : `${nextLevel.pointsToNext} points to ${nextLevel.nextLevel} · Scored on discipline, risk, journaling, goals, psychology, strategy, consistency and performance — not profit alone.`}
           </p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
             <Link href="/levels" className="action-link">Level &amp; score breakdown</Link>
             <Link href="/achievements" className="action-link">Achievements</Link>
           </div>
+
+          <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-5">
+            <div
+              className="itg-completion-ring shrink-0"
+              style={{ "--completion": `${profileCompletion.percent}%` } as CSSProperties}
+              role="img"
+              aria-label={`Profile ${profileCompletion.percent}% complete`}
+            >
+              <div className="itg-completion-ring-content">
+                <span className="tnum text-lg font-bold leading-none">{profileCompletion.percent}%</span>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold">Profile completion</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {profileCompletion.missing.length === 0
+                  ? "Your profile is complete — the ITG Verified Profile badge is active."
+                  : `${profileCompletion.nextStep} to reach 100%.`}
+              </p>
+              <Link href="/profile" className="action-link mt-1">Open your profile</Link>
+            </div>
+          </div>
+
+          <h3 className="mt-5 text-sm font-semibold">Goals</h3>
           {bundle.goals.length > 0 ? (
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 space-y-3">
               {bundle.goals.slice(0, 3).map((g) => (
                 <ProgressBar
                   key={g.id}
@@ -311,7 +390,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               No goals yet.{" "}
               <Link href="/goals" className="font-medium underline">
                 Create your first goal

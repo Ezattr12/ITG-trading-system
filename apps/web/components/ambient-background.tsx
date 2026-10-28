@@ -17,10 +17,16 @@
  * prefers-reduced-motion rules in globals.css. One small
  * layer of large orbs — never dozens of independently
  * animated elements.
+ *
+ * Phase 19: the layer also carries Ezat's `.itg-aurora`
+ * class name (globals.css) — his supplied aurora layer,
+ * implemented here at z-index -1 (the supplied z-index: 0
+ * would have painted the fixed layer over in-flow content).
+ * One layer, two names; the profile page adds no second one.
  */
 export function AmbientBackground() {
   return (
-    <div aria-hidden="true" className="app-ambient">
+    <div aria-hidden="true" className="app-ambient itg-aurora">
       <div className="app-ambient-orb app-ambient-orb-purple motion-orb-drift" />
       <div className="app-ambient-orb app-ambient-orb-violet motion-orb-drift motion-orb-drift-slow" />
       <div className="app-ambient-orb app-ambient-orb-magenta motion-orb-drift" />
