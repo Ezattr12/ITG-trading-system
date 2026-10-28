@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatMoney } from "@/lib/trades/calculations";
+import { usePrefersReducedMotion } from "@/lib/motion/use-reduced-motion";
 
 /**
  * Chart components (Phase 4). Client components wrapping Recharts
@@ -59,6 +60,11 @@ export function EquityChart({
 }: {
   data: { date: string; equity: number; drawdown: number; trades: number }[];
 }) {
+  // Chart motion (Phase 16): the curve draws in over 600ms with
+  // an ease-out curve — fast and professional, never decorative.
+  // Data transitions animate the same way; with reduced motion
+  // the chart renders its final state immediately.
+  const reduced = usePrefersReducedMotion();
   return (
     <div className="h-56 w-full sm:h-64" role="img" aria-label={`Equity curve over ${data.length} closed trades`}>
       <ResponsiveContainer width="100%" height="100%">
@@ -71,7 +77,7 @@ export function EquityChart({
             labelFormatter={(label) => `Closed ${label}`}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Area type="monotone" dataKey="equity" stroke={GREEN} fill={GREEN} fillOpacity={0.15} name="Cumulative P&L" />
+          <Area type="monotone" dataKey="equity" stroke={GREEN} fill={GREEN} fillOpacity={0.15} name="Cumulative P&L" isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -79,6 +85,7 @@ export function EquityChart({
 }
 
 export function DrawdownChart({ data }: { data: { date: string; drawdown: number }[] }) {
+  const reduced = usePrefersReducedMotion();
   return (
     <div className="h-44 w-full sm:h-48" role="img" aria-label="Drawdown over time">
       <ResponsiveContainer width="100%" height="100%">
@@ -90,7 +97,7 @@ export function DrawdownChart({ data }: { data: { date: string; drawdown: number
             formatter={(value) => [formatMoney(Number(value)), "Drawdown"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Area type="monotone" dataKey="drawdown" stroke={RED} fill={RED} fillOpacity={0.2} name="Drawdown" />
+          <Area type="monotone" dataKey="drawdown" stroke={RED} fill={RED} fillOpacity={0.2} name="Drawdown" isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -98,6 +105,7 @@ export function DrawdownChart({ data }: { data: { date: string; drawdown: number
 }
 
 export function PeriodPnlChart({ data }: { data: { label: string; pnl: number }[] }) {
+  const reduced = usePrefersReducedMotion();
   return (
     <div className="h-56 w-full sm:h-64" role="img" aria-label="Profit and loss by period">
       <ResponsiveContainer width="100%" height="100%">
@@ -109,7 +117,7 @@ export function PeriodPnlChart({ data }: { data: { label: string; pnl: number }[
             formatter={(value) => [formatMoney(Number(value)), "P&L"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Bar dataKey="pnl" name="P&L">
+          <Bar dataKey="pnl" name="P&L" isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out">
             {data.map((entry) => (
               <Cell key={entry.label} fill={entry.pnl >= 0 ? GREEN : RED} />
             ))}
@@ -125,6 +133,7 @@ export function RDistributionChart({
 }: {
   data: { label: string; count: number }[];
 }) {
+  const reduced = usePrefersReducedMotion();
   return (
     <div className="h-52 w-full sm:h-56" role="img" aria-label="Distribution of R multiples">
       <ResponsiveContainer width="100%" height="100%">
@@ -136,7 +145,7 @@ export function RDistributionChart({
             formatter={(value) => [`${value} trades`, "Trades"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Bar dataKey="count" name="Trades" fill={BLUE} />
+          <Bar dataKey="count" name="Trades" fill={BLUE} isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -144,6 +153,7 @@ export function RDistributionChart({
 }
 
 export function XpHistoryChart({ data }: { data: { date: string; cumulativeXp: number }[] }) {
+  const reduced = usePrefersReducedMotion();
   return (
     <div className="h-52 w-full sm:h-56" role="img" aria-label="Cumulative XP over time">
       <ResponsiveContainer width="100%" height="100%">
@@ -155,7 +165,7 @@ export function XpHistoryChart({ data }: { data: { date: string; cumulativeXp: n
             formatter={(value) => [`${value} XP`, "Total XP"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Line type="monotone" dataKey="cumulativeXp" stroke={AMBER} strokeWidth={2} dot={false} name="Total XP" />
+          <Line type="monotone" dataKey="cumulativeXp" stroke={AMBER} strokeWidth={2} dot={false} name="Total XP" isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out" />
         </LineChart>
       </ResponsiveContainer>
     </div>

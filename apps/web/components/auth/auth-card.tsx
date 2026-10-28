@@ -5,6 +5,14 @@ import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabas
  * Shared auth shell (Phase 2, spec §37): premium dark login page,
  * lightweight — no heavy 3D, fast by design. A subtle CSS-only
  * chart-like backdrop (no images, no WebGL) keeps it fast.
+ *
+ * Motion (Phase 16): the strongest motion in the app lives
+ * here, and it is still restrained — a slow-drifting soft blue
+ * glow and a grid that pans almost imperceptibly, plus a
+ * fade-up entrance for the card. No particles, no neon, no
+ * moving charts. Everything is CSS-only and disabled by the
+ * reduced-motion rules; browsers also pause CSS animations in
+ * hidden tabs, so the backdrop costs nothing when unseen.
  */
 export function AuthCard({
   title,
@@ -20,14 +28,25 @@ export function AuthCard({
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="motion-login-grid pointer-events-none absolute inset-0 opacity-40"
         style={{
           backgroundImage:
             "linear-gradient(to right, hsl(217 32% 17% / 0.35) 1px, transparent 1px), linear-gradient(to bottom, hsl(217 32% 17% / 0.35) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
-      <div className="relative w-full max-w-md">
+      {/* Soft institutional glow: a slow-drifting radial wash of
+          brand blue and a faint green/red hint of market depth.
+          Large, blurred, low opacity — depth, not decoration. */}
+      <div
+        aria-hidden="true"
+        className="motion-login-glow pointer-events-none absolute -top-32 left-[calc(50%-21rem)] h-96 w-[42rem] max-w-none rounded-full opacity-25 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, hsl(217 91% 60% / 0.55), hsl(262 83% 68% / 0.18) 55%, transparent 75%)",
+        }}
+      />
+      <div className="motion-fade-in relative w-full max-w-md">
         <header className="mb-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             ITG — Institutional Trading Group
@@ -38,7 +57,7 @@ export function AuthCard({
           <h2 className="text-xl font-semibold">{title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           {!configured && (
-            <p role="alert" className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <p role="alert" className="motion-fade-in mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
               {supabaseNotConnectedMessage()}
             </p>
           )}

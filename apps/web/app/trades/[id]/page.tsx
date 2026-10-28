@@ -7,6 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { QuickTradeForm } from "@/components/trades/quick-trade-form";
 import { AdvancedReviewForm } from "@/components/trades/advanced-review-form";
 import { ScreenshotUploadForm } from "@/components/trades/screenshot-upload-form";
+import { TradeSavedBanner } from "@/components/trades/trade-saved-banner";
 import { ConfirmButton } from "@/components/trades/confirm-button";
 import {
   cancelTradeAction,
@@ -51,10 +52,13 @@ function orDash(value: string | number | null | undefined): string {
  */
 export default async function TradeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const { id } = await params;
+  const { saved } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!user.onboarding?.is_complete) redirect("/onboarding");
@@ -109,6 +113,10 @@ export default async function TradeDetailPage({
           Opened {new Date(trade.opened_at).toLocaleString()}
           {trade.closed_at ? ` · Closed ${new Date(trade.closed_at).toLocaleString()}` : " · Still open"}
         </p>
+
+        {/* Shown after a save or correction (?saved=1, Phase 16):
+            an animated checkmark confirmation, dismissible. */}
+        {saved === "1" ? <TradeSavedBanner /> : null}
 
         {trade.status === "reversed" && detail.correctingTrade && (
           <p role="status" className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">

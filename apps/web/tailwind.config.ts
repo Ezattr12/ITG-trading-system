@@ -31,6 +31,29 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Motion tokens (Phase 16). Keyframes live in globals.css;
+      // these tokens name them so components use one system.
+      transitionDuration: {
+        instant: "var(--motion-duration-instant)",
+        fast: "var(--motion-duration-fast)",
+        base: "var(--motion-duration-base)",
+        slow: "var(--motion-duration-slow)",
+        count: "var(--motion-duration-count)",
+      },
+      transitionTimingFunction: {
+        standard: "var(--motion-ease-standard)",
+        emphasized: "var(--motion-ease-emphasized)",
+      },
+      animation: {
+        "fade-up": "motion-fade-up var(--motion-duration-slow) var(--motion-ease-standard) both",
+        "fade-in": "motion-fade-in var(--motion-duration-base) var(--motion-ease-standard) both",
+        "scale-in": "motion-scale-in var(--motion-duration-base) var(--motion-ease-emphasized) both",
+        "ai-pulse": "motion-ai-pulse 2.4s ease-in-out infinite",
+        shimmer: "motion-shimmer 1.6s linear infinite",
+        "login-drift": "motion-login-drift 28s ease-in-out infinite alternate",
+        "grid-pan": "motion-grid-pan 60s linear infinite",
+        "check-draw": "motion-check-draw var(--motion-duration-slow) var(--motion-ease-standard) 120ms both",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

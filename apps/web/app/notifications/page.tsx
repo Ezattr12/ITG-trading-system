@@ -64,10 +64,11 @@ export default async function NotificationsPage() {
           </p>
         ) : (
           <ul className="mt-6 sm:mt-8 space-y-3">
-            {items.map((n) => (
+            {items.map((n, i) => (
               <li
                 key={n.id}
-                className={`card-surface p-4 ${n.is_read ? "opacity-70" : ""}`}
+                className={`motion-reveal card-surface p-4 transition-opacity duration-base ease-standard ${n.is_read ? "opacity-70" : ""}`}
+                style={{ animationDelay: `${Math.min(i, 7) * 50}ms` }}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>

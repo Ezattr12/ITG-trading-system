@@ -108,7 +108,7 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+        "relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all duration-fast ease-standard",
         "hover:bg-accent hover:text-accent-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active
@@ -117,12 +117,22 @@ function NavLink({
         collapsed && "justify-center px-0",
       )}
     >
+      {/* Active indicator (Phase 16): a small bar that grows in
+          instead of a hard colour swap. Transform only, so the
+          layout never shifts. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-all duration-base ease-standard",
+          active ? "scale-y-100 opacity-100" : "scale-y-50 opacity-0",
+        )}
+      />
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       {!collapsed && (
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
       )}
       {!collapsed && badge !== undefined && badge > 0 ? (
-        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-semibold text-destructive-foreground">
+        <span className="motion-scale-in inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-semibold text-destructive-foreground">
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -148,6 +158,32 @@ export function AppShellClient({
   const [collapsed, setCollapsed] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const items = NAV.filter((item) => !item.admin || isAdmin);
+
+  // Drawer enter/exit (Phase 16): the drawer stays mounted for
+  // 250ms after closing so the slide-out and overlay fade can
+  // play, and it enters on the next frame so the slide-in can
+  // play. Without this the drawer would just appear/disappear.
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  const [drawerEntered, setDrawerEntered] = useState(false);
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerMounted(true);
+      return;
+    }
+    if (!drawerMounted) return;
+    const t = window.setTimeout(() => setDrawerMounted(false), 250);
+    return () => window.clearTimeout(t);
+  }, [drawerOpen, drawerMounted]);
+  useEffect(() => {
+    if (!drawerOpen) {
+      setDrawerEntered(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setDrawerEntered(true)),
+    );
+    return () => cancelAnimationFrame(raf);
+  }, [drawerOpen]);
 
   // Sidebar collapse preference survives reloads (local only).
   useEffect(() => {
@@ -191,11 +227,12 @@ export function AppShellClient({
         Skip to content
       </a>
 
-      {/* Desktop sidebar — collapsible, icons only when collapsed. */}
+      {/* Desktop sidebar — collapsible, icons only when collapsed.
+          The width animates over 250ms (Phase 16). */}
       <aside
         aria-label="Primary"
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r bg-card/60 lg:flex",
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r bg-card/60 transition-[width] duration-base ease-standard lg:flex",
           collapsed ? "w-20" : "w-64",
         )}
       >
@@ -248,16 +285,26 @@ export function AppShellClient({
         </div>
       </aside>
 
-      {/* Mobile slide-over drawer — the full navigation. */}
-      {drawerOpen && (
+      {/* Mobile slide-over drawer — the full navigation. The
+          overlay fades and the panel slides (Phase 16); the
+          drawer unmounts 250ms after closing so the exit plays. */}
+      {drawerMounted && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
           <button
             type="button"
             aria-label="Close navigation menu"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-black/60"
+            className={cn(
+              "absolute inset-0 bg-black/60 transition-opacity duration-base ease-standard",
+              drawerEntered ? "opacity-100" : "opacity-0",
+            )}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-xl">
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-xl transition-transform duration-base ease-standard",
+              drawerEntered ? "translate-x-0" : "-translate-x-full",
+            )}
+          >
             <div className="flex h-14 items-center justify-between border-b px-4">
               <span className="text-base font-bold">ITG TraderOS</span>
               <button
@@ -326,7 +373,7 @@ export function AppShellClient({
             >
               <Bell className="h-5 w-5" aria-hidden="true" />
               {unread > 0 ? (
-                <span className="absolute right-1 top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-semibold text-destructive-foreground">
+                <span className="motion-scale-in absolute right-1 top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-semibold text-destructive-foreground">
                   {unread > 99 ? "99+" : unread}
                 </span>
               ) : null}
@@ -346,7 +393,12 @@ export function AppShellClient({
             narrow ? "max-w-3xl" : "max-w-6xl",
           )}
         >
-          {children}
+          {/* Subtle page transition (Phase 16): each navigation
+              fades the new page up 6px over 250ms. Transform and
+              opacity only — no layout shift. */}
+          <div key={pathname} className="motion-page">
+            {children}
+          </div>
         </main>
       </div>
 
@@ -366,11 +418,20 @@ export function AppShellClient({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium",
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
+                {/* Active indicator (Phase 16): a dot that scales
+                    in under the icon. Transform only. */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-1 w-1 rounded-full bg-primary transition-all duration-base ease-standard",
+                    active ? "scale-100 opacity-100" : "scale-0 opacity-0",
+                  )}
+                />
                 {item.label}
               </Link>
             );

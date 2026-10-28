@@ -33,7 +33,7 @@ const SEVERITY_LABEL: Record<string, string> = {
   positive: "Positive",
 };
 
-function InsightCard({ insight }: { insight: AiInsightRow }) {
+function InsightCard({ insight, index = 0 }: { insight: AiInsightRow; index?: number }) {
   const s = insight.metrics_snapshot;
   const evidence: string[] = [];
   if (s.trades !== undefined) evidence.push(`${s.trades} trades`);
@@ -47,7 +47,11 @@ function InsightCard({ insight }: { insight: AiInsightRow }) {
   if (s.criticalRiskEvents !== undefined) evidence.push(`${s.criticalRiskEvents} critical risk events`);
   if (s.goalsTotal !== undefined) evidence.push(`goals ${s.goalsCompleted ?? 0}/${s.goalsTotal}`);
   return (
-    <article className="card-surface p-4">
+    // Insights reveal one after another (Phase 16), 60ms apart.
+    <article
+      className="motion-reveal card-surface p-4"
+      style={{ animationDelay: `${Math.min(index, 5) * 60}ms` }}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">{insight.summary}</h3>
         <span className="text-xs text-muted-foreground">
@@ -123,8 +127,14 @@ export default async function CoachPage() {
           stored trades, not a language model.
         </p>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="This week's analysis">
-          <h2 className="section-title">This week&apos;s analysis</h2>
+        <section className="motion-reveal mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="This week's analysis">
+          <h2 className="section-title flex items-center gap-2">
+            {/* AI status indicator (Phase 16): a soft purple pulse.
+                Decorative only — the text beside it carries the
+                meaning, and reduced motion stops the pulse. */}
+            <span aria-hidden="true" className="motion-ai-dot inline-block h-2 w-2 shrink-0 rounded-full bg-ai" />
+            This week&apos;s analysis
+          </h2>
           {!isSupabaseConfigured() ? (
             <p className="mt-2 text-muted-foreground">
               Supabase is not connected, so there is no trading data to analyse yet.
@@ -141,8 +151,8 @@ export default async function CoachPage() {
             </p>
           ) : (
             <div className="mt-4 space-y-4">
-              {liveInsights.map((insight) => (
-                <InsightCard key={insight.id} insight={insight} />
+              {liveInsights.map((insight, i) => (
+                <InsightCard key={insight.id} insight={insight} index={i} />
               ))}
               {isPreview && (
                 <p className="text-xs text-muted-foreground">
@@ -171,8 +181,8 @@ export default async function CoachPage() {
             </p>
           ) : (
             <div className="mt-4 space-y-4">
-              {storedHistory.map((insight) => (
-                <InsightCard key={insight.id} insight={insight} />
+              {storedHistory.map((insight, i) => (
+                <InsightCard key={insight.id} insight={insight} index={i} />
               ))}
             </div>
           )}

@@ -10,6 +10,7 @@ import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { createNotification } from "@/lib/discipline/actions";
 import { XpHistoryChart } from "@/components/analytics/charts";
 import { ProgressBar } from "@/components/analytics/stat-card";
+import { AnimatedNumber, CountUpDecimal } from "@/components/analytics/count-up";
 
 export const metadata = { title: "Levels — ITG TraderOS" };
 
@@ -90,12 +91,12 @@ export default async function LevelsPage() {
           </section>
         ) : (
           <>
-            <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
+            <section className="motion-reveal mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
               <article className="card-surface p-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Current level</h2>
                 <p className="mt-2 text-xl font-semibold">{bundle.score.levelName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Score {bundle.score.score.toFixed(1)} / 100
+                  Score <CountUpDecimal value={bundle.score.score} decimals={1} /> / 100
                 </p>
               </article>
               <article className="card-surface p-4">
@@ -111,7 +112,12 @@ export default async function LevelsPage() {
               </article>
               <article className="card-surface p-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Total XP</h2>
-                <p className="mt-2 text-xl font-semibold">{bundle.xpTotal} XP</p>
+                {/* XP counts up (Phase 16) — XP rewards discipline,
+                    journaling and reviews, and the count-up marks
+                    the total without flashing a reward. */}
+                <p className="mt-2 text-xl font-semibold">
+                  <AnimatedNumber value={bundle.xpTotal} format={(n) => `${Math.round(n)} XP`} />
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Earned for journaling, goals, reviews and discipline.
                 </p>
@@ -119,7 +125,7 @@ export default async function LevelsPage() {
             </section>
 
             {progress !== null && progress.nextLevel !== null ? (
-              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Progress to next level">
+              <section className="motion-reveal motion-reveal-1 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Progress to next level">
                 <h2 className="section-title">Progress to {progress.nextLevel}</h2>
                 <div className="mt-4">
                   <ProgressBar
@@ -130,7 +136,7 @@ export default async function LevelsPage() {
               </section>
             ) : null}
 
-            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Score breakdown">
+            <section className="motion-reveal motion-reveal-2 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Score breakdown">
               <h2 className="section-title">Score breakdown</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Each dimension is scored 0–100 from your real data. Dimensions with no
@@ -160,7 +166,7 @@ export default async function LevelsPage() {
               </div>
             </section>
 
-            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
+            <section className="motion-reveal motion-reveal-3 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
               <h2 className="section-title">XP over time</h2>
               {bundle.xpHistory.length === 0 ? (
                 <p className="mt-2 text-muted-foreground">
@@ -176,7 +182,7 @@ export default async function LevelsPage() {
               )}
             </section>
 
-            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="All levels">
+            <section className="motion-reveal motion-reveal-4 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="All levels">
               <h2 className="section-title">Levels</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {bundle.levels.map((level) => (

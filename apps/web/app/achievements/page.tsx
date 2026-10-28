@@ -85,16 +85,26 @@ export default async function AchievementsPage() {
               {bundle.xpTotal} XP total
             </p>
             <section className="mt-4 grid gap-4 sm:grid-cols-2" aria-label="Achievements">
-              {bundle.achievements.map((achievement) => {
+              {bundle.achievements.map((achievement, i) => {
                 const unlocked = unlockedIds.has(achievement.id);
                 return (
                   <article
                     key={achievement.id}
-                    className={`card-surface p-4 ${unlocked ? "" : "opacity-70"}`}
+                    className={`motion-reveal card-surface p-4 ${unlocked ? "" : "opacity-70"}`}
+                    style={{ animationDelay: `${Math.min(i, 7) * 50}ms` }}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <h2 className="font-semibold">
-                        {unlocked ? "✓ " : "🔒 "}
+                        {unlocked ? (
+                          // Unlock check scales in (Phase 16) — a
+                          // quiet mark, not a celebration. The
+                          // "Unlocked" line below carries the fact.
+                          <span aria-hidden="true" className="motion-scale-in inline-block text-emerald-400">
+                            ✓{" "}
+                          </span>
+                        ) : (
+                          "🔒 "
+                        )}
                         {achievement.name}
                       </h2>
                       <span className="shrink-0 text-sm text-muted-foreground">

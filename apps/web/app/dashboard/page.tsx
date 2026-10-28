@@ -14,6 +14,7 @@ import {
 } from "@/lib/analytics/analytics";
 import { EquityChart } from "@/components/analytics/charts";
 import { Money, Pct, ProgressBar, StatCard } from "@/components/analytics/stat-card";
+import { CountUpDecimal, CountUpMoney, CountUpPct } from "@/components/analytics/count-up";
 import { ensureDisciplineReminderLogged } from "@/lib/discipline/actions";
 import { getLatestCoachInsights } from "@/lib/coach/queries";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
@@ -119,29 +120,35 @@ export default async function DashboardPage() {
 
   return (
     <AppShell email={user.email}>
-      {/* 1. Welcome / current trading status */}
-      <h1 className="page-title">
-        Welcome{user.profile?.full_name ? `, ${user.profile.full_name}` : ""}
-      </h1>
-      <p className="page-lede">
-        {summary.tradeCount === 0
-          ? "No trades yet — add your first trade and your performance will be calculated from it."
-          : `${summary.tradeCount} closed trades journaled. All figures below are calculated from your real trades.`}
-      </p>
+      {/* 1. Welcome / current trading status.
+          Sections enter with a 60ms stagger (Phase 16) — the
+          page settles in under half a second, then stays still. */}
+      <div className="motion-reveal">
+        <h1 className="page-title">
+          Welcome{user.profile?.full_name ? `, ${user.profile.full_name}` : ""}
+        </h1>
+        <p className="page-lede">
+          {summary.tradeCount === 0
+            ? "No trades yet — add your first trade and your performance will be calculated from it."
+            : `${summary.tradeCount} closed trades journaled. All figures below are calculated from your real trades.`}
+        </p>
+      </div>
 
-      {/* 2. KPI row — the five numbers that matter most, first. */}
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5" aria-label="Key performance indicators">
-        <StatCard label="Current P&L" value={<Money value={summary.tradeCount === 0 ? null : summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
-        <StatCard label="Win rate" value={<Pct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
-        <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
-        <StatCard label="Average R" value={summary.avgR === null ? "—" : `${summary.avgR.toFixed(2)}R`} hint="Average R multiple (needs a stop-loss set)." />
+      {/* 2. KPI row — the five numbers that matter most, first.
+          Numeric KPIs count up over 700ms (Phase 16); a null
+          still renders "—", never 0. */}
+      <section className="motion-reveal motion-reveal-1 mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5" aria-label="Key performance indicators">
+        <StatCard label="Current P&L" value={summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
+        <StatCard label="Win rate" value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
+        <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
+        <StatCard label="Average R" value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
         <div className="col-span-2 sm:col-span-1">
           <StatCard label="Current streak" value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
         </div>
       </section>
 
       {/* 3. Main performance / equity curve. */}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
+      <section className="motion-reveal motion-reveal-2 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
         <h2 className="section-title">Performance</h2>
         {equity.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -160,7 +167,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* 4. Risk & discipline + 5. Goal progress. */}
-      <section className="mt-6 grid gap-4 sm:mt-8 lg:grid-cols-2" aria-label="Risk, discipline and goals">
+      <section className="motion-reveal motion-reveal-3 mt-6 grid gap-4 sm:mt-8 lg:grid-cols-2" aria-label="Risk, discipline and goals">
         <article className="card-surface p-4 sm:p-6">
           <h2 className="section-title">Risk &amp; discipline</h2>
           <ul className="mt-3 space-y-2 text-base">
@@ -232,12 +239,12 @@ export default async function DashboardPage() {
       </section>
 
       {/* 6. Psychology. */}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Psychology">
+      <section className="motion-reveal motion-reveal-4 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Psychology">
         <h2 className="section-title">Psychology</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <p className="section-label">Average confidence</p>
-            <p className="metric-value">{psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}</p>
+            <p className="metric-value">{psych.avgConfidence === null ? "—" : <CountUpDecimal value={psych.avgConfidence} decimals={1} suffix=" / 5" />}</p>
           </div>
           <div>
             <p className="section-label">Best emotion by P&amp;L</p>
@@ -250,7 +257,7 @@ export default async function DashboardPage() {
           </div>
           <div>
             <p className="section-label">Journal completion</p>
-            <p className="metric-value">{psych.journalCompletionPct.toFixed(0)}%</p>
+            <p className="metric-value"><CountUpDecimal value={psych.journalCompletionPct} decimals={0} suffix="%" /></p>
           </div>
         </div>
         {psych.byEmotion.length > 0 ? (
@@ -271,7 +278,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* 7. Recent trades. */}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent trades">
+      <section className="motion-reveal motion-reveal-5 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent trades">
         <h2 className="section-title">Recent trades</h2>
         {recentTrades.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">No trades yet.</p>
@@ -297,7 +304,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* 8. AI Coach insights. */}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="AI insights">
+      <section className="motion-reveal motion-reveal-6 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="AI insights">
         <h2 className="section-title">AI Coach insights</h2>
         {latestInsights.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -323,7 +330,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* 9. Recent activity — real notifications only, never invented. */}
-      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent activity">
+      <section className="motion-reveal motion-reveal-6 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent activity">
         <h2 className="section-title">Recent activity</h2>
         {recentActivity.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">

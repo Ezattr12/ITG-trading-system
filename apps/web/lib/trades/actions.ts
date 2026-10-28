@@ -284,7 +284,10 @@ export async function createTradeAction(
   });
   revalidatePath("/trades");
   revalidatePath("/dashboard");
-  return { ok: true, redirectTo: `/trades/${data.id}` };
+  // ?saved=1 shows the animated "Trade saved" confirmation on
+  // the trade page (Phase 16). It is only a display flag — the
+  // trade is already saved and the dashboard is revalidated.
+  return { ok: true, redirectTo: `/trades/${data.id}?saved=1` };
 }
 
 /* --------------------------------------------------------- advanced review */
@@ -486,7 +489,8 @@ export async function correctTradeAction(
   });
   revalidatePath("/trades");
   revalidatePath(`/trades/${tradeId}`);
-  return { ok: true, redirectTo: `/trades/${corrected.id}` };
+  // Same ?saved=1 confirmation as a new trade (Phase 16).
+  return { ok: true, redirectTo: `/trades/${corrected.id}?saved=1` };
 }
 
 /* ------------------------------------------------------------------ cancel */

@@ -14,7 +14,7 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-8 px-6 py-16">
-      <header>
+      <header className="motion-reveal">
         <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           ITG — Institutional Trading Group
         </p>
@@ -26,7 +26,7 @@ export default async function HomePage() {
         </p>
       </header>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="motion-reveal motion-reveal-1 flex flex-wrap gap-3">
         <Button asChild size="lg">
           <Link href="/login">Log in</Link>
         </Button>
@@ -40,15 +40,19 @@ export default async function HomePage() {
           { title: "Journal", body: "Phase 3 — 30–60 second trade entry." },
           { title: "Dashboard", body: "Phase 4 — shows only your real data." },
           { title: "AI Coach", body: "Phase 9 — insights from your real data only." },
-        ].map((card) => (
-          <article key={card.title} className="card-surface p-4">
+        ].map((card, i) => (
+          <article
+            key={card.title}
+            className="motion-reveal card-surface p-4"
+            style={{ animationDelay: `${(i + 2) * 60}ms` }}
+          >
             <h3 className="font-semibold">{card.title}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{card.body}</p>
           </article>
         ))}
       </section>
 
-      <footer className="text-sm text-muted-foreground">
+      <footer className="motion-reveal motion-reveal-3 text-sm text-muted-foreground">
         Phase 2 — Authentication &amp; onboarding. Supabase and Vercel are not
         connected yet; sign-in will work once Supabase is connected.
       </footer>

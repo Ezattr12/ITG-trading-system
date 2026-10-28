@@ -33,11 +33,21 @@ export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: strin
           className="mt-1 block rounded-md border bg-background px-3 py-2 text-sm"
         />
       </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Analysing…" : "Refresh analysis"}
+      <Button type="submit" disabled={pending} aria-busy={pending}>
+        {pending ? (
+          <>
+            {/* Generating state (Phase 16): a soft purple pulse
+                beside "Analysing…" — the text says what is
+                happening, the pulse only softens the wait. */}
+            <span aria-hidden="true" className="motion-ai-dot inline-block h-2 w-2 rounded-full bg-ai" />
+            Analysing…
+          </>
+        ) : (
+          "Refresh analysis"
+        )}
       </Button>
-      {state.error && <p className="w-full text-sm text-red-400">{state.error}</p>}
-      {state.message && <p className="w-full text-sm text-emerald-400">{state.message}</p>}
+      {state.error && <p className="motion-fade-in w-full text-sm text-red-400">{state.error}</p>}
+      {state.message && <p className="motion-fade-in w-full text-sm text-emerald-400">{state.message}</p>}
     </form>
   );
 }

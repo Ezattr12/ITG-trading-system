@@ -44,6 +44,103 @@
     --warning: 38 92% 50%;
     --info: 217 91% 60%;
     --ai: 262 83% 68%;
+    /* Motion tokens (Phase 16). One system for the whole app:
+       short durations, standard easing, never decorative-slow.
+       Durations: instant 80ms (press), fast 150ms (hover/focus),
+       base 250ms (entrance/exit, drawers, page), slow 400ms
+       (staggered section entrance, check draw), count 700ms
+       (number count-up). Easing is ease-out by default so
+       motion feels responsive, never floaty. */
+    --motion-duration-instant: 80ms;
+    --motion-duration-fast: 150ms;
+    --motion-duration-base: 250ms;
+    --motion-duration-slow: 400ms;
+    --motion-duration-count: 700ms;
+    --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --motion-ease-emphasized: cubic-bezier(0.2, 0, 0.2, 1);
+  }
+}
+
+/*
+ * Motion keyframes (Phase 16). All motion in the app is one of
+ * these: fade-up for entrances, fade-in for state changes,
+ * scale-in for badges/checks, a soft pulse for AI status, a
+ * shimmer for skeleton loaders, a slow drift for the login
+ * backdrop, and a stroke draw for the success checkmark.
+ * Transforms and opacity only — no layout shifts, ever.
+ */
+@keyframes motion-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes motion-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes motion-ai-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+@keyframes motion-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes motion-login-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(24px, -16px, 0);
+  }
+  100% {
+    transform: translate3d(-12px, 12px, 0);
+  }
+}
+@keyframes motion-grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 48px 48px;
+  }
+}
+@keyframes motion-check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -106,6 +203,79 @@
   }
   .card-surface {
     @apply rounded-xl border bg-card;
+    /* Subtle hover elevation for every card in the app. Border
+       and shadow only — never a translate, so nothing shifts. */
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .card-surface:hover {
+    border-color: hsl(222 22% 30%);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.28);
+  }
+  /*
+   * Motion utilities (Phase 16). `.motion-reveal` is the section
+   * entrance; the numbered variants stagger a group by 60ms
+   * steps. `.motion-page` is the subtle page transition.
+   * `.motion-ai-dot` is the soft AI status pulse. `.skeleton`
+   * is the shimmering placeholder for loading states.
+   * `.motion-login-glow` / `.motion-login-grid` are the login
+   * backdrop only — the one place decorative motion is allowed,
+   * and it is slow, small-range and cheap.
+   */
+  .motion-reveal {
+    animation: motion-fade-up var(--motion-duration-slow) var(--motion-ease-standard) both;
+  }
+  .motion-reveal-1 {
+    animation-delay: 60ms;
+  }
+  .motion-reveal-2 {
+    animation-delay: 120ms;
+  }
+  .motion-reveal-3 {
+    animation-delay: 180ms;
+  }
+  .motion-reveal-4 {
+    animation-delay: 240ms;
+  }
+  .motion-reveal-5 {
+    animation-delay: 300ms;
+  }
+  .motion-reveal-6 {
+    animation-delay: 360ms;
+  }
+  .motion-fade-in {
+    animation: motion-fade-in var(--motion-duration-base) var(--motion-ease-standard) both;
+  }
+  .motion-scale-in {
+    animation: motion-scale-in var(--motion-duration-base) var(--motion-ease-emphasized) both;
+  }
+  .motion-page {
+    animation: motion-fade-up var(--motion-duration-base) var(--motion-ease-standard) both;
+  }
+  .motion-ai-dot {
+    animation: motion-ai-pulse 2.4s ease-in-out infinite;
+  }
+  .motion-check-draw {
+    stroke-dasharray: 24;
+    animation: motion-check-draw var(--motion-duration-slow) var(--motion-ease-standard) 120ms both;
+  }
+  .motion-login-glow {
+    animation: motion-login-drift 28s ease-in-out infinite alternate;
+  }
+  .motion-login-grid {
+    animation: motion-grid-pan 60s linear infinite;
+  }
+  .skeleton {
+    @apply rounded-md;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--secondary)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: motion-shimmer 1.6s linear infinite;
   }
   /* Primary metric inside a stat card. */
   .metric-value {
@@ -130,8 +300,26 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Entrance animations start hidden (fill mode both), so
+     reduced motion must remove them entirely — otherwise
+     content could sit invisible. The final state is always
+     the real content; animation never carries information. */
+  .motion-reveal,
+  .motion-fade-in,
+  .motion-scale-in,
+  .motion-page,
+  .motion-ai-dot,
+  .motion-login-glow,
+  .motion-login-grid,
+  .skeleton {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

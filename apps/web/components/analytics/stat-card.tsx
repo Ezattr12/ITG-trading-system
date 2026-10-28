@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import { formatMoney } from "@/lib/trades/calculations";
 
 /** One dashboard / analytics stat (Phase 15). Null values render "—", never 0.
@@ -39,9 +41,18 @@ export function Pct({ value }: { value: number | null | undefined }) {
   return <>{value.toFixed(1)}%</>;
 }
 
-/** Simple progress bar (goals, journal completion). Percent is capped at 100 for display. */
+/** Simple progress bar (goals, journal completion). Percent is capped at 100 for display.
+ * The fill animates from 0 to its value over 500ms after mount (Phase 16) — a
+ * progress bar that fills reads as progress; one that appears full does not.
+ * aria-valuenow is the final value from the first paint, so screen readers
+ * always get the real number even while the visual fill is still moving. */
 export function ProgressBar({ percent, label }: { percent: number; label: string }) {
   const shown = Math.min(100, Math.max(0, percent));
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
   return (
     <div>
       <div
@@ -52,7 +63,10 @@ export function ProgressBar({ percent, label }: { percent: number; label: string
         aria-valuemax={100}
         aria-label={label}
       >
-        <div className="h-full rounded-full bg-emerald-400" style={{ width: `${shown}%` }} />
+        <div
+          className="h-full rounded-full bg-emerald-400 transition-[width] duration-500 ease-standard"
+          style={{ width: `${mounted ? shown : 0}%` }}
+        />
       </div>
       <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
