@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# next.js
+apps/web/.next/
+apps/web/out/
+apps/web/.vercel
+
+# env / secrets — NEVER commit real keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# build / test
+dist/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+next-env.d.ts
+
+# os / editor
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json

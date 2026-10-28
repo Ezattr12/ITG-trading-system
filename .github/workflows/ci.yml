@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: gitleaks scans the whole repo, not just the checkout.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: E2E smoke tests (production build, no Supabase)
+        # The webServer in playwright.config.ts builds + starts the app.
+        # Authenticated workflows need a live Supabase project and run
+        # in Phase 13/14, not here.
+        run: npm run test:e2e
+      - name: Security boundary checks
+        run: npm run security:check
+      - name: Dependency audit
+        # Runs here because the sandbox registry blocks `npm audit`
+        # locally (403 policy_denied); GitHub runners can reach it.
+        run: npm audit --audit-level=high
+      - name: Check for secrets in source
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

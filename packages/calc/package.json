@@ -1,0 +1,1 @@
+{"dependencies":{"decimal.js":"^10.4.3"},"description":"ITG TraderOS — pure trade/performance calculations (decimal.js, never float)","devDependencies":{"typescript":"^5.6.3"},"main":"src/index.ts","name":"@itg/calc","private":true,"scripts":{"typecheck":"tsc --noEmit"},"types":"src/index.ts","version":"0.1.0"}

@@ -1,0 +1,21 @@
+# ITG TraderOS — Supabase local config (Phase 1 scaffold).
+# No remote project is linked yet. Run `supabase link` only after the
+# Supabase project is created (Phase 0 blocker).
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+port = 9999
