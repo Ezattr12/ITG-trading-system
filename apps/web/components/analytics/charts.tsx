@@ -31,6 +31,11 @@ import { usePrefersReducedMotion } from "@/lib/motion/use-reduced-motion";
  * money labels, narrower Y axis, thinned X labels), chart
  * heights shrink on mobile, and tooltips use the token surface
  * colours. Charts stay decision tools, not decoration.
+ *
+ * Phase 17: every chart sits on a `.chart-panel` — an inset
+ * surface inside its card — so the chart reads as a panel
+ * set into the card, the layered depth the reference images
+ * get from cards-within-cards.
  */
 
 const GREEN = "#34d399";
@@ -66,6 +71,7 @@ export function EquityChart({
   // the chart renders its final state immediately.
   const reduced = usePrefersReducedMotion();
   return (
+    <div className="chart-panel">
     <div className="h-56 w-full sm:h-64" role="img" aria-label={`Equity curve over ${data.length} closed trades`}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -81,12 +87,14 @@ export function EquityChart({
         </AreaChart>
       </ResponsiveContainer>
     </div>
+    </div>
   );
 }
 
 export function DrawdownChart({ data }: { data: { date: string; drawdown: number }[] }) {
   const reduced = usePrefersReducedMotion();
   return (
+    <div className="chart-panel">
     <div className="h-44 w-full sm:h-48" role="img" aria-label="Drawdown over time">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -101,12 +109,14 @@ export function DrawdownChart({ data }: { data: { date: string; drawdown: number
         </AreaChart>
       </ResponsiveContainer>
     </div>
+    </div>
   );
 }
 
 export function PeriodPnlChart({ data }: { data: { label: string; pnl: number }[] }) {
   const reduced = usePrefersReducedMotion();
   return (
+    <div className="chart-panel">
     <div className="h-56 w-full sm:h-64" role="img" aria-label="Profit and loss by period">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -125,6 +135,7 @@ export function PeriodPnlChart({ data }: { data: { label: string; pnl: number }[
         </BarChart>
       </ResponsiveContainer>
     </div>
+    </div>
   );
 }
 
@@ -135,6 +146,7 @@ export function RDistributionChart({
 }) {
   const reduced = usePrefersReducedMotion();
   return (
+    <div className="chart-panel">
     <div className="h-52 w-full sm:h-56" role="img" aria-label="Distribution of R multiples">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -149,12 +161,14 @@ export function RDistributionChart({
         </BarChart>
       </ResponsiveContainer>
     </div>
+    </div>
   );
 }
 
 export function XpHistoryChart({ data }: { data: { date: string; cumulativeXp: number }[] }) {
   const reduced = usePrefersReducedMotion();
   return (
+    <div className="chart-panel">
     <div className="h-52 w-full sm:h-56" role="img" aria-label="Cumulative XP over time">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -168,6 +182,7 @@ export function XpHistoryChart({ data }: { data: { date: string; cumulativeXp: n
           <Line type="monotone" dataKey="cumulativeXp" stroke={AMBER} strokeWidth={2} dot={false} name="Total XP" isAnimationActive={!reduced} animationDuration={600} animationEasing="ease-out" />
         </LineChart>
       </ResponsiveContainer>
+    </div>
     </div>
   );
 }

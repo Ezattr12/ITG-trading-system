@@ -6,18 +6,21 @@ import { formatMoney } from "@/lib/trades/calculations";
 /** One dashboard / analytics stat (Phase 15). Null values render "—", never 0.
  * Cards use the shared card surface, a clear label, a large primary
  * metric (24-32px) and small supporting context — never tiny
- * compressed cards. */
+ * compressed cards. `raised` (Phase 17) lifts one card per view —
+ * the primary KPI — onto the hero level of the elevation scale. */
 export function StatCard({
   label,
   value,
   hint,
+  raised = false,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
+  raised?: boolean;
 }) {
   return (
-    <article className="card-surface p-4 sm:p-5">
+    <article className={raised ? "card-surface-raised p-4 sm:p-5" : "card-surface p-4 sm:p-5"}>
       <h2 className="section-label">{label}</h2>
       <p className="metric-value">{value}</p>
       {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}

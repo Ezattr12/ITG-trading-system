@@ -14,7 +14,6 @@ import {
   CalendarDays,
   ChevronsLeft,
   ClipboardList,
-  Ellipsis,
   FileText,
   Home,
   LayoutDashboard,
@@ -136,6 +135,16 @@ function NavLink({
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
+      {/* Collapsed rail (Phase 17): the unread count stays
+          visible as a small badge on the icon, like the
+          collapsed reference sidebar — a real count only,
+          never invented. Without it the badge would vanish
+          the moment the rail collapses. */}
+      {collapsed && badge !== undefined && badge > 0 ? (
+        <span className="motion-scale-in absolute right-1.5 top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold leading-5 text-destructive-foreground">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -232,7 +241,7 @@ export function AppShellClient({
       <aside
         aria-label="Primary"
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r bg-card/60 transition-[width] duration-base ease-standard lg:flex",
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r bg-card/60 shadow-elevation-1 transition-[width] duration-base ease-standard lg:flex",
           collapsed ? "w-20" : "w-64",
         )}
       >
@@ -301,7 +310,7 @@ export function AppShellClient({
           />
           <div
             className={cn(
-              "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-xl transition-transform duration-base ease-standard",
+              "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-card shadow-elevation-3 transition-transform duration-base ease-standard",
               drawerEntered ? "translate-x-0" : "-translate-x-full",
             )}
           >
@@ -402,14 +411,21 @@ export function AppShellClient({
         </main>
       </div>
 
-      {/* Mobile bottom tab bar — the five most used sections. */}
+      {/* Mobile bottom tab bar — Home, Trades, a raised Add
+          Trade action, Analytics, Goals (Phase 17). The
+          centre action is the most important workflow in the
+          app, so it is a raised primary circle above the bar,
+          like the prominent centre button in the references —
+          not a fifth equal tab. "More" (the full navigation)
+          stays one tap away in the top header menu, which
+          already opens the drawer. */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 shadow-elevation-2 backdrop-blur lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="grid grid-cols-5">
-          {BOTTOM_NAV.map((item) => {
+          {BOTTOM_NAV.slice(0, 2).map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
             return (
@@ -436,16 +452,43 @@ export function AppShellClient({
               </Link>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="More sections"
-            aria-expanded={drawerOpen}
-            className="flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-          >
-            <Ellipsis className="h-5 w-5" aria-hidden="true" />
-            More
-          </button>
+          <div className="flex flex-col items-center">
+            <Link
+              href="/trades/new"
+              aria-label="Add trade"
+              className="flex h-14 w-14 -translate-y-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevation-3 ring-4 ring-background transition-transform duration-fast ease-standard hover:bg-primary/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Plus className="h-6 w-6" aria-hidden="true" />
+            </Link>
+            <span className="-mt-3 pb-1.5 text-[11px] font-medium text-muted-foreground" aria-hidden="true">
+              Add
+            </span>
+          </div>
+          {BOTTOM_NAV.slice(2).map((item) => {
+            const active = isActive(pathname, item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-1 w-1 rounded-full bg-primary transition-all duration-base ease-standard",
+                    active ? "scale-100 opacity-100" : "scale-0 opacity-0",
+                  )}
+                />
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </div>

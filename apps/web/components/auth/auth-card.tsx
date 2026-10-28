@@ -13,6 +13,12 @@ import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabas
  * moving charts. Everything is CSS-only and disabled by the
  * reduced-motion rules; browsers also pause CSS animations in
  * hidden tabs, so the backdrop costs nothing when unseen.
+ *
+ * Depth (Phase 17): the card is now a glass surface — a
+ * translucent, blurred layer with a brighter top edge and a
+ * level-3 shadow — floating over the glow and grid, with the
+ * ITG tile above the title for a clear brand mark. The form
+ * inside is unchanged; the depth is in the surface only.
  */
 export function AuthCard({
   title,
@@ -48,12 +54,15 @@ export function AuthCard({
       />
       <div className="motion-fade-in relative w-full max-w-md">
         <header className="mb-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground shadow-elevation-2" aria-hidden="true">
+            ITG
+          </span>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             ITG — Institutional Trading Group
           </p>
           <h1 className="mt-2 text-3xl font-bold">ITG TraderOS</h1>
         </header>
-        <section className="rounded-xl border bg-card p-6 shadow-lg sm:p-8">
+        <section className="card-surface-glass p-6 sm:p-8">
           <h2 className="text-xl font-semibold">{title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           {!configured && (

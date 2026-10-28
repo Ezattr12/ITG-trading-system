@@ -44,6 +44,19 @@
     --warning: 38 92% 50%;
     --info: 217 91% 60%;
     --ai: 262 83% 68%;
+    /* Elevation scale (Phase 17). Depth comes from layered
+       borders + soft shadows, never from colour or neon.
+       Level 1 is the resting card, level 2 is a lifted/hero
+       card or a hover state, level 3 is a modal, drawer or
+       glass surface floating over a backdrop. The top
+       highlight (a 1px light edge inside the border) is what
+       makes a dark surface read as a raised plane instead of
+       a flat box — the same device the reference images use,
+       kept at institutional restraint. */
+    --elevation-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.18);
+    --elevation-2: 0 2px 4px rgb(0 0 0 / 0.3), 0 10px 28px rgb(0 0 0 / 0.26);
+    --elevation-3: 0 4px 8px rgb(0 0 0 / 0.35), 0 18px 44px rgb(0 0 0 / 0.35);
+    --elevation-highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
     /* Motion tokens (Phase 16). One system for the whole app:
        short durations, standard easing, never decorative-slow.
        Durations: instant 80ms (press), fast 150ms (hover/focus),
@@ -203,15 +216,78 @@
   }
   .card-surface {
     @apply rounded-xl border bg-card;
-    /* Subtle hover elevation for every card in the app. Border
-       and shadow only — never a translate, so nothing shifts. */
+    /* Resting elevation (Phase 17): a soft shadow plus a 1px
+       light top edge, so the card reads as a raised plane.
+       Hover lifts it one level — border and shadow only,
+       never a translate, so nothing shifts. */
+    box-shadow: var(--elevation-highlight), var(--elevation-1);
     transition:
       border-color var(--motion-duration-fast) var(--motion-ease-standard),
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
   }
   .card-surface:hover {
     border-color: hsl(222 22% 30%);
-    box-shadow: 0 6px 20px rgb(0 0 0 / 0.28);
+    box-shadow: var(--elevation-highlight), var(--elevation-2);
+  }
+  /* Hero / lifted card (Phase 17). One card per view at most
+     carries this — the primary KPI, the main chart — so the
+     most important information is also the most prominent.
+     Slightly lighter surface, brighter edge, level-2 shadow. */
+  .card-surface-raised {
+    @apply rounded-xl border;
+    background: hsl(222 26% 16%);
+    border-color: hsl(222 22% 28%);
+    box-shadow: var(--elevation-highlight), var(--elevation-2);
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .card-surface-raised:hover {
+    border-color: hsl(222 22% 34%);
+    box-shadow: var(--elevation-highlight), var(--elevation-3);
+  }
+  /* Inset panel (Phase 17). A surface set *into* a card —
+     darker than the card, no shadow — for the content that
+     sits inside a card, like a chart. The contrast between
+     the raised card and the inset panel is the layered depth
+     the reference images get from cards-within-cards. */
+  .card-surface-inset {
+    @apply rounded-lg border;
+    background: hsl(222 30% 10.5%);
+    border-color: hsl(222 20% 19%);
+  }
+  /* Chart panel (Phase 17). The inset surface a chart sits
+     on, with breathing room around the chart itself. */
+  .chart-panel {
+    @apply rounded-lg border p-3 sm:p-4;
+    background: hsl(222 30% 10.5%);
+    border-color: hsl(222 20% 19%);
+  }
+  /* Glass surface (Phase 17). The auth card only: a
+     translucent, blurred layer floating over the login
+     backdrop, with a brighter top edge and a level-3
+     shadow. The form inside is unchanged; the depth is
+     in the surface, not the interaction. */
+  .card-surface-glass {
+    @apply rounded-xl border;
+    background: linear-gradient(
+      180deg,
+      hsl(222 28% 15% / 0.94),
+      hsl(222 28% 12% / 0.9)
+    );
+    border-color: hsl(222 22% 30%);
+    box-shadow:
+      var(--elevation-highlight),
+      var(--elevation-3);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  /* Separated list rows (Phase 17). Lists inside cards get
+     hairline dividers and a quiet hover surface, like the
+     history rows in the references — rows stay readable
+     without becoming separate cards. */
+  .list-divider {
+    @apply divide-y divide-border;
   }
   /*
    * Motion utilities (Phase 16). `.motion-reveal` is the section

@@ -138,7 +138,7 @@ export default async function DashboardPage() {
           Numeric KPIs count up over 700ms (Phase 16); a null
           still renders "—", never 0. */}
       <section className="motion-reveal motion-reveal-1 mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5" aria-label="Key performance indicators">
-        <StatCard label="Current P&L" value={summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
+        <StatCard raised label="Current P&L" value={summary.tradeCount === 0 ? "—" : <CountUpMoney value={summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
         <StatCard label="Win rate" value={summary.winRate === null ? "—" : <CountUpPct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
         <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : <CountUpDecimal value={summary.profitFactor} decimals={2} />} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
         <StatCard label="Average R" value={summary.avgR === null ? "—" : <CountUpDecimal value={summary.avgR} decimals={2} suffix="R" />} hint="Average R multiple (needs a stop-loss set)." />
@@ -147,8 +147,11 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* 3. Main performance / equity curve. */}
-      <section className="motion-reveal motion-reveal-2 card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
+      {/* 3. Main performance / equity curve — the hero chart
+          sits on the raised card level (Phase 17), so the most
+          important visual in the app is also the most
+          prominent surface. */}
+      <section className="motion-reveal motion-reveal-2 card-surface-raised mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
         <h2 className="section-title">Performance</h2>
         {equity.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">
@@ -283,9 +286,9 @@ export default async function DashboardPage() {
         {recentTrades.length === 0 ? (
           <p className="mt-2 text-base text-muted-foreground">No trades yet.</p>
         ) : (
-          <ul className="mt-3 space-y-2 text-base">
+          <ul className="list-divider mt-1 text-base">
             {recentTrades.map((t) => (
-              <li key={t.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+              <li key={t.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
                 <Link href={`/trades/${t.id}`} className="min-h-11 font-medium underline underline-offset-4">
                   {t.pair} · {t.direction} · {new Date(t.opened_at).toLocaleDateString()}
                 </Link>
@@ -337,9 +340,9 @@ export default async function DashboardPage() {
             No activity yet — achievements, risk milestones and coach insights will appear here as they happen.
           </p>
         ) : (
-          <ul className="mt-3 space-y-3 text-base">
+          <ul className="list-divider mt-1 text-base">
             {recentActivity.map((n) => (
-              <li key={n.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+              <li key={n.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-3">
                 <span className="font-medium">{n.title}</span>
                 <span className="text-sm text-muted-foreground">
                   {new Date(n.created_at).toLocaleDateString()}

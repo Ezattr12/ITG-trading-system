@@ -31,6 +31,15 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Elevation tokens (Phase 17). The same three levels as
+      // the CSS vars, so one-off surfaces (sidebar, bottom
+      // bar, drawer, raised action) use the same shadows as
+      // the shared card classes.
+      boxShadow: {
+        "elevation-1": "var(--elevation-highlight), var(--elevation-1)",
+        "elevation-2": "var(--elevation-highlight), var(--elevation-2)",
+        "elevation-3": "var(--elevation-highlight), var(--elevation-3)",
+      },
       // Motion tokens (Phase 16). Keyframes live in globals.css;
       // these tokens name them so components use one system.
       transitionDuration: {
