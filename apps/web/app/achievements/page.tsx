@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { getGamificationBundle } from "@/lib/gamification/queries";
 import { refreshGamification } from "@/lib/gamification/actions";
 import { describeCriteria } from "@/lib/gamification/achievements";
@@ -61,22 +61,20 @@ export default async function AchievementsPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Achievements</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Achievements</h1>
+        <p className="page-lede">
           Earned by doing the work — journaling, discipline, risk management, goals
           and consistency. Each unlocked achievement awards its own XP.
         </p>
 
         {bundle === null ? (
-          <p className="mt-8 text-muted-foreground">
+          <p className="mt-6 sm:mt-8 text-muted-foreground">
             Supabase is not connected yet — your achievements will be checked against
             your real trades once the database is connected. Nothing here is estimated.
           </p>
         ) : bundle.achievements.length === 0 ? (
-          <p className="mt-8 text-muted-foreground">
+          <p className="mt-6 sm:mt-8 text-muted-foreground">
             No achievements are configured yet. An admin adds them to the achievements
             table — no code change is needed.
           </p>
@@ -92,7 +90,7 @@ export default async function AchievementsPage() {
                 return (
                   <article
                     key={achievement.id}
-                    className={`rounded-lg border bg-card p-4 ${unlocked ? "" : "opacity-70"}`}
+                    className={`card-surface p-4 ${unlocked ? "" : "opacity-70"}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <h2 className="font-semibold">
@@ -124,7 +122,6 @@ export default async function AchievementsPage() {
             </Link>
           </>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

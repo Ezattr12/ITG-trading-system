@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
 import { getAiInsights, getAiInsightsForWeek, getCoachWeekData } from "@/lib/coach/queries";
 import { generateCoachInsights } from "@/lib/coach/insights";
@@ -47,7 +47,7 @@ function InsightCard({ insight }: { insight: AiInsightRow }) {
   if (s.criticalRiskEvents !== undefined) evidence.push(`${s.criticalRiskEvents} critical risk events`);
   if (s.goalsTotal !== undefined) evidence.push(`goals ${s.goalsCompleted ?? 0}/${s.goalsTotal}`);
   return (
-    <article className="rounded-lg border bg-card p-4">
+    <article className="card-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">{insight.summary}</h3>
         <span className="text-xs text-muted-foreground">
@@ -114,19 +114,17 @@ export default async function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">AI Coach</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">AI Coach</h1>
+        <p className="page-lede">
           Weekly analysis of your own trading data — performance, mistakes, strategies, psychology,
           risk, goals and discipline. Every insight cites the real numbers it was computed from.
           No external AI service is connected yet: this coach is a deterministic analysis of your
           stored trades, not a language model.
         </p>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="This week's analysis">
-          <h2 className="text-lg font-semibold">This week&apos;s analysis</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="This week's analysis">
+          <h2 className="section-title">This week&apos;s analysis</h2>
           {!isSupabaseConfigured() ? (
             <p className="mt-2 text-muted-foreground">
               Supabase is not connected, so there is no trading data to analyse yet.
@@ -157,16 +155,16 @@ export default async function CoachPage() {
           <RefreshCoachForm defaultWeekStart={monday} />
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Backtesting">
-          <h2 className="text-lg font-semibold">Backtesting</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Backtesting">
+          <h2 className="section-title">Backtesting</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Log the backtesting sessions you completed. Each session earns +15 XP.
           </p>
           <BacktestingForm defaultDate={today} />
         </section>
 
-        <section className="mt-8" aria-label="Insight history">
-          <h2 className="text-lg font-semibold">Insight history</h2>
+        <section className="mt-6 sm:mt-8" aria-label="Insight history">
+          <h2 className="section-title">Insight history</h2>
           {storedHistory.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No stored insights yet — refresh an analysis to start your history.
@@ -188,7 +186,6 @@ export default async function CoachPage() {
             </Link>
           </p>
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

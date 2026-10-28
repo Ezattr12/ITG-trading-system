@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { getGamificationBundle } from "@/lib/gamification/queries";
 import { refreshGamification } from "@/lib/gamification/actions";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
@@ -61,24 +61,22 @@ export default async function LevelsPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Trader level</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Trader level</h1>
+        <p className="page-lede">
           Your level is scored on discipline, risk, journaling, goals, psychology,
           strategy, consistency and performance — not profit alone. Performance is
           only 5% of the score.
         </p>
 
         {bundle === null ? (
-          <p className="mt-8 text-muted-foreground">
+          <p className="mt-6 sm:mt-8 text-muted-foreground">
             Supabase is not connected yet — your level will be calculated from your
             real trades once the database is connected. Nothing here is estimated.
           </p>
         ) : bundle.score.score === null ? (
-          <section className="mt-8 rounded-lg border bg-card p-6">
-            <h2 className="text-lg font-semibold">No level yet</h2>
+          <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
+            <h2 className="section-title">No level yet</h2>
             <p className="mt-2 text-muted-foreground">
               Journal your first trade, set your risk rules and create a goal — your
               level is calculated from what you actually do, so there is nothing to
@@ -92,15 +90,15 @@ export default async function LevelsPage() {
           </section>
         ) : (
           <>
-            <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
-              <article className="rounded-lg border bg-card p-4">
+            <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
+              <article className="card-surface p-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Current level</h2>
                 <p className="mt-2 text-xl font-semibold">{bundle.score.levelName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Score {bundle.score.score.toFixed(1)} / 100
                 </p>
               </article>
-              <article className="rounded-lg border bg-card p-4">
+              <article className="card-surface p-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Next level</h2>
                 <p className="mt-2 text-xl font-semibold">
                   {progress?.nextLevel ?? "Top level reached"}
@@ -111,7 +109,7 @@ export default async function LevelsPage() {
                     : `${progress?.pointsToNext} points to go`}
                 </p>
               </article>
-              <article className="rounded-lg border bg-card p-4">
+              <article className="card-surface p-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Total XP</h2>
                 <p className="mt-2 text-xl font-semibold">{bundle.xpTotal} XP</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -121,8 +119,8 @@ export default async function LevelsPage() {
             </section>
 
             {progress !== null && progress.nextLevel !== null ? (
-              <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Progress to next level">
-                <h2 className="text-lg font-semibold">Progress to {progress.nextLevel}</h2>
+              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Progress to next level">
+                <h2 className="section-title">Progress to {progress.nextLevel}</h2>
                 <div className="mt-4">
                   <ProgressBar
                     percent={progress.progressPct}
@@ -132,8 +130,8 @@ export default async function LevelsPage() {
               </section>
             ) : null}
 
-            <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Score breakdown">
-              <h2 className="text-lg font-semibold">Score breakdown</h2>
+            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Score breakdown">
+              <h2 className="section-title">Score breakdown</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Each dimension is scored 0–100 from your real data. Dimensions with no
                 data yet are not counted — they do not drag your score down.
@@ -162,8 +160,8 @@ export default async function LevelsPage() {
               </div>
             </section>
 
-            <section className="mt-8 rounded-lg border bg-card p-6" aria-label="XP history">
-              <h2 className="text-lg font-semibold">XP over time</h2>
+            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
+              <h2 className="section-title">XP over time</h2>
               {bundle.xpHistory.length === 0 ? (
                 <p className="mt-2 text-muted-foreground">
                   No XP yet — journal a trade or complete a goal to earn your first XP.
@@ -178,8 +176,8 @@ export default async function LevelsPage() {
               )}
             </section>
 
-            <section className="mt-8 rounded-lg border bg-card p-6" aria-label="All levels">
-              <h2 className="text-lg font-semibold">Levels</h2>
+            <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="All levels">
+              <h2 className="section-title">Levels</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {bundle.levels.map((level) => (
                   <li key={level.id} className="flex justify-between gap-4">
@@ -202,7 +200,6 @@ export default async function LevelsPage() {
             </section>
           </>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { getAdminUserDetail } from "@/lib/admin/queries";
 import { getAuthorisedFinancials } from "@/lib/admin/actions";
 import {
@@ -42,9 +42,7 @@ export default async function AdminUserDetailPage({
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">{display(detail.full_name)}</h1>
+        <h1 className="page-title">{display(detail.full_name)}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {display(detail.country)} · {display(detail.trading_experience)} · Verification:{" "}
           {detail.verification_status} · Role: {detail.role} · Joined{" "}
@@ -52,27 +50,27 @@ export default async function AdminUserDetailPage({
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border bg-card p-4">
+          <div className="card-surface p-4">
             <p className="text-sm text-muted-foreground">Level</p>
             <p className="mt-1 font-semibold">
               {detail.level_name ?? "Not calculated yet"}
               {detail.level_score !== null ? ` (${detail.level_score})` : ""}
             </p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
+          <div className="card-surface p-4">
             <p className="text-sm text-muted-foreground">Trades / Certificates</p>
             <p className="mt-1 font-semibold">
               {detail.trade_count} / {detail.certificate_count}
             </p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
+          <div className="card-surface p-4">
             <p className="text-sm text-muted-foreground">Active goals</p>
             <p className="mt-1 font-semibold">{detail.active_goal_count}</p>
           </div>
         </div>
 
-        <section className="mt-8 rounded-lg border bg-card p-4">
-          <h2 className="text-lg font-semibold">Financial data — private by default</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4">
+          <h2 className="section-title">Financial data — private by default</h2>
           {financials ? (
             <dl className="mt-3 space-y-1 text-sm">
               <div className="flex justify-between">
@@ -108,21 +106,20 @@ export default async function AdminUserDetailPage({
           )}
         </section>
 
-        <section className="mt-8 grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border bg-card p-4">
-            <h2 className="text-lg font-semibold">Change role</h2>
+        <section className="mt-6 sm:mt-8 grid gap-6 md:grid-cols-2">
+          <div className="card-surface p-4">
+            <h2 className="section-title">Change role</h2>
             <div className="mt-4">
               <RoleForm userId={id} currentRole={detail.role} />
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <h2 className="text-lg font-semibold">Change verification</h2>
+          <div className="card-surface p-4">
+            <h2 className="section-title">Change verification</h2>
             <div className="mt-4">
               <VerificationForm userId={id} currentStatus={detail.verification_status} />
             </div>
           </div>
         </section>
-      </main>
     </>
   );
 }

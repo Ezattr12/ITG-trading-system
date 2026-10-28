@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import {
   MarkAllNotificationsReadForm,
   MarkNotificationReadForm,
@@ -44,13 +44,11 @@ export default async function NotificationsPage() {
   const unread = countUnread(items);
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
+    <AppShell email={user.email}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Notifications</h1>
-            <p className="mt-1 text-muted-foreground">
+            <h1 className="page-title">Notifications</h1>
+            <p className="page-lede">
               {items.length === 0
                 ? "No notifications yet."
                 : `${unread} unread of ${items.length} total.`}
@@ -60,16 +58,16 @@ export default async function NotificationsPage() {
         </div>
 
         {items.length === 0 ? (
-          <p className="mt-8 rounded-lg border bg-card p-6 text-muted-foreground">
+          <p className="mt-6 sm:mt-8 card-surface p-4 sm:p-6 text-muted-foreground">
             Nothing here yet. Goal completions, discipline reminders
             and risk warnings will appear here when they happen.
           </p>
         ) : (
-          <ul className="mt-8 space-y-3">
+          <ul className="mt-6 sm:mt-8 space-y-3">
             {items.map((n) => (
               <li
                 key={n.id}
-                className={`rounded-lg border bg-card p-4 ${n.is_read ? "opacity-70" : ""}`}
+                className={`card-surface p-4 ${n.is_read ? "opacity-70" : ""}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -89,7 +87,6 @@ export default async function NotificationsPage() {
             ))}
           </ul>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

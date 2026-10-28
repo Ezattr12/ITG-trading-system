@@ -84,6 +84,10 @@ export const quickTradeSchema = z
     positionSize: z
       .number({ invalid_type_error: "Position size must be a number" })
       .positive("Position size must be greater than 0"),
+    // Optional strategy, chosen at quick entry (Phase 15): the
+    // strategy used to be advanced-review only, which made the
+    // quick path lose the most useful piece of context.
+    strategyId: z.string().uuid().nullable().optional(),
     leverage: z
       .number({ invalid_type_error: "Leverage must be a number" })
       .min(1, "Leverage must be at least 1")

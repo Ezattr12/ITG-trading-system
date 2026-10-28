@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { RiskRulesForm } from "@/components/risk/risk-rules-form";
 import { ResolveEventForm } from "@/components/risk/resolve-event-form";
 import {
@@ -60,11 +60,9 @@ export default async function RiskPage() {
   const activeChecks = checks.filter((c) => c.breached);
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Risk management</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Risk management</h1>
+        <p className="page-lede">
           Set your limits once — the engine checks every trade against
           them and logs every breach. It never closes or executes a
           real trade for you.
@@ -77,7 +75,7 @@ export default async function RiskPage() {
           </p>
         )}
 
-        <section className="mt-8 rounded-lg border bg-card p-4" aria-label="Today's status">
+        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Today's status">
           <h2 className="text-sm font-medium text-muted-foreground">Today&apos;s status</h2>
           {rules === null ? (
             <p className="mt-2 text-sm">
@@ -105,30 +103,30 @@ export default async function RiskPage() {
           <dl className="mt-4 grid grid-cols-3 gap-4 text-sm">
             <div>
               <dt className="text-muted-foreground">Trades today</dt>
-              <dd className="text-lg font-semibold">{day.tradesToday}</dd>
+              <dd className="section-title">{day.tradesToday}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Today&apos;s P&amp;L</dt>
-              <dd className="text-lg font-semibold">
+              <dd className="section-title">
                 {day.dayPnl === null ? "—" : day.dayPnl.toFixed(2)}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Consecutive losses</dt>
-              <dd className="text-lg font-semibold">{day.consecutiveLosses}</dd>
+              <dd className="section-title">{day.consecutiveLosses}</dd>
             </div>
           </dl>
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-4" aria-label="Risk rules">
-          <h2 className="text-lg font-semibold">Your risk rules</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Risk rules">
+          <h2 className="section-title">Your risk rules</h2>
           <div className="mt-4">
             <RiskRulesForm rules={rules} />
           </div>
         </section>
 
-        <section className="mt-8" aria-label="Risk events">
-          <h2 className="text-lg font-semibold">Risk events</h2>
+        <section className="mt-6 sm:mt-8" aria-label="Risk events">
+          <h2 className="section-title">Risk events</h2>
           {events.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               No risk events yet. Breaches and positive streaks will
@@ -166,7 +164,6 @@ export default async function RiskPage() {
             </Link>
           </p>
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

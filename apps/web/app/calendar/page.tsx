@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { formatMoney } from "@/lib/trades/calculations";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
 import {
@@ -63,11 +63,9 @@ export default async function CalendarPage({
   const weeks = buildMonthGrid(year, month, days);
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Trading calendar</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Trading calendar</h1>
+        <p className="page-lede">
           Trading days, P&amp;L and journal completion — spot your patterns over time.
         </p>
 
@@ -75,7 +73,7 @@ export default async function CalendarPage({
           <Link href={`/calendar?month=${shiftMonth(year, month, -1)}`} className="rounded-md border px-3 py-1 text-sm">
             ← Previous
           </Link>
-          <h2 className="text-lg font-semibold">
+          <h2 className="section-title">
             {MONTH_NAMES[month - 1]} {year}
           </h2>
           <Link href={`/calendar?month=${shiftMonth(year, month, 1)}`} className="rounded-md border px-3 py-1 text-sm">
@@ -97,11 +95,11 @@ export default async function CalendarPage({
         </section>
 
         {monthTrades.length === 0 && bundle.trades.length === 0 ? (
-          <p className="mt-8 rounded-lg border bg-card p-6 text-muted-foreground">
+          <p className="mt-6 sm:mt-8 card-surface p-4 sm:p-6 text-muted-foreground">
             No trades yet — your calendar will fill in as you journal trades.
           </p>
         ) : (
-          <section className="mt-8" aria-label="Calendar grid">
+          <section className="mt-6 sm:mt-8" aria-label="Calendar grid">
             <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground" role="row">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
                 <div key={d} className="py-1">{d}</div>
@@ -111,13 +109,13 @@ export default async function CalendarPage({
               <div key={wi} className="mt-1 grid grid-cols-7 gap-1">
                 {week.map((cell, ci) => {
                   if (cell.day === null) {
-                    return <div key={ci} className="min-h-16 rounded-md border border-transparent" />;
+                    return <div key={ci} className="min-h-14 rounded-md border border-transparent sm:min-h-16" />;
                   }
                   const hasTrades = (cell.data?.trades ?? 0) > 0;
                   const pnl = cell.data?.pnl ?? 0;
                   const content = (
                     <div
-                      className={`flex min-h-16 flex-col rounded-md border p-1 text-left text-xs ${
+                      className={`flex min-h-14 flex-col rounded-md border p-1 text-left text-xs leading-tight sm:min-h-16 ${
                         hasTrades
                           ? pnl > 0
                             ? "border-emerald-500/40 bg-emerald-500/10"
@@ -134,7 +132,8 @@ export default async function CalendarPage({
                             {formatMoney(pnl)}
                           </span>
                           <span className="text-muted-foreground">
-                            {cell.data?.trades} trade{(cell.data?.trades ?? 0) === 1 ? "" : "s"} · {Math.round(cell.data?.journalCompletionPct ?? 0)}% journaled
+                            {cell.data?.trades} trade{(cell.data?.trades ?? 0) === 1 ? "" : "s"}
+                            <span className="hidden sm:inline"> · {Math.round(cell.data?.journalCompletionPct ?? 0)}% journaled</span>
                           </span>
                         </>
                       ) : cell.data?.journalCompleted ? (
@@ -157,7 +156,6 @@ export default async function CalendarPage({
             </p>
           </section>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

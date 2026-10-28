@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listAdminLevels } from "@/lib/admin/queries";
 import { LevelForm } from "@/components/admin/admin-forms";
 
@@ -21,9 +21,7 @@ export default async function AdminLevelsPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Levels</h1>
+        <h1 className="page-title">Levels</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Score thresholds for Bronze, Silver, Gold and Platinum. Levels are multi-dimensional —
           never profit-only — and the weights are stored per level in the database.
@@ -35,7 +33,7 @@ export default async function AdminLevelsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {levels.map((level) => (
-              <li key={level.id} className="rounded-lg border bg-card p-4">
+              <li key={level.id} className="card-surface p-4">
                 <p className="font-medium">
                   {level.name} · score {level.min_score}
                   {level.max_score === null ? "+" : `–${level.max_score}`}
@@ -50,7 +48,6 @@ export default async function AdminLevelsPage() {
             ))}
           </ul>
         )}
-      </main>
     </>
   );
 }

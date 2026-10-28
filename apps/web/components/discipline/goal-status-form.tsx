@@ -22,7 +22,7 @@ export function GoalStatusForm({
         id={`status-${goalId}`}
         name="status"
         defaultValue={status}
-        className="min-h-[44px] w-full rounded-md border bg-background px-3 text-sm"
+        className="input-select"
       >
         <option value="active">Active</option>
         <option value="paused">Paused</option>

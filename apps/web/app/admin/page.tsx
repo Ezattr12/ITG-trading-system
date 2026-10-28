@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { getAdminStats, listAuditLogs } from "@/lib/admin/queries";
 
 export const metadata = { title: "Admin — ITG TraderOS" };
@@ -18,9 +18,9 @@ export const metadata = { title: "Admin — ITG TraderOS" };
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="card-surface p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+      <p className="mt-1 page-title">{value}</p>
     </div>
   );
 }
@@ -47,9 +47,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Admin dashboard</h1>
+        <h1 className="page-title">Admin dashboard</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {configured
             ? "Real counts from stored data. Financial data (capital, P&L) is never shown here — it needs an explicit, audit-logged request on a trader's page."
@@ -69,14 +67,14 @@ export default async function AdminDashboardPage() {
           <Stat label="AI Coach insights (7 days)" value={stats.ai_insights_7d} />
         </div>
 
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Recent admin activity</h2>
+        <section className="mt-6 sm:mt-8">
+          <h2 className="section-title">Recent admin activity</h2>
           {recentAudit.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No admin actions recorded yet.</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {recentAudit.map((row) => (
-                <li key={row.id} className="rounded-lg border bg-card p-3 text-sm">
+                <li key={row.id} className="card-surface p-3 text-sm">
                   <span className="font-medium">{row.action}</span>{" "}
                   <span className="text-muted-foreground">
                     on {row.entity_type}
@@ -88,7 +86,6 @@ export default async function AdminDashboardPage() {
             </ul>
           )}
         </section>
-      </main>
     </>
   );
 }

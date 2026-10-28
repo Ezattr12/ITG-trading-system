@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listAdminCertificates } from "@/lib/admin/queries";
 import { RevokeCertificateForm } from "@/components/admin/admin-forms";
 
@@ -22,9 +22,7 @@ export default async function AdminCertificatesPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Certificates</h1>
+        <h1 className="page-title">Certificates</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {certificates.length} certificate{certificates.length === 1 ? "" : "s"}. Only issued
           certificates can be revoked, and every revocation needs a reason.
@@ -36,7 +34,7 @@ export default async function AdminCertificatesPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {certificates.map((c) => (
-              <li key={c.id} className="rounded-lg border bg-card p-4">
+              <li key={c.id} className="card-surface p-4">
                 <p className="font-medium">
                   {c.certificate_id} · {c.trader_name ?? "Name not provided"} ·{" "}
                   {c.month.slice(0, 7)} · {c.status}
@@ -54,7 +52,6 @@ export default async function AdminCertificatesPage() {
             ))}
           </ul>
         )}
-      </main>
     </>
   );
 }

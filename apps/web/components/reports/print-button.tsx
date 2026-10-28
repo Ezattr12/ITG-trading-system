@@ -6,7 +6,7 @@ export function PrintButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="rounded-md border px-3 py-1.5 text-sm font-medium"
+      className="inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 text-sm font-medium"
     >
       Print
     </button>

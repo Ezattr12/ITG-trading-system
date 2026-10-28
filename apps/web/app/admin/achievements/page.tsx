@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listAdminAchievements } from "@/lib/admin/queries";
 import { AchievementForm } from "@/components/admin/admin-forms";
 
@@ -22,17 +22,15 @@ export default async function AdminAchievementsPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Achievements</h1>
+        <h1 className="page-title">Achievements</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {achievements.length} achievement{achievements.length === 1 ? "" : "s"} configured.
           Changes apply to the catalogue immediately; already-unlocked achievements are not
           taken away.
         </p>
 
-        <section className="mt-8 rounded-lg border bg-card p-4">
-          <h2 className="text-lg font-semibold">Create achievement</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4">
+          <h2 className="section-title">Create achievement</h2>
           <div className="mt-4">
             <AchievementForm />
           </div>
@@ -45,7 +43,7 @@ export default async function AdminAchievementsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {achievements.map((a) => (
-              <li key={a.id} className="rounded-lg border bg-card p-4">
+              <li key={a.id} className="card-surface p-4">
                 <p className="font-medium">
                   {a.name} · {a.slug} · {a.category} · {a.xp_reward} XP
                 </p>
@@ -62,7 +60,6 @@ export default async function AdminAchievementsPage() {
             ))}
           </ul>
         )}
-      </main>
     </>
   );
 }

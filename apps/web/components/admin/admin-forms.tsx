@@ -15,8 +15,7 @@ import {
 import type { AdminAchievementRow, AdminLevelRow } from "@/lib/admin/types";
 
 const inputClass = "min-h-[44px]";
-const selectClass =
-  "flex min-h-[44px] w-full rounded-md border bg-background px-3 py-2 text-sm";
+const selectClass = "input-select";
 
 function ReasonField({ id }: { id: string }) {
   return (

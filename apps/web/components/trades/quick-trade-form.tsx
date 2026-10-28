@@ -7,19 +7,25 @@ import type { TradeActionResult } from "@/lib/trades/actions";
 import type { TradeRow } from "@/lib/trades/types";
 
 /**
- * Quick Trade Entry (Phase 3, spec §9, §16).
+ * Quick Trade Entry (Phase 3, spec §9, §16; Phase 15 redesign).
  *
- * Minimal fields only, big touch targets (min 44px), so a trade
- * can be saved in 30–60 seconds on mobile. P&L, ROI, R multiple,
- * risk/reward, win/loss and duration are calculated server-side
- * and are not fields here — the trader never enters them.
+ * The quick path stays minimal so a trade records in 30–60
+ * seconds on one hand: Pair, Long/Short, Entry, Exit, TP, SL,
+ * Position size, Strategy. P&L, ROI, R multiple, risk/reward,
+ * win/loss and duration are calculated server-side and are not
+ * fields here — the trader never enters them.
+ *
+ * Leverage, fees and open/close times still exist (Phase 3
+ * behaviour is preserved), but they live behind an optional
+ * disclosure so they do not crowd the quick path. Opened
+ * defaults to now, so the form still submits without opening it.
  *
  * Reused for corrections: pass `initial` (the trade being
  * corrected) and the correction action; saving a correction
  * creates a reversing trade, it never overwrites the original.
+ * Corrections keep the original strategy — the strategy select
+ * is only rendered when `strategies` is passed (Add trade page).
  */
-
-const inputClass = "min-h-[44px]";
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -34,11 +40,13 @@ export function QuickTradeForm({
   submitLabel,
   tradeId,
   initial,
+  strategies,
 }: {
   action: (prev: TradeActionResult, formData: FormData) => Promise<TradeActionResult>;
   submitLabel: string;
   tradeId?: string;
   initial?: TradeRow | null;
+  strategies?: { id: string; name: string }[];
 }) {
   const nowLocal = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -56,55 +64,75 @@ export function QuickTradeForm({
             required
             placeholder="EUR/USD"
             defaultValue={initial?.pair ?? ""}
-            className={`${inputClass} uppercase`}
+            className="uppercase"
             autoComplete="off"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="direction">Long / Short</Label>
-          <select id="direction" name="direction" defaultValue={initial?.direction ?? "long"} className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${inputClass}`}>
+          <select id="direction" name="direction" defaultValue={initial?.direction ?? "long"} className="input-select">
             <option value="long">Long</option>
             <option value="short">Short</option>
           </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="entryPrice">Entry price</Label>
-          <Input id="entryPrice" name="entryPrice" type="number" step="any" min="0" required placeholder="1.1000" defaultValue={initial?.entry_price ?? ""} className={inputClass} inputMode="decimal" />
+          <Input id="entryPrice" name="entryPrice" type="number" step="any" min="0" required placeholder="1.1000" defaultValue={initial?.entry_price ?? ""} inputMode="decimal" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="exitPrice">Exit price <span className="font-normal text-muted-foreground">(leave blank if still open)</span></Label>
-          <Input id="exitPrice" name="exitPrice" type="number" step="any" min="0" placeholder="1.1200" defaultValue={initial?.exit_price ?? ""} className={inputClass} inputMode="decimal" />
+          <Input id="exitPrice" name="exitPrice" type="number" step="any" min="0" placeholder="1.1200" defaultValue={initial?.exit_price ?? ""} inputMode="decimal" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="tp">Take profit <span className="font-normal text-muted-foreground">(optional)</span></Label>
-          <Input id="tp" name="tp" type="number" step="any" min="0" placeholder="1.1300" defaultValue={initial?.tp ?? ""} className={inputClass} inputMode="decimal" />
+          <Input id="tp" name="tp" type="number" step="any" min="0" placeholder="1.1300" defaultValue={initial?.tp ?? ""} inputMode="decimal" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="sl">Stop loss <span className="font-normal text-muted-foreground">(optional)</span></Label>
-          <Input id="sl" name="sl" type="number" step="any" min="0" placeholder="1.0900" defaultValue={initial?.sl ?? ""} className={inputClass} inputMode="decimal" />
+          <Input id="sl" name="sl" type="number" step="any" min="0" placeholder="1.0900" defaultValue={initial?.sl ?? ""} inputMode="decimal" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="positionSize">Position size</Label>
-          <Input id="positionSize" name="positionSize" type="number" step="any" min="0" required placeholder="10000" defaultValue={initial?.position_size ?? ""} className={inputClass} inputMode="decimal" />
+          <Input id="positionSize" name="positionSize" type="number" step="any" min="0" required placeholder="10000" defaultValue={initial?.position_size ?? ""} inputMode="decimal" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="leverage">Leverage</Label>
-          <Input id="leverage" name="leverage" type="number" step="any" min="1" max="500" defaultValue={initial?.leverage ?? 1} className={inputClass} inputMode="decimal" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="fees">Fees <span className="font-normal text-muted-foreground">(optional)</span></Label>
-          <Input id="fees" name="fees" type="number" step="any" min="0" placeholder="0" defaultValue={initial?.fees ?? ""} className={inputClass} inputMode="decimal" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="openedAt">Opened</Label>
-          <Input id="openedAt" name="openedAt" type="datetime-local" required defaultValue={initial ? toLocalInput(initial.opened_at) : nowValue} className={inputClass} />
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="closedAt">Closed <span className="font-normal text-muted-foreground">(required when an exit price is given)</span></Label>
-          <Input id="closedAt" name="closedAt" type="datetime-local" defaultValue={initial ? toLocalInput(initial.closed_at) : ""} className={inputClass} />
-        </div>
+        {strategies !== undefined ? (
+          <div className="space-y-2">
+            <Label htmlFor="strategyId">Strategy <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <select id="strategyId" name="strategyId" defaultValue={initial?.strategy_id ?? ""} className="input-select">
+              <option value="">No strategy</option>
+              {strategies.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <details className="rounded-lg border bg-muted/40 p-4">
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          More details (optional)
+        </summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="leverage">Leverage</Label>
+            <Input id="leverage" name="leverage" type="number" step="any" min="1" max="500" defaultValue={initial?.leverage ?? 1} inputMode="decimal" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fees">Fees <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <Input id="fees" name="fees" type="number" step="any" min="0" placeholder="0" defaultValue={initial?.fees ?? ""} inputMode="decimal" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="openedAt">Opened</Label>
+            <Input id="openedAt" name="openedAt" type="datetime-local" required defaultValue={initial ? toLocalInput(initial.opened_at) : nowValue} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="closedAt">Closed <span className="font-normal text-muted-foreground">(required when an exit price is given)</span></Label>
+            <Input id="closedAt" name="closedAt" type="datetime-local" defaultValue={initial ? toLocalInput(initial.closed_at) : ""} />
+          </div>
+        </div>
+      </details>
+      <p className="text-sm text-muted-foreground">
         P&amp;L, ROI, R multiple, risk/reward, win/loss and duration are calculated automatically — you never enter
         them. Strategy, psychology, lesson and screenshots are optional and can be added later from the trade page.
       </p>

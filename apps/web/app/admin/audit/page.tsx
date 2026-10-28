@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listAuditLogs } from "@/lib/admin/queries";
 
 export const metadata = { title: "Admin — Audit log — ITG TraderOS" };
@@ -19,9 +19,7 @@ export default async function AdminAuditPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Audit log</h1>
+        <h1 className="page-title">Audit log</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {logs.length} entr{logs.length === 1 ? "y" : "ies"}. Append-only: admin actions are
           recorded here and cannot be edited or deleted from the app.
@@ -33,7 +31,7 @@ export default async function AdminAuditPage() {
         ) : (
           <ul className="mt-6 space-y-2">
             {logs.map((row) => (
-              <li key={row.id} className="rounded-lg border bg-card p-3 text-sm">
+              <li key={row.id} className="card-surface p-3 text-sm">
                 <p className="font-medium">{row.action}</p>
                 <p className="text-muted-foreground">
                   {row.entity_type}
@@ -49,7 +47,6 @@ export default async function AdminAuditPage() {
             ))}
           </ul>
         )}
-      </main>
     </>
   );
 }

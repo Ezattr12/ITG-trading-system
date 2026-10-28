@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { ProgressBar } from "@/components/analytics/stat-card";
 import { GoalForm } from "@/components/discipline/goal-form";
 import { GoalProgressForm } from "@/components/discipline/goal-progress-form";
@@ -97,30 +97,28 @@ export default async function GoalsPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Goals &amp; discipline</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Goals &amp; discipline</h1>
+        <p className="page-lede">
           Daily, weekly, monthly and yearly goals, measured from your
           real trades and activity where possible — never guessed.
         </p>
 
         {motivation ? (
-          <blockquote className="mt-6 rounded-lg border bg-card p-4 text-sm italic text-muted-foreground">
+          <blockquote className="mt-6 card-surface p-4 text-sm italic text-muted-foreground">
             “{motivation.message}”
           </blockquote>
         ) : null}
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Create a goal">
-          <h2 className="text-lg font-semibold">New goal</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Create a goal">
+          <h2 className="section-title">New goal</h2>
           <div className="mt-4">
             <GoalForm />
           </div>
         </section>
 
-        <section className="mt-8" aria-label="Your goals">
-          <h2 className="text-lg font-semibold">Your goals</h2>
+        <section className="mt-6 sm:mt-8" aria-label="Your goals">
+          <h2 className="section-title">Your goals</h2>
           {resolved.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No goals yet. Create your first goal above — for example,
@@ -129,7 +127,7 @@ export default async function GoalsPage() {
           ) : (
             <ul className="mt-4 space-y-4">
               {resolved.map((r) => (
-                <li key={r.goal.id} className="rounded-lg border bg-card p-4">
+                <li key={r.goal.id} className="card-surface p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="font-semibold">{r.goal.title}</h3>
                     <span className="text-sm text-muted-foreground">
@@ -177,8 +175,8 @@ export default async function GoalsPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Recent discipline reminders">
-          <h2 className="text-lg font-semibold">Recent discipline reminders</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Recent discipline reminders">
+          <h2 className="section-title">Recent discipline reminders</h2>
           {events.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               No reminders yet. If you miss a day of journaling, a
@@ -202,7 +200,6 @@ export default async function GoalsPage() {
             View all notifications
           </Link>
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

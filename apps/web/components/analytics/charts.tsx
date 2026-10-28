@@ -25,6 +25,11 @@ import { formatMoney } from "@/lib/trades/calculations";
  *
  * Colours follow the spec §35 palette: green = positive,
  * red = risk/loss, amber = warning, blue = information.
+ *
+ * Phase 15: axis ticks are compact on narrow screens (short
+ * money labels, narrower Y axis, thinned X labels), chart
+ * heights shrink on mobile, and tooltips use the token surface
+ * colours. Charts stay decision tools, not decoration.
  */
 
 const GREEN = "#34d399";
@@ -33,8 +38,21 @@ const BLUE = "#60a5fa";
 const AMBER = "#fbbf24";
 
 function moneyTick(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    const compact = (abs / 1000).toFixed(1).replace(/\.0$/, "");
+    return `${value < 0 ? "-" : ""}${compact}k`;
+  }
   return formatMoney(value);
 }
+
+const TICK = { fill: "#a8b3c5", fontSize: 11 };
+const TOOLTIP_STYLE = {
+  backgroundColor: "#171b25",
+  border: "1px solid #2b3242",
+  borderRadius: "0.75rem",
+  color: "#e8ecf3",
+};
 
 export function EquityChart({
   data,
@@ -42,16 +60,16 @@ export function EquityChart({
   data: { date: string; equity: number; drawdown: number; trades: number }[];
 }) {
   return (
-    <div className="h-64 w-full" role="img" aria-label={`Equity curve over ${data.length} closed trades`}>
+    <div className="h-56 w-full sm:h-64" role="img" aria-label={`Equity curve over ${data.length} closed trades`}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-          <XAxis dataKey="date" tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} />
-          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} tickFormatter={moneyTick} width={70} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#232a38" />
+          <XAxis dataKey="date" tick={TICK} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+          <YAxis tick={TICK} tickLine={false} tickFormatter={moneyTick} width={56} />
           <Tooltip
             formatter={(value) => [formatMoney(Number(value)), "Cumulative P&L"]}
             labelFormatter={(label) => `Closed ${label}`}
-            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151" }}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Area type="monotone" dataKey="equity" stroke={GREEN} fill={GREEN} fillOpacity={0.15} name="Cumulative P&L" />
         </AreaChart>
@@ -62,15 +80,15 @@ export function EquityChart({
 
 export function DrawdownChart({ data }: { data: { date: string; drawdown: number }[] }) {
   return (
-    <div className="h-48 w-full" role="img" aria-label="Drawdown over time">
+    <div className="h-44 w-full sm:h-48" role="img" aria-label="Drawdown over time">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-          <XAxis dataKey="date" tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} />
-          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} tickFormatter={moneyTick} width={70} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#232a38" />
+          <XAxis dataKey="date" tick={TICK} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+          <YAxis tick={TICK} tickLine={false} tickFormatter={moneyTick} width={56} />
           <Tooltip
             formatter={(value) => [formatMoney(Number(value)), "Drawdown"]}
-            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151" }}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Area type="monotone" dataKey="drawdown" stroke={RED} fill={RED} fillOpacity={0.2} name="Drawdown" />
         </AreaChart>
@@ -81,15 +99,15 @@ export function DrawdownChart({ data }: { data: { date: string; drawdown: number
 
 export function PeriodPnlChart({ data }: { data: { label: string; pnl: number }[] }) {
   return (
-    <div className="h-64 w-full" role="img" aria-label="Profit and loss by period">
+    <div className="h-56 w-full sm:h-64" role="img" aria-label="Profit and loss by period">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-          <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} />
-          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} tickFormatter={moneyTick} width={70} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#232a38" />
+          <XAxis dataKey="label" tick={TICK} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
+          <YAxis tick={TICK} tickLine={false} tickFormatter={moneyTick} width={56} />
           <Tooltip
             formatter={(value) => [formatMoney(Number(value)), "P&L"]}
-            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151" }}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Bar dataKey="pnl" name="P&L">
             {data.map((entry) => (
@@ -108,15 +126,15 @@ export function RDistributionChart({
   data: { label: string; count: number }[];
 }) {
   return (
-    <div className="h-56 w-full" role="img" aria-label="Distribution of R multiples">
+    <div className="h-52 w-full sm:h-56" role="img" aria-label="Distribution of R multiples">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-          <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} />
-          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} allowDecimals={false} width={40} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#232a38" />
+          <XAxis dataKey="label" tick={TICK} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
+          <YAxis tick={TICK} tickLine={false} allowDecimals={false} width={40} />
           <Tooltip
             formatter={(value) => [`${value} trades`, "Trades"]}
-            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151" }}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Bar dataKey="count" name="Trades" fill={BLUE} />
         </BarChart>
@@ -127,15 +145,15 @@ export function RDistributionChart({
 
 export function XpHistoryChart({ data }: { data: { date: string; cumulativeXp: number }[] }) {
   return (
-    <div className="h-56 w-full" role="img" aria-label="Cumulative XP over time">
+    <div className="h-52 w-full sm:h-56" role="img" aria-label="Cumulative XP over time">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-          <XAxis dataKey="date" tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} />
-          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} tickLine={false} allowDecimals={false} width={50} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#232a38" />
+          <XAxis dataKey="date" tick={TICK} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+          <YAxis tick={TICK} tickLine={false} allowDecimals={false} width={50} />
           <Tooltip
             formatter={(value) => [`${value} XP`, "Total XP"]}
-            contentStyle={{ backgroundColor: "#111827", border: "1px solid #374151" }}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Line type="monotone" dataKey="cumulativeXp" stroke={AMBER} strokeWidth={2} dot={false} name="Total XP" />
         </LineChart>

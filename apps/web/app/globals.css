@@ -2,26 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ITG TraderOS design tokens (Phase 15).
+ *
+ * Premium institutional fintech: dark navy/charcoal foundation
+ * (never pure black), off-white primary text, muted secondary
+ * text, one blue/indigo brand accent, and semantic colours only
+ * for profit (green), risk/loss (red), warning (amber) and AI
+ * (purple). No other accent colours. Every page reads these
+ * tokens through Tailwind — colours are never hard-coded per page.
+ */
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
-    --primary: 210 40% 96%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 32% 17%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 32% 17%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 210 40% 96%;
-    --border: 217 32% 17%;
-    --input: 217 32% 17%;
-    --ring: 212 27% 84%;
-    --radius: 0.5rem;
+    /* Surfaces */
+    --background: 222 33% 9%;
+    --foreground: 210 30% 94%;
+    --card: 222 28% 13%;
+    --card-foreground: 210 30% 94%;
+    --popover: 222 28% 13%;
+    --popover-foreground: 210 30% 94%;
+    /* Brand / action — blue/indigo, restrained */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary surfaces and text */
+    --secondary: 222 24% 18%;
+    --secondary-foreground: 210 25% 90%;
+    --muted: 222 24% 17%;
+    --muted-foreground: 215 18% 72%;
+    --accent: 222 24% 18%;
+    --accent-foreground: 210 25% 90%;
+    /* Risk */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    /* Lines and inputs */
+    --border: 222 20% 21%;
+    --input: 222 20% 24%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+    /* Semantic colours — the only other accents in the system */
+    --success: 152 69% 42%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+    --ai: 262 83% 68%;
   }
 }
 
@@ -29,9 +51,77 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Safety net: a page must never scroll sideways. The shell
+       and every component are built to fit; this only catches a
+       stray fixed-width element instead of letting it create the
+       empty right-hand space seen on mobile. */
+    overflow-x: clip;
+  }
   body {
-    @apply bg-background text-foreground;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.55;
+    overflow-x: clip;
+  }
+  /*
+   * Form controls stay at 16px everywhere. Below 16px iOS zooms
+   * the viewport when an input is focused, which breaks the
+   * mobile layout; 16px is also a comfortable reading size.
+   */
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+  /* Visible keyboard focus everywhere. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Shared typography and surface classes. Pages use these instead
+ * of inventing their own sizes, so the hierarchy is identical
+ * across the app.
+ *
+ * Page titles 24-32px, section titles 16-20px, primary metrics
+ * 24-32px, body 14-16px, secondary 12-14px. No tiny text on mobile.
+ */
+@layer components {
+  .page-title {
+    @apply text-2xl font-bold tracking-tight sm:text-3xl;
+  }
+  .page-lede {
+    @apply mt-1 text-base text-muted-foreground;
+  }
+  .section-title {
+    @apply text-base font-semibold sm:text-lg;
+  }
+  .section-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+  .card-surface {
+    @apply rounded-xl border bg-card;
+  }
+  /* Primary metric inside a stat card. */
+  .metric-value {
+    @apply mt-2 text-2xl font-bold tabular-nums sm:text-3xl;
+  }
+  /* Native selects share the Input look: 44px minimum, 16px text. */
+  .input-select {
+    @apply flex min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* Links that act as actions inside cards and lists. */
+  .action-link {
+    @apply inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline;
+  }
+  /* Tabular figures for money and percentages. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -40,6 +130,8 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

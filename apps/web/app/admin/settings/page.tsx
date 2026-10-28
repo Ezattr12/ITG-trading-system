@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listSystemSettings } from "@/lib/admin/queries";
 import { SettingForm } from "@/components/admin/admin-forms";
 
@@ -45,12 +45,10 @@ export default async function AdminSettingsPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="page-title">Settings</h1>
 
-        <section className="mt-6 rounded-lg border bg-card p-4">
-          <h2 className="text-lg font-semibold">AI Coach configuration</h2>
+        <section className="mt-6 card-surface p-4">
+          <h2 className="section-title">AI Coach configuration</h2>
           <dl className="mt-3 space-y-1 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Coach mode</dt>
@@ -71,8 +69,8 @@ export default async function AdminSettingsPage() {
           </p>
         </section>
 
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">System settings</h2>
+        <section className="mt-6 sm:mt-8">
+          <h2 className="section-title">System settings</h2>
           {settings.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {configured ? "No settings stored yet." : "Supabase is not connected yet, so no settings are listed."}
@@ -83,7 +81,7 @@ export default async function AdminSettingsPage() {
                 const meta = SETTING_META[s.key];
                 if (!meta) return null;
                 return (
-                  <li key={s.key} className="rounded-lg border bg-card p-4">
+                  <li key={s.key} className="card-surface p-4">
                     <SettingForm
                       settingKey={s.key}
                       value={settingValue(s.value)}
@@ -96,7 +94,6 @@ export default async function AdminSettingsPage() {
             </ul>
           )}
         </section>
-      </main>
     </>
   );
 }

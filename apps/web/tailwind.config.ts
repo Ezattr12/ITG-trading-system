@@ -17,10 +17,14 @@ const config: Config = {
         muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
-        // Trading semantics: green = positive, red = risk/loss, amber = warning.
-        profit: "#22c55e",
-        loss: "#ef4444",
-        warning: "#f59e0b",
+        // Semantic colours (Phase 15 tokens): green = profit/success,
+        // red = loss/risk, amber = warning, purple = AI, blue = info/brand.
+        profit: "hsl(var(--success))",
+        loss: "hsl(var(--destructive))",
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        info: "hsl(var(--info))",
+        ai: "hsl(var(--ai))",
       },
       borderRadius: {
         lg: "var(--radius)",

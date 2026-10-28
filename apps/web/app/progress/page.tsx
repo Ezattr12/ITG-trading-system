@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { displayOrNotProvided } from "@/lib/onboarding/completion";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
 import { mondayOf, periodPnl, psychologySummary } from "@/lib/analytics/analytics";
@@ -83,22 +83,20 @@ export default async function ProgressPage() {
     }));
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Progress</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Progress</h1>
+        <p className="page-lede">
           Your development over time — trading, discipline, psychology, risk, strategy, journaling, goals, level and XP.
         </p>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level and XP">
+        <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level and XP">
           <StatCard label="Trader level" value={displayOrNotProvided(bundle.levelName)} hint={bundle.levelScore === null ? "No score yet — journal a trade to start building your level." : `Multi-dimensional score: ${bundle.levelScore.toFixed(1)} / 100 — discipline, risk, journaling, goals, psychology, strategy, consistency and performance.`} />
           <StatCard label="Total XP" value={`${bundle.xpTotal} XP`} hint="Earned for journaling, goals, reviews and discipline." />
           <StatCard label="Journal completion" value={`${psych.journalCompletionPct.toFixed(0)}%`} hint="Share of closed trades with psychology or a lesson." />
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="XP history">
-          <h2 className="text-lg font-semibold">XP over time</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
+          <h2 className="section-title">XP over time</h2>
           {bundle.xpHistory.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No XP yet — XP is earned by journaling trades, completing goals and doing reviews.
@@ -113,8 +111,8 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Goals">
-          <h2 className="text-lg font-semibold">Goals</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Goals">
+          <h2 className="section-title">Goals</h2>
           {bundle.goals.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No goals yet. Goal progress will be tracked here once you create one.
@@ -138,8 +136,8 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Journal consistency by week">
-          <h2 className="text-lg font-semibold">Journal consistency — last 12 weeks</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Journal consistency by week">
+          <h2 className="section-title">Journal consistency — last 12 weeks</h2>
           {weeklyRows.length === 0 ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
           ) : (
@@ -168,8 +166,8 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Discipline and psychology by month">
-          <h2 className="text-lg font-semibold">Discipline &amp; psychology by month</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Discipline and psychology by month">
+          <h2 className="section-title">Discipline &amp; psychology by month</h2>
           {monthlyRows.length === 0 ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
           ) : (
@@ -204,7 +202,6 @@ export default async function ProgressPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

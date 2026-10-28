@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { IssueCertificateForm } from "@/components/certificates/issue-certificate-form";
 import { getCertificates, getMonthlyEligibility } from "@/lib/certificates/queries";
 import { monthLabel } from "@/lib/certificates/eligibility";
@@ -45,18 +45,16 @@ export default async function CertificatesPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Certificates</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Certificates</h1>
+        <p className="page-lede">
           A monthly ITG Performance Certificate is earned, not bought — it is
           issued only when the month&apos;s journaling, risk discipline,
           routine and review requirements are all met.
         </p>
 
-        <section className="mt-8 rounded-lg border bg-card p-4">
-          <h2 className="text-lg font-semibold">
+        <section className="mt-6 sm:mt-8 card-surface p-4">
+          <h2 className="section-title">
             {monthLabel(currentMonth)} — eligibility
           </h2>
           {!configured || !eligibility ? (
@@ -97,8 +95,8 @@ export default async function CertificatesPage() {
           )}
         </section>
 
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Issued certificates</h2>
+        <section className="mt-6 sm:mt-8">
+          <h2 className="section-title">Issued certificates</h2>
           {certificates.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No certificates issued yet. Meet a month&apos;s requirements and
@@ -109,7 +107,7 @@ export default async function CertificatesPage() {
               {certificates.map((c) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4"
+                  className="flex flex-wrap items-center justify-between gap-3 card-surface p-4"
                 >
                   <div>
                     <p className="font-medium">
@@ -133,7 +131,6 @@ export default async function CertificatesPage() {
             </ul>
           )}
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

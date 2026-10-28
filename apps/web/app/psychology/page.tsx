@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { getAnalyticsBundle } from "@/lib/analytics/queries";
 import {
   breakdownBy,
@@ -29,15 +29,15 @@ function BreakdownTable({
   rows: { label: string; trades: number; pnl: number; winRate: number | null }[];
 }) {
   return (
-    <section className="mt-8" aria-label={title}>
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="mt-6 sm:mt-8" aria-label={title}>
+      <h2 className="section-title">{title}</h2>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
           No data yet — record emotion, confidence and discipline in
           a trade&apos;s Advanced Review and it will appear here.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border">
+        <div className="mt-4 overflow-x-auto rounded-xl border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -88,11 +88,9 @@ export default async function PsychologyPage() {
   ).filter((row) => row.key !== "unknown");
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Psychology</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Psychology</h1>
+        <p className="page-lede">
           How your state of mind lines up with your results. These
           options exist for honest journaling — FOMO and revenge
           trades are recorded so you can see their cost, not
@@ -106,21 +104,21 @@ export default async function PsychologyPage() {
           </p>
         )}
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Psychology summary">
-          <article className="rounded-lg border bg-card p-4">
+        <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Psychology summary">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Average confidence</h2>
             <p className="mt-2 text-xl font-semibold">
               {psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}
             </p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Good discipline</h2>
             <p className="mt-2 text-xl font-semibold">
               {psych.goodDisciplinePct === null ? "—" : `${psych.goodDisciplinePct.toFixed(0)}%`}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">Share of rated trades with good discipline.</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Journal completion</h2>
             <p className="mt-2 text-xl font-semibold">
               {psych.journalCompletionPct.toFixed(0)}%
@@ -135,7 +133,6 @@ export default async function PsychologyPage() {
         />
         <BreakdownTable title="Performance by confidence" rows={byConfidence} />
         <BreakdownTable title="Performance by discipline" rows={byDiscipline} />
-      </main>
-    </div>
+    </AppShell>
   );
 }

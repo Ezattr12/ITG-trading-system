@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { TradeFiltersForm } from "@/components/trades/trade-filters";
 import { getSystemStrategies, getTradeListItems } from "@/lib/trades/queries";
 import { applyTradeFilters, paginate } from "@/lib/trades/filters";
@@ -76,13 +76,11 @@ export default async function TradesPage({
   };
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
+    <AppShell email={user.email}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Trades</h1>
-            <p className="mt-1 text-muted-foreground">
+            <h1 className="page-title">Trades</h1>
+            <p className="page-lede">
               {page.total === 0
                 ? "No trades yet."
                 : `${page.total} trade${page.total === 1 ? "" : "s"} found.`}{" "}
@@ -102,8 +100,8 @@ export default async function TradesPage({
         </div>
 
         {page.total === 0 ? (
-          <section className="mt-8 rounded-lg border bg-card p-6" aria-label="No trades">
-            <h2 className="text-lg font-semibold">No trades match</h2>
+          <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="No trades">
+            <h2 className="section-title">No trades match</h2>
             <p className="mt-2 text-muted-foreground">
               {items.length === 0
                 ? "You have not added any trades yet. A trade takes 30–60 seconds to add."
@@ -115,7 +113,38 @@ export default async function TradesPage({
           </section>
         ) : (
           <>
-            <div className="mt-8 overflow-x-auto rounded-lg border">
+            {/* Mobile: one card per trade — a 720px table squeezed
+                into a phone is not a mobile list. Desktop keeps the
+                table, which fits there and stays sortable by eye. */}
+            <ul className="mt-6 space-y-3 md:hidden" aria-label="Trades">
+              {page.items.map(({ trade }) => (
+                <li key={trade.id} className="card-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link href={`/trades/${trade.id}`} className="min-h-11 text-base font-semibold underline underline-offset-4">
+                      {trade.pair}
+                    </Link>
+                    <span
+                      className={`text-base font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}
+                    >
+                      {trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <span className="capitalize">{trade.direction}</span>
+                    {" · "}
+                    {new Date(trade.opened_at).toLocaleDateString()}
+                    {" · "}
+                    {trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}
+                    {" · "}
+                    <span className="capitalize">{trade.status}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Entry {trade.entry_price} · Exit {trade.exit_price ?? "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 sm:mt-8 hidden overflow-x-auto rounded-xl border md:block">
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
@@ -157,19 +186,19 @@ export default async function TradesPage({
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <p className="text-muted-foreground">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
                 Page {page.page} of {page.totalPages} · showing the {Math.min(500, page.total)} most recent trades
                 for filtering.
               </p>
               <div className="flex gap-2">
                 {page.page > 1 && (
-                  <Link href={pageHref(page.page - 1)} className="rounded-md border px-3 py-2">
+                  <Link href={pageHref(page.page - 1)} className="inline-flex min-h-11 items-center rounded-md border px-3 py-2">
                     Previous
                   </Link>
                 )}
                 {page.page < page.totalPages && (
-                  <Link href={pageHref(page.page + 1)} className="rounded-md border px-3 py-2">
+                  <Link href={pageHref(page.page + 1)} className="inline-flex min-h-11 items-center rounded-md border px-3 py-2">
                     Next
                   </Link>
                 )}
@@ -177,7 +206,6 @@ export default async function TradesPage({
             </div>
           </>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { ActionForm } from "@/components/auth/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,11 +61,9 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Your profile</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email} narrow>
+        <h1 className="page-title">Your profile</h1>
+        <p className="page-lede">
           {displayOrNotProvided(p?.full_name)} · {displayOrNotProvided(p?.verification_status === "verified" ? "Verified" : p?.verification_status === "partial" ? "Partially Verified" : "Not Provided")}
         </p>
         {!configured && (
@@ -74,8 +72,8 @@ export default async function ProfilePage() {
           </p>
         )}
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Profile photo">
-          <h2 className="text-lg font-semibold">Profile photo</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Profile photo">
+          <h2 className="section-title">Profile photo</h2>
           {p?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={p.avatar_url} alt="Your profile photo" className="mt-4 h-24 w-24 rounded-full object-cover" />
@@ -90,8 +88,8 @@ export default async function ProfilePage() {
           </ActionForm>
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Edit profile">
-          <h2 className="text-lg font-semibold">Edit profile</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Edit profile">
+          <h2 className="section-title">Edit profile</h2>
           <ActionForm action={updateProfileAction} submitLabel="Save profile">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name">
@@ -136,12 +134,12 @@ export default async function ProfilePage() {
           </ActionForm>
         </section>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Progress">
-          <article className="rounded-lg border bg-card p-4">
+        <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Progress">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Level</h2>
             <p className="mt-2 font-semibold">{displayOrNotProvided(levelName)}</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Achievements</h2>
             {achievements.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">No achievements yet. (Phase 7)</p>
@@ -149,7 +147,7 @@ export default async function ProfilePage() {
               <ul className="mt-2 list-disc pl-4 text-sm">{achievements.map((a) => <li key={a.name}>{a.name}</li>)}</ul>
             )}
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm font-medium text-muted-foreground">Certificates</h2>
             {certificates.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">No certificates yet. (Phase 8)</p>
@@ -158,7 +156,6 @@ export default async function ProfilePage() {
             )}
           </article>
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

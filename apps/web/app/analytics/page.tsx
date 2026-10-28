@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { formatMoney } from "@/lib/trades/calculations";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
 import {
@@ -48,15 +48,15 @@ const EMPTY_BUNDLE: AnalyticsBundle = {
 function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }) {
   if (rows.length === 0) {
     return (
-      <section className="rounded-lg border bg-card p-6">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <section className="card-surface p-4 sm:p-6">
+        <h2 className="section-title">{title}</h2>
         <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
       </section>
     );
   }
   return (
-    <section className="rounded-lg border bg-card p-6">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="card-surface p-4 sm:p-6">
+      <h2 className="section-title">{title}</h2>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
@@ -114,17 +114,15 @@ export default async function AnalyticsPage({
   const hasTrades = bundle.trades.length > 0;
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Analytics</h1>
+        <p className="page-lede">
           {hasTrades
             ? `${summary.tradeCount} closed trades. All figures are calculated from your real trades.`
             : "No closed trades yet — your analytics will appear here once you close trades."}
         </p>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Performance summary">
+        <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Performance summary">
           <StatCard label="Total P&L" value={<Money value={hasTrades ? summary.totalPnl : null} />} />
           <StatCard label="Win rate / loss rate" value={<><Pct value={summary.winRate} /> / <Pct value={summary.lossRate} /></>} />
           <StatCard label="Average win / loss" value={<>{formatMoney(summary.avgWin)} / {formatMoney(summary.avgLoss)}</>} />
@@ -133,8 +131,8 @@ export default async function AnalyticsPage({
           <StatCard label="Max drawdown" value={<Money value={hasTrades ? summary.maxDrawdown : null} />} />
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Equity curve">
-          <h2 className="text-lg font-semibold">Equity curve</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Equity curve">
+          <h2 className="section-title">Equity curve</h2>
           {hasTrades ? (
             <>
               <div className="mt-4"><EquityChart data={equity} /></div>
@@ -164,8 +162,8 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Drawdown">
-          <h2 className="text-lg font-semibold">Drawdown</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Drawdown">
+          <h2 className="section-title">Drawdown</h2>
           {hasTrades ? (
             <div className="mt-4">
               <DrawdownChart data={equity.map((p) => ({ date: p.date, drawdown: p.drawdown }))} />
@@ -178,15 +176,15 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Profit and loss by period">
-          <h2 className="text-lg font-semibold">P&amp;L by period</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Profit and loss by period">
+          <h2 className="section-title">P&amp;L by period</h2>
           <div className="mt-3 flex gap-2" role="tablist" aria-label="Period">
             {(["day", "week", "month"] as const).map((p) => (
               <Link
                 key={p}
                 href={`/analytics?period=${p}`}
                 aria-current={period === p ? "true" : undefined}
-                className={`rounded-md border px-3 py-1 text-sm ${period === p ? "bg-secondary font-medium" : "text-muted-foreground"}`}
+                className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1 text-sm ${period === p ? "bg-secondary font-medium" : "text-muted-foreground"}`}
               >
                 {PERIOD_LABELS[p]}
               </Link>
@@ -223,8 +221,8 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="R distribution">
-          <h2 className="text-lg font-semibold">R distribution</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="R distribution">
+          <h2 className="section-title">R distribution</h2>
           {hasTrades ? (
             <>
               <div className="mt-4">
@@ -259,14 +257,14 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <div className="mt-8 grid gap-4">
+        <div className="mt-6 sm:mt-8 grid gap-4">
           <BreakdownTable title="By strategy" rows={breakdownByStrategy(bundle.trades)} />
           <BreakdownTable title="By session" rows={breakdownBySession(bundle.trades)} />
           <BreakdownTable title="By direction" rows={breakdownByDirection(bundle.trades)} />
         </div>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Psychology">
-          <h2 className="text-lg font-semibold">Psychology vs performance</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Psychology">
+          <h2 className="section-title">Psychology vs performance</h2>
           {psych.byEmotion.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No psychology records yet — add confidence, emotion and discipline in a trade&apos;s advanced review.
@@ -300,7 +298,6 @@ export default async function AnalyticsPage({
             </div>
           )}
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

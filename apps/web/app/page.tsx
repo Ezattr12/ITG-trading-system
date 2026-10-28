@@ -41,7 +41,7 @@ export default async function HomePage() {
           { title: "Dashboard", body: "Phase 4 — shows only your real data." },
           { title: "AI Coach", body: "Phase 9 — insights from your real data only." },
         ].map((card) => (
-          <article key={card.title} className="rounded-lg border bg-card p-4">
+          <article key={card.title} className="card-surface p-4">
             <h3 className="font-semibold">{card.title}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{card.body}</p>
           </article>

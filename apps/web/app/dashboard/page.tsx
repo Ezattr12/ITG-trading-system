@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { displayOrNotProvided } from "@/lib/onboarding/completion";
 import { formatMoney } from "@/lib/trades/calculations";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
@@ -21,6 +21,7 @@ import { motivationContextFor, selectMotivationMessage } from "@/lib/discipline/
 import {
   getLastJournalDate,
   getMotivationMessages,
+  getNotifications,
 } from "@/lib/discipline/queries";
 
 export const metadata = { title: "Dashboard — ITG TraderOS" };
@@ -101,6 +102,9 @@ export default async function DashboardPage() {
   const latestInsights = isSupabaseConfigured()
     ? await getLatestCoachInsights(await createServerSupabaseClient(), user.id, 3)
     : [];
+  const recentActivity = isSupabaseConfigured()
+    ? await getNotifications(await createServerSupabaseClient(), user.id, 5)
+    : [];
   const motivation = selectMotivationMessage(
     motivationMessages,
     motivationContextFor({
@@ -114,97 +118,64 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">
-          Welcome{user.profile?.full_name ? `, ${user.profile.full_name}` : ""}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {summary.tradeCount === 0
-            ? "No trades yet — add your first trade and your performance will be calculated from it."
-            : `${summary.tradeCount} closed trades journaled. All figures below are calculated from your real trades.`}
-        </p>
+    <AppShell email={user.email}>
+      {/* 1. Welcome / current trading status */}
+      <h1 className="page-title">
+        Welcome{user.profile?.full_name ? `, ${user.profile.full_name}` : ""}
+      </h1>
+      <p className="page-lede">
+        {summary.tradeCount === 0
+          ? "No trades yet — add your first trade and your performance will be calculated from it."
+          : `${summary.tradeCount} closed trades journaled. All figures below are calculated from your real trades.`}
+      </p>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Performance">
-          <StatCard label="Current P&L (closed trades)" value={<Money value={summary.tradeCount === 0 ? null : summary.totalPnl} />} hint="Cumulative P&L of closed trades. Open trades have no P&L yet." />
-          <StatCard label="Win rate" value={<Pct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
-          <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
-          <StatCard label="Average R" value={summary.avgR === null ? "—" : `${summary.avgR.toFixed(2)}R`} hint="Average R multiple (needs a stop-loss set)." />
-          <StatCard label="Current streak" value={streakLabel} />
-          <StatCard label="Max drawdown" value={<Money value={summary.tradeCount === 0 ? null : summary.maxDrawdown} />} hint="Largest peak-to-trough fall in cumulative P&L." />
-        </section>
+      {/* 2. KPI row — the five numbers that matter most, first. */}
+      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5" aria-label="Key performance indicators">
+        <StatCard label="Current P&L" value={<Money value={summary.tradeCount === 0 ? null : summary.totalPnl} />} hint="Cumulative P&L of closed trades." />
+        <StatCard label="Win rate" value={<Pct value={summary.winRate} />} hint={`${summary.wins} wins · ${summary.losses} losses`} />
+        <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null ? "Needs at least one losing trade to calculate." : "Gross profit ÷ gross loss."} />
+        <StatCard label="Average R" value={summary.avgR === null ? "—" : `${summary.avgR.toFixed(2)}R`} hint="Average R multiple (needs a stop-loss set)." />
+        <div className="col-span-2 sm:col-span-1">
+          <StatCard label="Current streak" value={streakLabel} hint={summary.tradeCount === 0 ? "No closed trades yet." : "Consecutive wins or losses."} />
+        </div>
+      </section>
 
-        <section className="mt-8 grid gap-4 lg:grid-cols-2" aria-label="Progress and discipline">
-          <article className="rounded-lg border bg-card p-4">
-            <h2 className="text-sm font-medium text-muted-foreground">Trader level</h2>
-            <p className="mt-2 text-xl font-semibold">{displayOrNotProvided(bundle.levelName)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {bundle.levelScore === null
-                ? "No score yet — journal a trade to start building your level."
-                : `Score ${bundle.levelScore.toFixed(1)} / 100${nextLevel?.nextLevel ? ` · ${nextLevel.pointsToNext} points to ${nextLevel.nextLevel}` : " · Top level reached"}`}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {bundle.xpTotal} XP · Scored on discipline, risk, journaling, goals,
-              psychology, strategy, consistency and performance — not profit alone.
-            </p>
-            <div className="mt-3 flex gap-4">
-              <Link href="/levels" className="text-sm font-medium underline">
-                Level &amp; score breakdown
-              </Link>
-              <Link href="/achievements" className="text-sm font-medium underline">
-                Achievements
-              </Link>
+      {/* 3. Main performance / equity curve. */}
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Performance chart">
+        <h2 className="section-title">Performance</h2>
+        {equity.length === 0 ? (
+          <p className="mt-2 text-base text-muted-foreground">
+            Your equity curve will appear here once you close your first trade.
+          </p>
+        ) : (
+          <>
+            <div className="mt-4">
+              <EquityChart data={equity} />
             </div>
-            {bundle.goals.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {bundle.goals.slice(0, 3).map((g) => (
-                  <ProgressBar
-                    key={g.id}
-                    percent={g.percent}
-                    label={`${g.title}: ${g.currentValue} / ${g.targetValue} (${g.percent.toFixed(0)}%)`}
-                  />
-                ))}
-                <Link href="/progress" className="text-sm font-medium underline">
-                  View all goals and progress
-                </Link>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No goals yet.{" "}
-                <Link href="/goals" className="font-medium underline">
-                  Create your first goal
-                </Link>{" "}
-                — for now, journaling builds your XP.
-              </p>
-            )}
-          </article>
-          <article className="rounded-lg border bg-card p-4">
-            <h2 className="text-sm font-medium text-muted-foreground">Risk discipline</h2>
-            <ul className="mt-2 space-y-2 text-sm">
-              <li>Stop-loss set on <strong>{psych.stopLossPct.toFixed(0)}%</strong> of closed trades</li>
-              <li>Discipline rated “Good” on <strong>{psych.goodDisciplinePct === null ? "—" : `${psych.goodDisciplinePct.toFixed(0)}%`}</strong> of rated trades</li>
-              <li>Journal completion: <strong>{psych.journalCompletionPct.toFixed(0)}%</strong> of closed trades have psychology or a lesson</li>
-              <li>Average confidence: <strong>{psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}</strong></li>
-              {bestEmotion ? (
-                <li>Best emotion by P&L: <strong>{bestEmotion.emotion}</strong> ({formatMoney(bestEmotion.pnl)} over {bestEmotion.trades} trades)</li>
-              ) : null}
-            </ul>
-            <Link href="/analytics" className="mt-3 inline-block text-sm font-medium underline">
-              Full analytics
-            </Link>
-          </article>
-        </section>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Cumulative P&L of closed trades, in close order. Starting capital is not stored, so the curve starts at 0.
+            </p>
+          </>
+        )}
+      </section>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Discipline">
-          <h2 className="text-lg font-semibold">Discipline</h2>
+      {/* 4. Risk & discipline + 5. Goal progress. */}
+      <section className="mt-6 grid gap-4 sm:mt-8 lg:grid-cols-2" aria-label="Risk, discipline and goals">
+        <article className="card-surface p-4 sm:p-6">
+          <h2 className="section-title">Risk &amp; discipline</h2>
+          <ul className="mt-3 space-y-2 text-base">
+            <li>Stop-loss set on <strong>{psych.stopLossPct.toFixed(0)}%</strong> of closed trades</li>
+            <li>Discipline rated “Good” on <strong>{psych.goodDisciplinePct === null ? "—" : `${psych.goodDisciplinePct.toFixed(0)}%`}</strong> of rated trades</li>
+            <li>Journal completion: <strong>{psych.journalCompletionPct.toFixed(0)}%</strong> of closed trades have psychology or a lesson</li>
+            <li>Max drawdown: <strong><Money value={summary.tradeCount === 0 ? null : summary.maxDrawdown} /></strong></li>
+          </ul>
           {reminder.level > 0 ? (
-            <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+            <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
               <p className="font-medium">{reminder.title}</p>
-              <p className="mt-1 text-muted-foreground">{reminder.body}</p>
+              <p className="page-lede">{reminder.body}</p>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-4 text-base text-muted-foreground">
               {lastJournalDate === null
                 ? "No journal entries yet — your first reviewed trade starts your discipline streak."
                 : "You're up to date with your journaling. Keep it going."}
@@ -213,82 +184,167 @@ export default async function DashboardPage() {
           {motivation ? (
             <p className="mt-3 text-sm italic text-muted-foreground">“{motivation.message}”</p>
           ) : null}
-          <div className="mt-4 flex gap-4">
-            <Link href="/goals" className="text-sm font-medium underline">Goals &amp; discipline</Link>
-            <Link href="/notifications" className="text-sm font-medium underline">Notifications</Link>
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/risk" className="action-link">Risk rules</Link>
+            <Link href="/notifications" className="action-link">Notifications</Link>
           </div>
-        </section>
+        </article>
 
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Performance chart">
-          <h2 className="text-lg font-semibold">Performance</h2>
-          {equity.length === 0 ? (
-            <p className="mt-2 text-muted-foreground">
-              Your equity curve will appear here once you close your first trade.
-            </p>
+        <article className="card-surface p-4 sm:p-6">
+          <h2 className="section-title">Goal progress</h2>
+          <p className="mt-3 page-title">{displayOrNotProvided(bundle.levelName)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {bundle.levelScore === null
+              ? "No score yet — journal a trade to start building your level."
+              : `Score ${bundle.levelScore.toFixed(1)} / 100${nextLevel?.nextLevel ? ` · ${nextLevel.pointsToNext} points to ${nextLevel.nextLevel}` : " · Top level reached"}`}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {bundle.xpTotal} XP · Scored on discipline, risk, journaling, goals,
+            psychology, strategy, consistency and performance — not profit alone.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/levels" className="action-link">Level &amp; score breakdown</Link>
+            <Link href="/achievements" className="action-link">Achievements</Link>
+          </div>
+          {bundle.goals.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {bundle.goals.slice(0, 3).map((g) => (
+                <ProgressBar
+                  key={g.id}
+                  percent={g.percent}
+                  label={`${g.title}: ${g.currentValue} / ${g.targetValue} (${g.percent.toFixed(0)}%)`}
+                />
+              ))}
+              <Link href="/progress" className="action-link">
+                View all goals and progress
+              </Link>
+            </div>
           ) : (
-            <>
-              <div className="mt-4">
-                <EquityChart data={equity} />
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Cumulative P&L of closed trades, in close order. Starting capital is not stored, so the curve starts at 0.
+            <p className="mt-4 text-base text-muted-foreground">
+              No goals yet.{" "}
+              <Link href="/goals" className="font-medium underline">
+                Create your first goal
+              </Link>{" "}
+              — for now, journaling builds your XP.
+            </p>
+          )}
+        </article>
+      </section>
+
+      {/* 6. Psychology. */}
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Psychology">
+        <h2 className="section-title">Psychology</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="section-label">Average confidence</p>
+            <p className="metric-value">{psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}</p>
+          </div>
+          <div>
+            <p className="section-label">Best emotion by P&amp;L</p>
+            <p className="metric-value">{bestEmotion ? bestEmotion.emotion : "—"}</p>
+            {bestEmotion ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatMoney(bestEmotion.pnl)} over {bestEmotion.trades} trades
               </p>
-            </>
-          )}
-        </section>
-
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="Recent trades">
-          <h2 className="text-lg font-semibold">Recent trades</h2>
-          {recentTrades.length === 0 ? (
-            <p className="mt-2 text-muted-foreground">No trades yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm">
-              {recentTrades.map((t) => (
-                <li key={t.id} className="flex justify-between gap-4">
-                  <Link href={`/trades/${t.id}`} className="underline">
-                    {t.pair} · {t.direction} · {new Date(t.opened_at).toLocaleDateString()}
-                  </Link>
-                  <span className={t.pnl === null ? "" : t.pnl > 0 ? "text-emerald-400" : t.pnl < 0 ? "text-red-400" : ""}>
-                    {t.status === "open" ? "Open" : formatMoney(t.pnl)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-4 flex gap-4">
-            <Link href="/trades/new" className="text-sm font-medium underline">Add a trade</Link>
-            <Link href="/trades" className="text-sm font-medium underline">View all trades</Link>
-            <Link href="/calendar" className="text-sm font-medium underline">Trading calendar</Link>
+            ) : null}
           </div>
-        </section>
-
-        <section className="mt-8 rounded-lg border bg-card p-6" aria-label="AI insights">
-          <h2 className="text-lg font-semibold">AI insights</h2>
-          {latestInsights.length === 0 ? (
-            <p className="mt-2 text-muted-foreground">
-              No coach insights yet — the AI Coach analyses your real trades once you have at
-              least 3 closed trades in a week. Nothing here is generated or estimated.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm">
-              {latestInsights.map((insight) => (
-                <li key={insight.id}>
-                  <span className="font-medium">{insight.summary}</span>
-                  <span className="text-muted-foreground">
-                    {" — "}
-                    {insight.metrics_snapshot.recommendation}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-4">
-            <Link href="/coach" className="text-sm font-medium underline">
-              Open AI Coach
-            </Link>
+          <div>
+            <p className="section-label">Journal completion</p>
+            <p className="metric-value">{psych.journalCompletionPct.toFixed(0)}%</p>
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+        {psych.byEmotion.length > 0 ? (
+          <ul className="mt-4 space-y-2 text-base">
+            {[...psych.byEmotion].sort((a, b) => b.trades - a.trades).slice(0, 4).map((row) => (
+              <li key={row.emotion} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                <span className="capitalize">{row.emotion} · {row.trades} trades</span>
+                <span className={row.pnl > 0 ? "font-medium text-emerald-400" : row.pnl < 0 ? "font-medium text-red-400" : ""}>
+                  {formatMoney(row.pnl)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Link href="/psychology" className="action-link mt-4">
+          Full psychology breakdown
+        </Link>
+      </section>
+
+      {/* 7. Recent trades. */}
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent trades">
+        <h2 className="section-title">Recent trades</h2>
+        {recentTrades.length === 0 ? (
+          <p className="mt-2 text-base text-muted-foreground">No trades yet.</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-base">
+            {recentTrades.map((t) => (
+              <li key={t.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                <Link href={`/trades/${t.id}`} className="min-h-11 font-medium underline underline-offset-4">
+                  {t.pair} · {t.direction} · {new Date(t.opened_at).toLocaleDateString()}
+                </Link>
+                <span className={t.pnl === null ? "" : t.pnl > 0 ? "font-medium text-emerald-400" : t.pnl < 0 ? "font-medium text-red-400" : ""}>
+                  {t.status === "open" ? "Open" : formatMoney(t.pnl)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+          <Link href="/trades/new" className="action-link">Add a trade</Link>
+          <Link href="/trades" className="action-link">View all trades</Link>
+          <Link href="/calendar" className="action-link">Trading calendar</Link>
+        </div>
+      </section>
+
+      {/* 8. AI Coach insights. */}
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="AI insights">
+        <h2 className="section-title">AI Coach insights</h2>
+        {latestInsights.length === 0 ? (
+          <p className="mt-2 text-base text-muted-foreground">
+            No coach insights yet — the AI Coach analyses your real trades once you have at
+            least 3 closed trades in a week. Nothing here is generated or estimated.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-base">
+            {latestInsights.map((insight) => (
+              <li key={insight.id}>
+                <span className="font-medium">{insight.summary}</span>
+                <span className="text-muted-foreground">
+                  {" — "}
+                  {insight.metrics_snapshot.recommendation}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link href="/coach" className="action-link mt-4">
+          Open AI Coach
+        </Link>
+      </section>
+
+      {/* 9. Recent activity — real notifications only, never invented. */}
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Recent activity">
+        <h2 className="section-title">Recent activity</h2>
+        {recentActivity.length === 0 ? (
+          <p className="mt-2 text-base text-muted-foreground">
+            No activity yet — achievements, risk milestones and coach insights will appear here as they happen.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3 text-base">
+            {recentActivity.map((n) => (
+              <li key={n.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                <span className="font-medium">{n.title}</span>
+                <span className="text-sm text-muted-foreground">
+                  {new Date(n.created_at).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link href="/notifications" className="action-link mt-4">
+          All notifications
+        </Link>
+      </section>
+    </AppShell>
   );
 }

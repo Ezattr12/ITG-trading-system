@@ -18,7 +18,7 @@ import type { TradeFilters } from "@/lib/trades/validation";
  * optional.
  */
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
+const selectClass = "input-select";
 
 export function TradeFiltersForm({
   filters,
@@ -28,7 +28,7 @@ export function TradeFiltersForm({
   strategies: StrategyRow[];
 }) {
   return (
-    <form method="get" action="/trades" className="rounded-lg border bg-card p-4">
+    <form method="get" action="/trades" className="card-surface p-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
           <Label htmlFor="q">Search</Label>

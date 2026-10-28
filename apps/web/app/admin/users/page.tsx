@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+
 import { listAdminUsers } from "@/lib/admin/queries";
 
 export const metadata = { title: "Admin — Users — ITG TraderOS" };
@@ -21,9 +21,7 @@ export default async function AdminUsersPage() {
 
   return (
     <>
-      <AppHeader email={user?.email ?? null} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Users</h1>
+        <h1 className="page-title">Users</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {users.length} trader{users.length === 1 ? "" : "s"}. Financial data is not shown
           here — open a trader to request it with a reason.
@@ -35,7 +33,7 @@ export default async function AdminUsersPage() {
         ) : (
           <ul className="mt-6 space-y-2">
             {users.map((u) => (
-              <li key={u.id} className="rounded-lg border bg-card p-4">
+              <li key={u.id} className="card-surface p-4">
                 <Link href={`/admin/users/${u.id}`} className="font-medium underline">
                   {u.full_name ?? "Name not provided"}
                 </Link>
@@ -48,7 +46,6 @@ export default async function AdminUsersPage() {
             ))}
           </ul>
         )}
-      </main>
     </>
   );
 }

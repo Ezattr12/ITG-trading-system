@@ -30,6 +30,21 @@ describe("quickTradeSchema — minimal entry (spec §9, §16)", () => {
       quickTradeSchema.safeParse({ ...closedTrade, exitPrice: null, closedAt: null, tp: null, sl: null }).success,
     ).toBe(true);
   });
+  it("accepts an optional strategy id (Phase 15 quick entry)", () => {
+    const withStrategy = quickTradeSchema.safeParse({
+      ...closedTrade,
+      strategyId: "123e4567-e89b-12d3-a456-426614174000",
+    });
+    expect(withStrategy.success).toBe(true);
+    if (withStrategy.success) {
+      expect(withStrategy.data.strategyId).toBe("123e4567-e89b-12d3-a456-426614174000");
+    }
+    expect(quickTradeSchema.safeParse({ ...closedTrade, strategyId: null }).success).toBe(true);
+    expect(quickTradeSchema.safeParse(closedTrade).success).toBe(true);
+  });
+  it("rejects a non-UUID strategy id", () => {
+    expect(quickTradeSchema.safeParse({ ...closedTrade, strategyId: "fvg" }).success).toBe(false);
+  });
   it("accepts a trade with no TP/SL/fees — they are optional", () => {
     expect(
       quickTradeSchema.safeParse({ ...closedTrade, tp: null, sl: null, fees: null }).success,

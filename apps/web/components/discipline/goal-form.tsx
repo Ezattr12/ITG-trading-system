@@ -32,7 +32,7 @@ export function GoalForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="period">Period</Label>
-          <select id="period" name="period" defaultValue="monthly" className={`${inputClass} w-full rounded-md border bg-background px-3 text-sm`}>
+          <select id="period" name="period" defaultValue="monthly" className="input-select">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -41,7 +41,7 @@ export function GoalForm() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="goalType">What is measured</Label>
-          <select id="goalType" name="goalType" defaultValue="max_trades" className={`${inputClass} w-full rounded-md border bg-background px-3 text-sm`}>
+          <select id="goalType" name="goalType" defaultValue="max_trades" className="input-select">
             <option value="max_trades">Trades opened</option>
             <option value="journal_completion">Trades journaled</option>
             <option value="study_hours">Study hours</option>

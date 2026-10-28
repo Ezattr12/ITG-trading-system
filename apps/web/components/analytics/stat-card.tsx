@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { formatMoney } from "@/lib/trades/calculations";
 
-/** One dashboard / analytics stat. Null values render "—", never 0. */
+/** One dashboard / analytics stat (Phase 15). Null values render "—", never 0.
+ * Cards use the shared card surface, a clear label, a large primary
+ * metric (24-32px) and small supporting context — never tiny
+ * compressed cards. */
 export function StatCard({
   label,
   value,
@@ -12,10 +15,10 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <article className="rounded-lg border bg-card p-4">
-      <h2 className="text-sm font-medium text-muted-foreground">{label}</h2>
-      <p className="mt-2 text-xl font-semibold">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+    <article className="card-surface p-4 sm:p-5">
+      <h2 className="section-label">{label}</h2>
+      <p className="metric-value">{value}</p>
+      {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
     </article>
   );
 }
@@ -51,7 +54,7 @@ export function ProgressBar({ percent, label }: { percent: number; label: string
       >
         <div className="h-full rounded-full bg-emerald-400" style={{ width: `${shown}%` }} />
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { TradingPlanForm } from "@/components/risk/plan-form";
 import { getAnalyticsBundle } from "@/lib/analytics/queries";
 import { psychologySummary } from "@/lib/analytics/analytics";
@@ -63,11 +63,9 @@ export default async function PlanPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Trading plan</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Trading plan</h1>
+        <p className="page-lede">
           Define how you intend to trade. The comparison below shows
           what you actually did — from your real trades only.
         </p>
@@ -79,15 +77,15 @@ export default async function PlanPage() {
           </p>
         )}
 
-        <section className="mt-8 rounded-lg border bg-card p-4" aria-label="Your plan">
-          <h2 className="text-lg font-semibold">Your plan</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4" aria-label="Your plan">
+          <h2 className="section-title">Your plan</h2>
           <div className="mt-4">
             <TradingPlanForm plan={plan} setups={setups} />
           </div>
         </section>
 
-        <section className="mt-8" aria-label="Plan versus actual">
-          <h2 className="text-lg font-semibold">Plan vs actual</h2>
+        <section className="mt-6 sm:mt-8" aria-label="Plan versus actual">
+          <h2 className="section-title">Plan vs actual</h2>
           {plan === null ? (
             <p className="mt-2 text-sm text-muted-foreground">
               Save a plan first — the comparison appears here.
@@ -98,7 +96,7 @@ export default async function PlanPage() {
               have journaled trades.
             </p>
           ) : (
-            <div className="mt-4 overflow-x-auto rounded-lg border">
+            <div className="mt-4 overflow-x-auto rounded-xl border">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
@@ -128,7 +126,6 @@ export default async function PlanPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

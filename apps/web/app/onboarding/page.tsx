@@ -47,7 +47,7 @@ export default async function OnboardingPage({
           ITG — Institutional Trading Group
         </p>
         <h1 className="mt-2 text-3xl font-bold">Set up your trader profile</h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           Five short steps. Anything you don&apos;t have, leave as “Not provided” — we never
           ask you to invent experience, profit or capital.
         </p>
@@ -57,7 +57,7 @@ export default async function OnboardingPage({
           Onboarding saved. You can finish it from your dashboard at any time.
         </p>
       )}
-      <section className="mt-8 rounded-xl border bg-card p-6">
+      <section className="card-surface mt-6 p-4 sm:mt-8 sm:p-6">
         <OnboardingWizard initialStep={initialStep} initialAnswers={merged} />
       </section>
       <p className="mt-4 text-center text-xs text-muted-foreground">

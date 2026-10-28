@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { WeeklyReviewForm } from "@/components/reviews/weekly-review-form";
 import { getWeeklyReviews } from "@/lib/reviews/queries";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
@@ -34,19 +34,17 @@ export default async function WeeklyReviewPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Weekly Review</h1>
-        <p className="mt-1 text-muted-foreground">
+    <AppShell email={user.email}>
+        <h1 className="page-title">Weekly Review</h1>
+        <p className="page-lede">
           Review the week honestly — what worked, what did not, and what to
           focus on next. Completing a review earns +30 XP, and the
           week&apos;s trades, P&L and win rate are filled in automatically
           from your journal.
         </p>
 
-        <section className="mt-8 rounded-lg border bg-card p-4">
-          <h2 className="text-lg font-semibold">New weekly review</h2>
+        <section className="mt-6 sm:mt-8 card-surface p-4">
+          <h2 className="section-title">New weekly review</h2>
           {!configured ? (
             <p className="mt-2 text-muted-foreground">
               Supabase is not connected yet — weekly reviews will be saved
@@ -57,8 +55,8 @@ export default async function WeeklyReviewPage() {
           )}
         </section>
 
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Past reviews</h2>
+        <section className="mt-6 sm:mt-8">
+          <h2 className="section-title">Past reviews</h2>
           {reviews.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No weekly reviews yet. Complete your first one above.
@@ -66,7 +64,7 @@ export default async function WeeklyReviewPage() {
           ) : (
             <ul className="mt-4 space-y-3">
               {reviews.map((r) => (
-                <li key={r.id} className="rounded-lg border bg-card p-4">
+                <li key={r.id} className="card-surface p-4">
                   <p className="font-medium">
                     Week of {r.week_start_date} — {r.trades_count} trades
                     {r.total_pnl !== null ? ` · P&L ${r.total_pnl.toFixed(2)}` : ""}
@@ -96,7 +94,6 @@ export default async function WeeklyReviewPage() {
             </ul>
           )}
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }

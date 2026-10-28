@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { QuickTradeForm } from "@/components/trades/quick-trade-form";
 import { AdvancedReviewForm } from "@/components/trades/advanced-review-form";
 import { ScreenshotUploadForm } from "@/components/trades/screenshot-upload-form";
@@ -91,23 +91,21 @@ export default async function TradeDetailPage({
   const editable = trade.status === "open" || trade.status === "closed";
 
   return (
-    <div className="min-h-screen">
-      <AppHeader email={user.email} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
+    <AppShell email={user.email}>
         <p className="text-sm">
           <Link href="/trades" className="text-muted-foreground underline">
             ← Back to trades
           </Link>
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">
+          <h1 className="page-title">
             {trade.pair} · <span className="capitalize">{trade.direction}</span>
           </h1>
           <span className="rounded-full border px-3 py-1 text-xs capitalize">{trade.status}</span>
           {trade.is_win === true && <span className="rounded-full border border-emerald-500/40 px-3 py-1 text-xs text-emerald-400">Win</span>}
           {trade.is_win === false && <span className="rounded-full border border-red-500/40 px-3 py-1 text-xs text-red-400">Loss</span>}
         </div>
-        <p className="mt-1 text-muted-foreground">
+        <p className="page-lede">
           Opened {new Date(trade.opened_at).toLocaleString()}
           {trade.closed_at ? ` · Closed ${new Date(trade.closed_at).toLocaleString()}` : " · Still open"}
         </p>
@@ -132,37 +130,37 @@ export default async function TradeDetailPage({
         )}
 
         <section className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Performance">
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">P&amp;L</h2>
             <p className={`mt-1 text-xl font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}>
               {formatMoney(trade.pnl)}
             </p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">ROI</h2>
             <p className="mt-1 text-xl font-semibold">{trade.roi_pct === null ? "—" : `${trade.roi_pct.toFixed(2)}%`}</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">R multiple</h2>
             <p className="mt-1 text-xl font-semibold">{trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Risk / reward</h2>
             <p className="mt-1 text-xl font-semibold">{trade.risk_reward === null ? "—" : `1 : ${trade.risk_reward.toFixed(2)}`}</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Duration</h2>
             <p className="mt-1 text-xl font-semibold">{formatDuration(trade.duration_seconds)}</p>
           </article>
-          <article className="rounded-lg border bg-card p-4">
+          <article className="card-surface p-4">
             <h2 className="text-sm text-muted-foreground">Leverage</h2>
             <p className="mt-1 text-xl font-semibold">{trade.leverage}x</p>
           </article>
         </section>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-lg border bg-card p-6" aria-label="Trade data">
-            <h2 className="text-lg font-semibold">Trade data</h2>
+          <section className="card-surface p-4 sm:p-6" aria-label="Trade data">
+            <h2 className="section-title">Trade data</h2>
             <dl className="mt-3 text-sm">
               <Row label="Entry" value={trade.entry_price} />
               <Row label="Exit" value={orDash(trade.exit_price)} />
@@ -178,8 +176,8 @@ export default async function TradeDetailPage({
             </dl>
           </section>
 
-          <section className="rounded-lg border bg-card p-6" aria-label="Psychology and lesson">
-            <h2 className="text-lg font-semibold">Psychology &amp; lesson</h2>
+          <section className="card-surface p-4 sm:p-6" aria-label="Psychology and lesson">
+            <h2 className="section-title">Psychology &amp; lesson</h2>
             <dl className="mt-3 text-sm">
               <Row label="Confidence" value={detail.psychology?.confidence ? `${detail.psychology.confidence} / 5` : "—"} />
               <Row label="Emotion" value={detail.psychology?.emotion ? EMOTION_LABELS[detail.psychology.emotion] : "—"} />
@@ -209,8 +207,8 @@ export default async function TradeDetailPage({
           </section>
         </div>
 
-        <section className="mt-6 rounded-lg border bg-card p-6" aria-label="Screenshots">
-          <h2 className="text-lg font-semibold">Screenshots</h2>
+        <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Screenshots">
+          <h2 className="section-title">Screenshots</h2>
           {detail.screenshots.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No screenshots attached to this trade yet.</p>
           ) : (
@@ -242,8 +240,8 @@ export default async function TradeDetailPage({
           </div>
         </section>
 
-        <section className="mt-6 rounded-lg border bg-card p-6" aria-label="AI insight">
-          <h2 className="text-lg font-semibold">AI insight</h2>
+        <section className="mt-6 card-surface p-4 sm:p-6" aria-label="AI insight">
+          <h2 className="section-title">AI insight</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Not available yet. The AI Coach arrives in Phase 9 and will analyse your real trades — performance,
             mistakes, best and worst strategies, psychology and risk. Nothing is shown here until then; no insight
@@ -252,8 +250,8 @@ export default async function TradeDetailPage({
         </section>
 
         {related.length > 0 && (
-          <section className="mt-6 rounded-lg border bg-card p-6" aria-label="Related trades">
-            <h2 className="text-lg font-semibold">Related trades — {trade.pair}</h2>
+          <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Related trades">
+            <h2 className="section-title">Related trades — {trade.pair}</h2>
             <ul className="mt-3 space-y-2 text-sm">
               {related.map(({ trade: rel }) => (
                 <li key={rel.id} className="flex justify-between gap-4">
@@ -271,8 +269,8 @@ export default async function TradeDetailPage({
 
         {editable && (
           <>
-            <section className="mt-6 rounded-lg border bg-card p-6" aria-label="Advanced review">
-              <h2 className="text-lg font-semibold">Advanced review</h2>
+            <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Advanced review">
+              <h2 className="section-title">Advanced review</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Strategy, psychology, lesson and notes are optional — add them now or any time later.
               </p>
@@ -281,8 +279,8 @@ export default async function TradeDetailPage({
               </div>
             </section>
 
-            <section className="mt-6 rounded-lg border bg-card p-6" aria-label="Correct trade">
-              <h2 className="text-lg font-semibold">Correct this trade</h2>
+            <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Correct trade">
+              <h2 className="section-title">Correct this trade</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Corrections never overwrite the original: saving a correction creates a new trade and marks this
                 one as reversed, so the audit trail stays intact.
@@ -300,8 +298,8 @@ export default async function TradeDetailPage({
         )}
 
         {trade.status === "open" && (
-          <section className="mt-6 rounded-lg border bg-card p-6" aria-label="Cancel trade">
-            <h2 className="text-lg font-semibold">Cancel this trade</h2>
+          <section className="mt-6 card-surface p-4 sm:p-6" aria-label="Cancel trade">
+            <h2 className="section-title">Cancel this trade</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Only an open trade can be cancelled. A closed trade is a financial fact — correct it with a reversal
               instead of deleting it.
@@ -312,7 +310,6 @@ export default async function TradeDetailPage({
             </form>
           </section>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

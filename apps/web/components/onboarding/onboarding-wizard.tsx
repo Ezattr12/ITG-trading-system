@@ -36,7 +36,7 @@ function YesNoSelect({ name, defaultValue }: { name: string; defaultValue?: bool
     <select
       name={name}
       defaultValue={defaultValue === true ? "true" : defaultValue === false ? "false" : ""}
-      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      className="input-select"
       required
     >
       <option value="" disabled>
@@ -91,8 +91,8 @@ export function OnboardingWizard({
 
   if (done) {
     return (
-      <section className="rounded-lg border bg-card p-6 text-center">
-        <h2 className="text-lg font-semibold">Onboarding complete</h2>
+      <section className="card-surface p-4 sm:p-6 text-center">
+        <h2 className="section-title">Onboarding complete</h2>
         <p className="mt-2 text-muted-foreground">
           Your profile is set up. Anything marked “Not Provided” can be added later from your profile — nothing was invented.
         </p>
@@ -192,7 +192,7 @@ export function OnboardingWizard({
               <select
                 name="verificationStatus"
                 defaultValue={(a.verificationStatus as string) ?? "not_provided"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="input-select"
               >
                 <option value="not_provided">Not provided</option>
                 <option value="partial">Partially verified</option>
@@ -207,7 +207,7 @@ export function OnboardingWizard({
               <select
                 name="employmentStatus"
                 defaultValue={(a.employmentStatus as string) ?? "not_provided"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="input-select"
               >
                 <option value="full_time">I trade full-time</option>
                 <option value="part_time">I trade part-time</option>
