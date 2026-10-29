@@ -24,7 +24,7 @@ import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { summarizeTrades } from "@/lib/analytics/analytics";
 import { AvatarUpload } from "@/components/profile/avatar-upload";
 import { LevelRing } from "@/components/profile/level-ring";
-import { AnimatedNumber } from "@/components/analytics/count-up";
+import { CountUpXp } from "@/components/analytics/count-up";
 
 export const metadata = { title: "Profile — ITG TraderOS" };
 
@@ -201,7 +201,7 @@ export default async function ProfilePage() {
         <div className="mt-6 border-t border-white/10 pt-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="itg-xp text-xl font-bold">
-              <AnimatedNumber value={xpTotal} format={(n) => `${Math.round(n)} XP`} />
+              <CountUpXp value={xpTotal} />
               <span className="ml-2 text-sm font-medium text-muted-foreground">
                 {bundle === null ? "— connect Supabase to load XP" : "total XP earned"}
               </span>

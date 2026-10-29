@@ -10,7 +10,7 @@ import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { createNotification } from "@/lib/discipline/actions";
 import { XpHistoryChart } from "@/components/analytics/charts";
 import { ProgressBar } from "@/components/analytics/stat-card";
-import { AnimatedNumber, CountUpDecimal } from "@/components/analytics/count-up";
+import { CountUpDecimal, CountUpXp } from "@/components/analytics/count-up";
 
 export const metadata = { title: "Levels — ITG TraderOS" };
 
@@ -117,7 +117,7 @@ export default async function LevelsPage() {
                     journaling and reviews, and the count-up marks
                     the total without flashing a reward. */}
                 <p className="mt-2 text-xl font-semibold">
-                  <AnimatedNumber value={bundle.xpTotal} format={(n) => `${Math.round(n)} XP`} />
+                  <CountUpXp value={bundle.xpTotal} />
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Earned for journaling, goals, reviews and discipline.

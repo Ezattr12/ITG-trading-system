@@ -84,6 +84,21 @@ export function CountUpPct({ value }: { value: number }) {
   return <AnimatedNumber value={value} format={(n) => `${n.toFixed(1)}%`} />;
 }
 
+/**
+ * Whole XP total ("123 XP"). Server Components must use this
+ * wrapper (or CountUpMoney / CountUpPct / CountUpDecimal) rather
+ * than passing a `format` function to AnimatedNumber directly:
+ * a function prop cannot cross the server→client boundary and
+ * throws during RSC rendering (the /profile production crash,
+ * 2026-10-29). The format function is created here, inside the
+ * client component, where it is serializable-safe.
+ */
+export function CountUpXp({ value }: { value: number }) {
+  return (
+    <AnimatedNumber value={value} format={(n) => `${Math.round(n)} XP`} />
+  );
+}
+
 /** Plain number with a fixed decimal count and an optional suffix. */
 export function CountUpDecimal({
   value,
