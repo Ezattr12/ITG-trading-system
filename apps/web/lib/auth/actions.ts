@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { avatarFileError } from "@/lib/profile/avatar-validation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import {
@@ -410,14 +412,10 @@ export async function uploadAvatarAction(
 ): Promise<ActionResult> {
   if (!isSupabaseConfigured()) return notConfigured();
   const file = formData.get("avatar");
-  if (!(file instanceof File) || file.size === 0) {
+  const fileError = avatarFileError(file instanceof File ? file : null);
+  if (fileError) return { ok: false, error: fileError };
+  if (!(file instanceof File)) {
     return { ok: false, error: "Choose an image file first." };
-  }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: "Only image files can be used as a profile photo." };
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    return { ok: false, error: "Profile photo must be 2 MB or smaller." };
   }
   const supabase = await createServerSupabaseClient();
   const {
@@ -447,5 +445,9 @@ export async function uploadAvatarAction(
     .update({ avatar_url: publicUrl })
     .eq("id", user.id);
   if (updateError) return { ok: false, error: "Photo uploaded but the profile could not be updated. Please try again." };
+  // Show the new photo immediately: without this, the profile
+  // page kept rendering the previous avatar until the next
+  // navigation/reload even though the upload had succeeded.
+  revalidatePath("/profile");
   return { ok: true, message: "Profile photo updated." };
 }

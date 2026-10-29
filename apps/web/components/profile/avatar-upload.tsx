@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { Camera, CheckCircle2, Loader2 } from "lucide-react";
 import { uploadAvatarAction, type ActionResult } from "@/lib/auth/actions";
+import { avatarFileError } from "@/lib/profile/avatar-validation";
 
 /**
  * Premium profile-photo interaction (Phase 19).
@@ -30,6 +31,7 @@ export function AvatarUpload({
     { ok: false },
   );
   const [fileName, setFileName] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -43,6 +45,18 @@ export function AvatarUpload({
   function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    // Same validation the server action runs (shared helper):
+    // an invalid file gets the inline error here and is never
+    // submitted, so it can never crash or waste an upload. The
+    // server still re-validates authoritatively.
+    const error = avatarFileError(file);
+    if (error) {
+      setLocalError(error);
+      setFileName(null);
+      event.target.value = "";
+      return;
+    }
+    setLocalError(null);
     setFileName(file.name);
     formRef.current?.requestSubmit();
   }
@@ -90,13 +104,15 @@ export function AvatarUpload({
       <p className="min-h-5 text-center text-xs text-muted-foreground" aria-live="polite">
         {pending
           ? `Uploading${fileName ? ` ${fileName}` : ""}…`
-          : state.ok && state.message
-            ? state.message
-            : state.error
-              ? state.error
-              : configured
-                ? "Tap the photo to change it"
-                : "Photo upload needs Supabase connected"}
+          : localError
+            ? localError
+            : state.ok && state.message
+              ? state.message
+              : state.error
+                ? state.error
+                : configured
+                  ? "Tap the photo to change it"
+                  : "Photo upload needs Supabase connected"}
       </p>
       {state.ok && state.message && (
         <p role="status" className="flex items-center gap-1.5 text-xs font-medium text-emerald-300">
