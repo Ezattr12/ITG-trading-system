@@ -10,7 +10,9 @@
  *     service-role client, and it must never be bundled for the
  *     browser. Client components may import Server Actions (the
  *     action reference stays server-side) and type-only imports.
- *  2. Only lib/supabase/server.ts reads SUPABASE_SERVICE_ROLE_KEY.
+ *  2. Only lib/supabase/server.ts reads SUPABASE_SERVICE_ROLE_KEY
+ *     (plus the MCP server's src/config.ts — the single sanctioned
+ *     reader in that separate server process, audit inserts only).
  *  3. No secret-looking value in tracked source: JWTs, Supabase
  *     service keys, GitHub/AWS/Slack tokens, or a service-role key
  *     assigned a real (non-placeholder) value. Docs and .env.example
@@ -78,10 +80,15 @@ for (const file of files) {
 
 // --- 2. Only server.ts may read the service-role key --------------------
 // (This script itself is exempt: it checks for the string, it never reads the key.)
+// One sanctioned equivalent exists per server-side process: the web
+// app's lib/supabase/server.ts, and the MCP server's src/config.ts
+// (Stage 3) — a separate Node process whose config module is the
+// single place its key is read, used only for audit-log inserts.
 for (const file of files) {
   if (!/\.(ts|tsx|mjs|js)$/.test(file)) continue;
   const rel = relative(ROOT, file);
   if (rel === "apps/web/lib/supabase/server.ts") continue;
+  if (rel === "apps/mcp-server/src/config.ts") continue;
   if (rel === "scripts/security-check.mjs") continue;
   if (read(file).includes("SUPABASE_SERVICE_ROLE_KEY")) {
     fail(`${rel}: reads SUPABASE_SERVICE_ROLE_KEY outside lib/supabase/server.ts`);

@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "packages/**/src/**/*.test.ts",
       "apps/web/lib/**/*.test.ts",
+      "apps/mcp-server/src/**/*.test.ts",
     ],
     environment: "node",
   },
