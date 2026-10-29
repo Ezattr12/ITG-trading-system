@@ -35,6 +35,12 @@ export interface AuditEntry {
   durationMs: number;
   /** Ids only — never free text, never token material. */
   tradeId?: string | null;
+  /**
+   * Structured, non-free-text arguments for tools that do not
+   * take a trade_id (Stage 4: dates, limits). When omitted, the
+   * row records `{ trade_id }` exactly as Stage 3 did.
+   */
+  arguments?: Record<string, unknown>;
   correlationId: string;
 }
 
@@ -55,7 +61,7 @@ export async function writeAuditLog(
         outcome: entry.outcome,
         duration_ms: Math.round(entry.durationMs),
         correlation_id: entry.correlationId,
-        arguments: { trade_id: entry.tradeId ?? null },
+        arguments: entry.arguments ?? { trade_id: entry.tradeId ?? null },
       },
     });
     return !error;

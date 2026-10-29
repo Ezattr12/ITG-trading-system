@@ -84,7 +84,7 @@ Design decisions:
 trades + psychology_records + lessons (per-trade);
 analytics aggregates (strategy/session/direction/
 psychology); risk rules + risk_events + active plan;
-goals + goal_progress_logs; discipline_events +
+goals + goal_progress; discipline_events +
 notifications; xp_transactions + user_levels +
 user_achievements; weekly_reviews; daily_activity;
 certificates (eligibility state).

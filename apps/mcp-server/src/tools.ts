@@ -9,33 +9,50 @@ import {
   calcRoi,
   isWin,
 } from "./calc.js";
+import {
+  NOT_FOUND,
+  TimeoutError,
+  UpstreamError,
+  capText,
+  fetchActivePlan,
+  fetchActiveRules,
+  num,
+  numOr,
+  withTimeout,
+} from "./common.js";
+import {
+  INTELLIGENCE_TOOL_DEFINITIONS,
+  INTELLIGENCE_TOOLS,
+} from "./intelligence.js";
 import type { McpConfig } from "./config.js";
 import type { Authenticator } from "./auth.js";
 import { writeAuditLog, type AuditOutcome } from "./audit.js";
 import { RateLimiter } from "./ratelimit.js";
 import type { DbClient } from "./db.js";
 
+export { TEXT_CAP } from "./common.js";
+
 /**
- * The Stage 3 POC tools: `get_trade` and `analyze_trade`
- * (design §3). Both are strictly read-only, single-entity, and
- * tenant-scoped: the user id comes from the validated access
- * token (auth.ts), never from tool arguments, and every query
- * additionally filters by that id (defense-in-depth on top of
- * RLS — the same pattern as the web app's getTradeDetail).
+ * Tool definitions and the call dispatcher.
  *
- * Every call — success, not-found, invalid, unauthenticated,
- * rate-limited, upstream failure — writes exactly one audit
- * row (audit.ts).
+ * The Stage 3 POC tools `get_trade` and `analyze_trade`
+ * (design §3) are implemented in this module. The Stage 4
+ * intelligence tools (design §4) live in intelligence.ts and
+ * are dispatched through the same caller, so every tool —
+ * either stage — shares one security path: tenant identity
+ * from the validated access token only (auth.ts), reads on
+ * the RLS client with an additional user_id filter, argument
+ * validation before any query, the per-user rate limit, the
+ * call timeout, and exactly one audit row per call (audit.ts).
  */
 
-export const TEXT_CAP = 2000;
 export const MAX_LESSONS = 50;
 export const CALL_TIMEOUT_MS = 10_000;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const TOOL_DEFINITIONS = [
+const TRADE_TOOL_DEFINITIONS = [
   {
     name: "get_trade",
     description:
@@ -64,6 +81,11 @@ export const TOOL_DEFINITIONS = [
   },
 ] as const;
 
+export const TOOL_DEFINITIONS = [
+  ...TRADE_TOOL_DEFINITIONS,
+  ...INTELLIGENCE_TOOL_DEFINITIONS,
+];
+
 export type ToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
 
 export interface ToolCallResult {
@@ -78,11 +100,6 @@ export interface ToolCallerDeps {
   serviceClient: DbClient | null;
   rateLimiter: RateLimiter;
 }
-
-class UpstreamError extends Error {}
-class TimeoutError extends Error {}
-
-const NOT_FOUND = Symbol("not_found");
 
 // ---------------------------------------------------------------- rows
 
@@ -121,16 +138,6 @@ const TRADE_COLUMNS =
   "position_size, leverage, fees, opened_at, closed_at, status, " +
   "strategy_id, setup_id, market_condition, trade_reason, session, notes, " +
   "pnl, roi_pct, r_multiple, risk_reward, is_win, duration_seconds, reversal_trade_id";
-
-function num(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-function numOr(value: unknown, fallback: number): number {
-  return num(value) ?? fallback;
-}
 
 function normalizeTrade(raw: Record<string, unknown>): TradeRecord {
   return {
@@ -281,12 +288,6 @@ async function fetchTradeDetail(
   };
 }
 
-function capText(text: string | null): { text: string | null; truncated: boolean } {
-  if (text === null) return { text: null, truncated: false };
-  if (text.length <= TEXT_CAP) return { text, truncated: false };
-  return { text: text.slice(0, TEXT_CAP), truncated: true };
-}
-
 // ---------------------------------------------------------------- get_trade
 
 function getTradePayload(detail: TradeDetailData): unknown {
@@ -430,68 +431,6 @@ function metricFieldMatches(
   return new Decimal(stored)
     .toDecimalPlaces(6)
     .equals(new Decimal(recomputed).toDecimalPlaces(6));
-}
-
-interface PlanRow {
-  id: string;
-  name: string;
-  risk_per_trade_pct: number | null;
-  max_daily_loss: number | null;
-  max_daily_trades: number | null;
-}
-
-interface RulesRow {
-  max_risk_per_trade_pct: number | null;
-  max_daily_loss: number | null;
-  max_leverage: number | null;
-}
-
-async function fetchActivePlan(
-  client: DbClient,
-  userId: string,
-): Promise<PlanRow | null> {
-  const { data, error } = await client
-    .from("trading_plans")
-    .select("id, name, risk_per_trade_pct, max_daily_loss, max_daily_trades")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new UpstreamError("trading plan query failed");
-  if (!data) return null;
-  const row = data as Record<string, unknown>;
-  return {
-    id: String(row.id),
-    name: String(row.name),
-    risk_per_trade_pct: num(row.risk_per_trade_pct),
-    max_daily_loss: num(row.max_daily_loss),
-    max_daily_trades: num(row.max_daily_trades),
-  };
-}
-
-async function fetchActiveRules(
-  client: DbClient,
-  userId: string,
-): Promise<RulesRow | null> {
-  const { data, error } = await client
-    .from("risk_rules")
-    .select("max_risk_per_trade_pct, max_daily_loss, max_leverage")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new UpstreamError("risk rules query failed");
-  if (!data) return null;
-  const row = data as Record<string, unknown>;
-  return {
-    max_risk_per_trade_pct: num(row.max_risk_per_trade_pct),
-    max_daily_loss: num(row.max_daily_loss),
-    max_leverage: num(row.max_leverage),
-  };
 }
 
 interface RiskEventRow {
@@ -766,17 +705,6 @@ export function parseTradeIdArg(args: unknown): ParsedArgs {
   return { tradeId: supplied, invalidMessage: null };
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new TimeoutError("call timed out")), ms);
-    timer.unref?.();
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
-}
-
 export function createToolCaller(deps: ToolCallerDeps) {
   const { config, authenticator, serviceClient, rateLimiter } = deps;
 
@@ -797,30 +725,53 @@ export function createToolCaller(deps: ToolCallerDeps) {
     const correlationId = randomUUID();
     const parsed = parseTradeIdArg(args);
     const isKnownTool = TOOL_DEFINITIONS.some((t) => t.name === name);
+    // Stage 4 tools validate through their own parsers and run
+    // through the same auth/rate-limit/audit path below.
+    const intelSpec = INTELLIGENCE_TOOLS[name];
+    const intelParsed = intelSpec ? intelSpec.parse(args) : null;
+
+    interface AuditOverrides {
+      entityType?: string;
+      entityId?: string | null;
+      arguments?: Record<string, unknown>;
+    }
 
     const finish = async (
       outcome: AuditOutcome,
       userId: string | null,
       result: ToolCallResult,
+      audit?: AuditOverrides,
     ): Promise<ToolCallResult> => {
       await writeAuditLog(serviceClient, {
         userId,
         action: isKnownTool ? `mcp.${name}` : "mcp.unknown_tool",
-        entityType: isKnownTool ? "trades" : "unknown",
-        entityId: parsed.tradeId,
+        entityType:
+          audit?.entityType ?? (isKnownTool ? "trades" : "unknown"),
+        entityId: audit?.entityId !== undefined ? audit.entityId : parsed.tradeId,
         tool: name.slice(0, 64),
         outcome,
         durationMs: Date.now() - started,
         tradeId: parsed.tradeId,
+        arguments: audit?.arguments,
         correlationId,
       });
       return result;
     };
-    const fail = (code: AuditOutcome & string, message: string, userId: string | null) =>
-      finish(code, userId, {
-        isError: true,
-        payload: errorPayload(code, message),
-      });
+    const fail = (
+      code: AuditOutcome & string,
+      message: string,
+      userId: string | null,
+      audit?: AuditOverrides,
+    ) =>
+      finish(
+        code,
+        userId,
+        {
+          isError: true,
+          payload: errorPayload(code, message),
+        },
+        audit,
+      );
 
     if (!isKnownTool) {
       return fail("invalid_argument", `unknown tool: ${name}`, null);
@@ -857,7 +808,20 @@ export function createToolCaller(deps: ToolCallerDeps) {
         auth.userId,
       );
     }
-    if (parsed.invalidMessage || !parsed.tradeId) {
+    if (intelSpec && intelParsed) {
+      if (intelParsed.invalidMessage) {
+        return fail(
+          "invalid_argument",
+          `invalid_argument: ${intelParsed.invalidMessage}`,
+          auth.userId,
+          {
+            entityType: intelSpec.entityType,
+            entityId: null,
+            arguments: intelParsed.auditArgs,
+          },
+        );
+      }
+    } else if (parsed.invalidMessage || !parsed.tradeId) {
       return fail(
         "invalid_argument",
         `invalid_argument: ${parsed.invalidMessage ?? "trade_id must be a uuid"}`,
@@ -866,8 +830,31 @@ export function createToolCaller(deps: ToolCallerDeps) {
     }
 
     try {
+      if (intelSpec && intelParsed) {
+        const outcome = await withTimeout(
+          intelSpec.run(auth.client, auth.userId, intelParsed.value),
+          CALL_TIMEOUT_MS,
+        );
+        if (outcome === NOT_FOUND) {
+          return fail("not_found", "not_found: no such record", auth.userId, {
+            entityType: intelSpec.entityType,
+            entityId: null,
+            arguments: intelParsed.auditArgs,
+          });
+        }
+        return finish(
+          "ok",
+          auth.userId,
+          { isError: false, payload: outcome.payload },
+          {
+            entityType: intelSpec.entityType,
+            entityId: outcome.entityId ?? null,
+            arguments: intelParsed.auditArgs,
+          },
+        );
+      }
       const payload = await withTimeout(
-        runTool(name as ToolName, auth.client, auth.userId, parsed.tradeId),
+        runTool(name as ToolName, auth.client, auth.userId, parsed.tradeId as string),
         CALL_TIMEOUT_MS,
       );
       if (payload === NOT_FOUND) {

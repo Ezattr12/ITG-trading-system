@@ -188,3 +188,53 @@ landed their audit rows (the two account-B rows above).
 Real trader identities always have a profile row, so this
 only affects artificial identities that never entered the
 app — but the POC record states it rather than hiding it.
+
+
+---
+
+## Stage 4 smoke test (2026-10-29)
+
+Same compiled server, same stdio driver pattern as the
+Stage 3 run above, against the production Supabase project.
+The test account's known state going in (verified by SQL
+before the run): 1 closed XAUUSD trade (+1.20, R 1.5,
+strategy "BOS", session london, closed 2026-10-29), 4 goals
+(one manual progress 4/10, two journal_completion, one with
+no progress), risk rules (1% / 200 / 5 / 3 / lev 20) and the
+"Audit Trading Plan" active, a stored weekly review for the
+week of 2026-10-26, XP total 200, a stored Platinum level
+(score 84.5), 0 discipline events, 6 unread notifications,
+0 risk events.
+
+Every returned aggregate was cross-checked against SQL
+ground truth after the run. **All matched exactly:**
+
+| Call | Result vs SQL ground truth |
+|---|---|
+| `tools/list` | exactly the 12 tools (2 Stage 3 + 10 Stage 4) |
+| `get_recent_trades {}` | 1 trade, XAUUSD +1.2, R 1.5, strategy "BOS", pagination {returned 1, limit 10, truncated false} |
+| `get_recent_trades {limit 5, pair "xau"}` | same trade (case-insensitive pair filter) |
+| `get_performance_summary {2026-10-01 → 2026-10-31}` | count 1, wins 1, net 1.2, win rate 100, avg win 1.2, avg loss null, profit factor null (no losses), expectancy 1.2, avg R 1.5, max drawdown 0, streak 1, best = worst = the trade |
+| `get_performance_summary {2026-01-01 → 2026-01-31}` | empty range: count 0, net 0, all rates/averages null, best/worst null |
+| `get_strategy_performance {Oct}` | 1 group "BOS", net 1.2 |
+| `get_session_performance {Oct}` | 1 group "london", net 1.2 |
+| `get_psychology_summary {Oct}` | closed 1, with records 1, without 0; calm {1, 1.2, 100%}; band 4-5 {1, 1.2, 100%}; discipline good {1, 1.2, 100%}; avg confidence 4 |
+| `get_risk_status {}` | rules 1/200/5/3/20; plan "Audit Trading Plan" 1/200/5; today's events 0 (all severities 0); open events 0 |
+| `get_goal_progress {}` | 4 goals: manual goal progress 4 (40%, source manual); both journal_completion goals measured 1 (20%); the plain "other" goal progress null + "Measured in the app" |
+| `get_discipline_status {}` | recent_events [], unread_notifications 6 |
+| `get_level_status {}` | Platinum, score 84.5, full 8-dimension breakdown; XP total 200; by reason achievement 115 (4), backtest_session 45 (3), weekly_review 30 (1), trade_journal 10 (1); 9 recent events, newest first |
+| `get_weekly_review {week_start 2026-10-29}` | normalized to week 2026-10-26 → 2026-11-01; stored review returned in full (173 chars, not truncated) with stored aggregates exactly as saved (trades_count 0, P&L null — the review predates the trade); live week_summary count 1, net 1.2, avg R 1.5 |
+| `get_weekly_review {week_start 2026-10-19}` | `not_found` (no review that week) |
+| `get_performance_summary {from > to}` | `invalid_argument` naming `from` |
+| `get_recent_trades {limit 99}` | `invalid_argument` naming `limit` |
+| `get_weekly_review {week_start "not-a-date"}` | `invalid_argument` naming `week_start` |
+| `get_risk_status {user_id …}` | `invalid_argument: unknown argument: user_id` (rejected before any query) |
+
+Audit: exactly one `audit_logs` row per call, actions
+`mcp.<tool_name>`, entity types trades / risk_rules /
+goals / discipline_events / user_levels / weekly_reviews,
+outcomes ok / not_found / invalid_argument as appropriate.
+Audit `details.arguments` carry only structured values
+(limit, from, to, week_start) — the free-text `pair` filter
+is deliberately not recorded. No tokens or secrets appear
+in this record or in any tool result.

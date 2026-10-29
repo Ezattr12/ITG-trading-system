@@ -65,13 +65,26 @@ describe("JSON-RPC / MCP protocol subset", () => {
     ).toBeNull();
   });
 
-  it("tools/list exposes exactly get_trade and analyze_trade", async () => {
+  it("tools/list exposes exactly the 12 read-only tools (Stages 3 + 4)", async () => {
     const { handleLine } = handler();
     const res = parse(
       await handleLine(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })),
     );
     const tools = (res.result as { tools: { name: string }[] }).tools;
-    expect(tools.map((t) => t.name)).toEqual(["get_trade", "analyze_trade"]);
+    expect(tools.map((t) => t.name)).toEqual([
+      "get_trade",
+      "analyze_trade",
+      "get_recent_trades",
+      "get_performance_summary",
+      "get_strategy_performance",
+      "get_session_performance",
+      "get_psychology_summary",
+      "get_risk_status",
+      "get_goal_progress",
+      "get_discipline_status",
+      "get_level_status",
+      "get_weekly_review",
+    ]);
   });
 
   it("tools/call wraps the tool payload as MCP content", async () => {

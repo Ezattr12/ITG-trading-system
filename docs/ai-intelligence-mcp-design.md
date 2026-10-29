@@ -130,26 +130,44 @@ Muse AI
 - **Errors / audit:** as get_trade; action
   `mcp.analyze_trade`.
 
-## 4. Stage 4 tool catalog (design only — implement selectively)
+## 4. Stage 4 tool catalog
 
 Each tool follows §2. "Compute" tools are pure functions of
 stored data via existing app logic (analytics/coach/risk/
 gamification modules) — the MCP layer is a transport, never
 a second implementation of a calculation.
 
-| Tool | Purpose | Inputs | Key outputs | Sources / logic |
-|---|---|---|---|---|
-| `get_recent_trades` | Bounded list for "what have I been doing" | limit (1–50), optional from/to, pair | Trade summaries (no notes), pagination meta | getTradeListItems pattern |
-| `get_performance_summary` | Period performance | period: week/month/custom range | trades, win rate, net P&L, profit factor, avg R, max drawdown — all from `summarizeTrades` | lib/analytics |
-| `get_strategy_performance` | Per-strategy breakdown | period | rows per strategy with the same metrics | lib/analytics by strategy |
-| `get_session_performance` | Per-session breakdown | period | rows per session | lib/analytics by session |
-| `get_psychology_summary` | Emotion/confidence/discipline vs outcome | period | aggregates + best/worst emotion by P&L | lib/analytics psychology |
-| `get_risk_status` | Current risk posture | — | active rules, today's usage vs limits, open risk events | lib/risk engine (read path) |
-| `get_goal_progress` | Goals with measured progress | — | goals + resolved progress (same resolver as /goals) | lib/discipline engine |
-| `get_level_status` | Level + XP standing | — | level, score by dimension, XP total, recent XP events (capped) | lib/gamification |
-| `get_discipline_status` | Discipline reminders state | — | current reminder level + recent events | lib/discipline engine |
-| `get_weekly_review` | One week's review + aggregates | week_start | review text (capped), aggregates snapshot | lib/reviews |
-| `compute_coach_insights` | The deterministic coach analysis for a week, computed on demand | week_start | insights with metrics_snapshot (NOT persisted — persistence stays in the app action) | lib/coach/insights |
+Status as of 2026-10-29 (Stage 4): ten of the eleven tools
+below are **Implemented (Stage 4)** — see
+`docs/stage-4-ai-tools.md` for inputs/outputs/sources, the
+aggregation-semantics mirroring notes, and the live
+cross-check table. `compute_coach_insights` is **Deferred**
+with the reason recorded under the table.
+
+| Tool | Purpose | Inputs | Key outputs | Sources / logic | Status |
+|---|---|---|---|---|---|
+| `get_recent_trades` | Bounded list for "what have I been doing" | limit (1–50), optional from/to, pair | Trade summaries (no notes), pagination meta | getTradeListItems pattern | Implemented (Stage 4) |
+| `get_performance_summary` | Period performance | period: week/month/custom range | trades, win rate, net P&L, profit factor, avg R, max drawdown — all from `summarizeTrades` | lib/analytics | Implemented (Stage 4) |
+| `get_strategy_performance` | Per-strategy breakdown | period | rows per strategy with the same metrics | lib/analytics by strategy | Implemented (Stage 4) |
+| `get_session_performance` | Per-session breakdown | period | rows per session | lib/analytics by session | Implemented (Stage 4) |
+| `get_psychology_summary` | Emotion/confidence/discipline vs outcome | period | aggregates + best/worst emotion by P&L | lib/analytics psychology | Implemented (Stage 4) |
+| `get_risk_status` | Current risk posture | — | active rules, today's usage vs limits, open risk events | lib/risk engine (read path) | Implemented (Stage 4) |
+| `get_goal_progress` | Goals with measured progress | — | goals + resolved progress (same resolver as /goals) | lib/discipline engine | Implemented (Stage 4) |
+| `get_level_status` | Level + XP standing | — | level, score by dimension, XP total, recent XP events (capped) | lib/gamification | Implemented (Stage 4) |
+| `get_discipline_status` | Discipline reminders state | — | current reminder level + recent events | lib/discipline engine | Implemented (Stage 4) |
+| `get_weekly_review` | One week's review + aggregates | week_start | review text (capped), aggregates snapshot | lib/reviews | Implemented (Stage 4) |
+| `compute_coach_insights` | The deterministic coach analysis for a week, computed on demand | week_start | insights with metrics_snapshot (NOT persisted — persistence stays in the app action) | lib/coach/insights | **Deferred** |
+
+**`compute_coach_insights` — Deferred.** The deterministic
+coach engine exists only as web-app code
+(`apps/web/lib/coach/insights.ts`). Copying it into the MCP
+server would create a second source of truth for coach
+logic, which §4's own rule ("the MCP layer is a transport,
+never a second implementation of a calculation") forbids.
+It stays a design entry until it can call the app's engine
+directly (e.g. a shared package extraction or an internal
+app endpoint), at which point it can be implemented without
+duplication.
 
 Implementation rule: a tool is built only when (a) its
 underlying app logic already exists and is tested, (b) the

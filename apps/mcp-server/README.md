@@ -1,11 +1,13 @@
-# @itg/mcp-server — ITG AI Intelligence MCP server (Stage 3 POC)
+# @itg/mcp-server — ITG AI Intelligence MCP server (Stages 3–4)
 
-A standalone, **read-only** MCP server that exposes exactly
-two tools over ITG TraderOS data — `get_trade` and
-`analyze_trade` — per the approved design in
-`docs/ai-intelligence-mcp-design.md`. It has no write,
-execution, broker, transfer or withdrawal surface of any
-kind, and the web app is untouched by it.
+A standalone, **read-only** MCP server that exposes twelve
+tools over ITG TraderOS data — the Stage 3 POC tools
+(`get_trade`, `analyze_trade`) plus the ten Stage 4
+intelligence tools listed below — per the approved design
+in `docs/ai-intelligence-mcp-design.md` (§3–§4) and
+`docs/stage-4-ai-tools.md`. It has no write, execution,
+broker, transfer or withdrawal surface of any kind, and the
+web app is untouched by it.
 
 ## Security model (design §2, non-negotiable)
 
@@ -27,12 +29,14 @@ kind, and the web app is untouched by it.
   the `audit_logs` row for each call. It is never used to
   read trading data, and never appears in any tool result.
 - **Audit everything.** Every `tools/call` writes one
-  `audit_logs` row (`mcp.get_trade` / `mcp.analyze_trade`)
-  with the outcome (`ok`, `not_found`, `invalid_argument`,
-  `unauthenticated`, `rate_limited`, `upstream_error`), the
-  duration, and a correlation id. Failed authentication is
-  logged with a null actor; no token material is ever
-  logged.
+  `audit_logs` row (`mcp.<tool_name>`) with the outcome
+  (`ok`, `not_found`, `invalid_argument`, `unauthenticated`,
+  `rate_limited`, `upstream_error`), the duration, and a
+  correlation id. Failed authentication is logged with a
+  null actor; no token material is ever logged. Stage 4
+  audit rows carry only structured argument values (limit,
+  from, to, week_start) — the free-text `pair` filter is
+  deliberately not recorded.
 - **No existence oracle.** A trade owned by another trader
   returns the byte-identical `not_found` result as a trade
   that does not exist.
@@ -76,6 +80,60 @@ Deterministic analysis, numbers-first:
 - `findings` — rule-based observations, each citing the
   numbers it was derived from (the `lib/coach/insights.ts`
   honesty pattern).
+
+### Stage 4 intelligence tools
+
+All ten follow the identical security model (token-only
+identity, RLS + `user_id` filters, unknown arguments
+rejected before any query, one audit row per call, 60/min
+rate limit, 10 s timeout, bounded results). All aggregation
+math runs through `@itg/calc` primitives only, mirroring
+the web app's `summarizeTrades` row semantics (closed
+trades with a stored P&L; reversed trades are not closed
+trades). Details: `docs/stage-4-ai-tools.md`.
+
+- `get_recent_trades` — `{ limit? 1–50 (default 10), pair? }`
+  newest-first trade summaries (no notes/free text) +
+  pagination metadata `{ returned, limit, truncated }`.
+- `get_performance_summary` — `{ from, to }` (ISO dates,
+  range ≤ 366 days): count, win/loss rates, net P&L, profit
+  factor, avg win/loss, expectancy, avg R, max drawdown,
+  current streak, best/worst trade.
+- `get_strategy_performance` — `{ from, to }`: the same
+  summary per strategy (names resolved; strategy-less
+  trades group as "No strategy"), sorted by net P&L desc,
+  capped at 20 groups.
+- `get_session_performance` — `{ from, to }`: grouped by
+  the trade's stored `session`; trades without one group
+  as "Not Provided".
+- `get_psychology_summary` — `{ from, to }`: per-emotion,
+  confidence-band (1–2 / 3 / 4–5) and per-discipline
+  aggregates, plus explicit counts of closed trades with
+  and without a psychology record.
+- `get_risk_status` — `{ }`: stored state only (the risk
+  engine is not re-run) — active risk rules, active plan
+  summary, today's (UTC) risk events by severity, open
+  (unresolved) event count.
+- `get_goal_progress` — `{ }`: goals with progress —
+  measured where the app measures them (mirroring the
+  discipline engine's goal types and period windows),
+  otherwise the latest manual `goal_progress` value,
+  otherwise `progress: null` + `"Measured in the app"`.
+- `get_discipline_status` — `{ }`: latest 5 stored
+  discipline events + unread notification count.
+- `get_level_status` — `{ }`: the stored `user_levels` row
+  (never recomputed; `level: null` + an honest note when
+  none exists) + XP total, by-reason totals, last 10 XP
+  events.
+- `get_weekly_review` — `{ week_start }`: any date in the
+  week, normalized to its Monday like the app; the stored
+  review (text capped at 2,000 chars with a truncation
+  flag, stored aggregates reported as saved) + the week's
+  live closed-trade summary. No review → `not_found`.
+
+`compute_coach_insights` is **not** implemented: the coach
+engine exists only as web-app code, and copying it would
+create a second source of truth (design §4).
 
 ## Protocol
 
@@ -133,6 +191,10 @@ tenant isolation (user B + user A's trade → the identical
 `not_found` shape), `metrics_match` true/false (tampered
 pnl), exactly-one-audit-row per call on every path, the
 60/minute rate limit, and the JSON-RPC protocol subset.
+The Stage 4 tests (`src/intelligence.test.ts`) add
+hand-computed aggregate fixtures per tool, validation and
+empty-state honesty cases, cross-tenant checks for the
+list/summary tools, and the 12-tool `tools/list` contract.
 
 The live smoke test against the real Supabase project
 (verification accounts only) is recorded in
