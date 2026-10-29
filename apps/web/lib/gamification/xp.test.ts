@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { calcXpFor } from "@itg/calc";
 import {
   aggregateXpHistory,
+  deterministicUuid,
   totalXp,
   validatePenalty,
   XP_ACTION_LABELS,
@@ -44,6 +47,46 @@ describe("totalXp / aggregateXpHistory", () => {
       { date: "2026-10-21", xp: 20, cumulativeXp: 30 },
       { date: "2026-10-22", xp: -5, cumulativeXp: 25 },
     ]);
+  });
+});
+
+describe("deterministicUuid", () => {
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it("produces valid UUID-shaped values (xp_transactions.source_ref_id is uuid)", () => {
+    expect(deterministicUuid("backtest:2026-10-27:1")).toMatch(UUID_RE);
+    expect(deterministicUuid("anything")).toMatch(UUID_RE);
+  });
+
+  it("is stable for the same key (idempotent re-submission)", () => {
+    expect(deterministicUuid("backtest:2026-10-29:2")).toBe(
+      deterministicUuid("backtest:2026-10-29:2"),
+    );
+  });
+
+  it("differs across dates and session indexes", () => {
+    const a = deterministicUuid("backtest:2026-10-29:1");
+    expect(deterministicUuid("backtest:2026-10-29:2")).not.toBe(a);
+    expect(deterministicUuid("backtest:2026-10-28:1")).not.toBe(a);
+  });
+
+  /**
+   * Regression guard for the Stage 2 audit bug (2026-10-29):
+   * the backtesting action passed the raw string
+   * `backtest:<date>:<n>` as source_ref_id into a uuid column,
+   * so every backtest XP insert failed silently and the UI
+   * falsely reported the sessions as "already logged".
+   */
+  it("the coach backtesting action maps its key through deterministicUuid", () => {
+    const src = readFileSync(
+      join(process.cwd(), "apps/web/lib/coach/actions.ts"),
+      "utf8",
+    );
+    expect(src).toContain(
+      "deterministicUuid(`backtest:${activityDate}:${i}`)",
+    );
+    expect(src).not.toContain("sourceRefId: `backtest:");
   });
 });
 

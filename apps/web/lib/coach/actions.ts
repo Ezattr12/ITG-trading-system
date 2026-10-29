@@ -7,6 +7,7 @@ import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabas
 import { getCurrentUser } from "@/lib/auth/session";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
 import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { deterministicUuid } from "@/lib/gamification/xp";
 import { COACH_MIN_TRADES } from "./types";
 import { generateCoachInsights } from "./insights";
 import { getAiInsightsForWeek, getCoachWeekData } from "./queries";
@@ -162,7 +163,11 @@ export async function logBacktestingSessionAction(
     const ok = await awardXp({
       userId: user.id,
       reason: "backtest_session",
-      sourceRefId: `backtest:${activityDate}:${i}`,
+      // source_ref_id is a uuid column: the per-session key
+      // must be mapped into a stable UUID, or the insert is
+      // rejected and the XP silently never lands (Stage 2
+      // audit bug, 2026-10-29 — see deterministicUuid).
+      sourceRefId: deterministicUuid(`backtest:${activityDate}:${i}`),
       note: `Backtesting session ${i} of ${sessions} on ${activityDate}`,
     });
     if (ok) awarded += 1;

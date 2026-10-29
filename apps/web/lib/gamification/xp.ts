@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { XP_TABLE, calcXpFor, type XpAction } from "@itg/calc";
 import type { XpHistoryPoint } from "@/lib/analytics/types";
 import type { XpReason } from "./types";
@@ -38,6 +39,33 @@ export const XP_REASON_LABELS: Record<XpReason, string> = {
   penalty: "XP penalty",
   other: "Other",
 };
+
+/**
+ * Derive a stable, valid UUID from an arbitrary string key.
+ *
+ * `xp_transactions.source_ref_id` is a Postgres `uuid` column,
+ * so idempotency keys that are not natural row ids (e.g. one
+ * backtesting session on a date) must be mapped into UUID
+ * space deterministically: the same key always yields the
+ * same UUID (so re-submitting never double-awards), and
+ * different keys yield different UUIDs. MD5 digest shaped
+ * into the RFC 4122 layout with version-5/variant bits —
+ * the value only needs to be a valid, stable uuid, it is
+ * never generated randomly or shown to users.
+ *
+ * (Stage 2 audit bug, 2026-10-29: the backtesting action
+ * passed the raw key `backtest:<date>:<n>` as source_ref_id;
+ * the uuid column rejected it, every insert failed silently
+ * inside awardXp, and backtesting XP was never awarded.)
+ */
+export function deterministicUuid(key: string): string {
+  const hex = createHash("md5").update(key).digest("hex");
+  const variant = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  return (
+    `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-` +
+    `${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+  );
+}
 
 /** Total XP from a list of transactions (penalties are negative). */
 export function totalXp(
