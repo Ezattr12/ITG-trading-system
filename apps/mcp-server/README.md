@@ -1,13 +1,13 @@
-# @itg/mcp-server — ITG AI Intelligence MCP server (Stages 3–4)
+# @itg/mcp-server — ITG AI Intelligence MCP server (Stages 3–4, Phase 20)
 
-A standalone, **read-only** MCP server that exposes twelve
+A standalone, **read-only** MCP server that exposes thirteen
 tools over ITG TraderOS data — the Stage 3 POC tools
-(`get_trade`, `analyze_trade`) plus the ten Stage 4
-intelligence tools listed below — per the approved design
+(`get_trade`, `analyze_trade`), the ten Stage 4
+intelligence tools listed below, and Phase 20's
+`compute_coach_insights` — per the approved design
 in `docs/ai-intelligence-mcp-design.md` (§3–§4) and
 `docs/stage-4-ai-tools.md`. It has no write, execution,
-broker, transfer or withdrawal surface of any kind, and the
-web app is untouched by it.
+broker, transfer or withdrawal surface of any kind.
 
 ## Security model (design §2, non-negotiable)
 
@@ -131,9 +131,21 @@ trades). Details: `docs/stage-4-ai-tools.md`.
   flag, stored aggregates reported as saved) + the week's
   live closed-trade summary. No review → `not_found`.
 
-`compute_coach_insights` is **not** implemented: the coach
-engine exists only as web-app code, and copying it would
-create a second source of truth (design §4).
+- `compute_coach_insights` — `{ week_start? }` (Phase 20):
+  the deterministic weekly coach analysis, computed by the
+  web app's authenticated internal endpoint
+  (`POST /api/internal/coach-insights`) — **not** by this
+  server. The tool forwards the caller's validated access
+  token as a Bearer header and sends `week_start` only (no
+  identity fields, no service key); the endpoint derives the
+  trader from the token and runs the one coach engine
+  (`lib/coach/insights.ts`) under RLS. Compute-only: nothing
+  is persisted by the call. Upstream statuses map onto the
+  usual taxonomy (401 → `unauthenticated`, 400 →
+  `invalid_argument`, 429 → `rate_limited`, else
+  `upstream_error`), the response is sanity-capped at
+  ~64 KB, and the call is audited like every other tool
+  (`mcp.compute_coach_insights`, entity_type `ai_insights`).
 
 ## Protocol
 
@@ -153,6 +165,7 @@ protocol frames.
 | `SUPABASE_ANON_KEY` | Anon key — auth validation + RLS-scoped reads |
 | `SUPABASE_SERVICE_ROLE_KEY` | Audit inserts only |
 | `ITG_SUPABASE_ACCESS_TOKEN` | The trader's access token (host-supplied) |
+| `ITG_API_BASE_URL` | Web app base URL for the internal coach endpoint used by `compute_coach_insights` (Phase 20). Optional; defaults to `https://itg-traderos.vercel.app` |
 
 If `SUPABASE_URL` / `SUPABASE_ANON_KEY` are missing, the
 server still starts and answers `initialize`, but every
@@ -193,8 +206,13 @@ pnl), exactly-one-audit-row per call on every path, the
 60/minute rate limit, and the JSON-RPC protocol subset.
 The Stage 4 tests (`src/intelligence.test.ts`) add
 hand-computed aggregate fixtures per tool, validation and
-empty-state honesty cases, cross-tenant checks for the
-list/summary tools, and the 12-tool `tools/list` contract.
+empty-state honesty cases, and cross-tenant checks for the
+list/summary tools. The Phase 20 tests (`src/coach.test.ts`)
+cover the coach tool's wire contract (URL, Bearer header,
+`week_start`-only body), pre-fetch argument rejection,
+upstream status mapping and audit-once behaviour; the
+13-tool `tools/list` contract is asserted in
+`src/server.test.ts`.
 
 The live smoke test against the real Supabase project
 (verification accounts only) is recorded in

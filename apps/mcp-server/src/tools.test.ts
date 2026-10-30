@@ -158,6 +158,7 @@ function makeCaller(
     supabaseAnonKey: "anon",
     supabaseServiceRoleKey: "service",
     accessToken: "token-a",
+    apiBaseUrl: "https://itg-traderos.vercel.app",
     configured: true,
   };
   const callTool = createToolCaller({

@@ -91,15 +91,20 @@ certificates (eligibility state).
 
 ## 4. Rollout order
 
-1. Stage 3 POC tools (get_trade, analyze_trade) — proves
-   the authenticated read path.
-2. Stage 4 read tools as justified.
-3. Wire the trade-close trigger to refresh the current
+1. ✅ Stage 3 POC tools (get_trade, analyze_trade) — proves
+   the authenticated read path. **Done (2026-10-29).**
+2. ✅ Stage 4 read tools as justified. **Done (2026-10-29).**
+3. ✅ Wire the trade-close trigger to refresh the current
    week's deterministic insights (idempotent job).
+   **Done in Phase 20 (2026-10-30)** — closing, correcting
+   or re-reviewing a closed trade refreshes that week's
+   insights through the shared coach service; the same
+   phase exposed `compute_coach_insights` via the internal
+   endpoint. See `docs/phase-20.md`.
 4. Only then evaluate an LLM narration layer behind a
    config flag, default off, with snapshot-diff checks in
    tests (narration may not introduce numbers absent from
-   the snapshot).
+   the snapshot). **Future — not started.**
 
 ## 5. Verification
 

@@ -9,8 +9,7 @@ import { mondayOfWeek } from "@/lib/reviews/reviews";
 import { awardXp, refreshGamification } from "@/lib/gamification/actions";
 import { deterministicUuid } from "@/lib/gamification/xp";
 import { COACH_MIN_TRADES } from "./types";
-import { generateCoachInsights } from "./insights";
-import { getAiInsightsForWeek, getCoachWeekData } from "./queries";
+import { CoachStoreUnavailableError, refreshCoachInsights } from "./service";
 import { backtestingSchema, firstZodError, refreshCoachSchema } from "./validation";
 
 /**
@@ -36,16 +35,6 @@ import { backtestingSchema, firstZodError, refreshCoachSchema } from "./validati
  * new sessions. A failed XP insert never loses the logged day.
  */
 
-/** Stable JSON stringify (sorted keys) for snapshot comparison. */
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-    a < b ? -1 : a > b ? 1 : 0,
-  );
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
-}
-
 export async function refreshCoachAnalysisAction(
   _prev: ActionResult & { inserted?: number; skipped?: number },
   formData: FormData,
@@ -64,56 +53,37 @@ export async function refreshCoachAnalysisAction(
   if (!monday) return { ok: false, error: "Choose a valid week (YYYY-MM-DD, Monday)." };
 
   const supabase = await createServerSupabaseClient();
-  const evidence = await getCoachWeekData(supabase, user.id, monday);
-  if (!evidence) return { ok: false, error: "Could not load this week's data. Please try again." };
-
-  const analysis = generateCoachInsights(evidence);
-  if (analysis.insufficientData) {
+  const admin = createServiceRoleSupabaseClient();
+  // Phase 20: the compute + idempotent persist lives in the
+  // shared coach service (lib/coach/service.ts) so the manual
+  // action, the automatic trade-close trigger and the internal
+  // endpoint all run the same engine the same way. The result
+  // is mapped back onto this action's original outcomes and
+  // messages, unchanged.
+  let refreshed: Awaited<ReturnType<typeof refreshCoachInsights>>;
+  try {
+    refreshed = await refreshCoachInsights({
+      supabase,
+      admin,
+      userId: user.id,
+      weekStartDate: monday,
+    });
+  } catch (e) {
+    if (e instanceof CoachStoreUnavailableError) {
+      return { ok: false, error: "Supabase is not configured — the analysis was not stored." };
+    }
+    throw e;
+  }
+  if (!refreshed.analysis) {
+    return { ok: false, error: "Could not load this week's data. Please try again." };
+  }
+  if (refreshed.insufficientData) {
     return {
       ok: false,
       error: `Not enough trades yet to analyse this week — the coach needs at least ${COACH_MIN_TRADES} closed trades. Journal a few more trades and refresh again.`,
     };
   }
-
-  const admin = createServiceRoleSupabaseClient();
-  if (!admin) {
-    return { ok: false, error: "Supabase is not configured — the analysis was not stored." };
-  }
-  const existing = await getAiInsightsForWeek(
-    supabase,
-    user.id,
-    analysis.periodStart,
-    analysis.periodEnd,
-  );
-  const existingKeys = new Set(
-    existing.map((r) => `${r.insight_type}:${stableStringify(r.metrics_snapshot)}`),
-  );
-
-  let inserted = 0;
-  let skipped = 0;
-  for (const insight of analysis.insights) {
-    const key = `${insight.type}:${stableStringify(insight.metricsSnapshot)}`;
-    if (existingKeys.has(key)) {
-      skipped += 1;
-      continue;
-    }
-    const { error } = await admin.from("ai_insights").insert({
-      user_id: user.id,
-      insight_type: insight.type,
-      period_start: analysis.periodStart,
-      period_end: analysis.periodEnd,
-      summary: insight.title,
-      metrics_snapshot: insight.metricsSnapshot,
-    });
-    if (error) {
-      // Unique-index race (a parallel refresh stored the same
-      // insight first) — count as skipped, not as a failure.
-      skipped += 1;
-    } else {
-      inserted += 1;
-      existingKeys.add(key);
-    }
-  }
+  const { inserted, skipped } = refreshed;
 
   revalidatePath("/coach");
   revalidatePath("/dashboard");

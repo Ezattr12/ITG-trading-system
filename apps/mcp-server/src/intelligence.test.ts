@@ -59,6 +59,7 @@ function makeCaller(tables: Record<string, Record<string, unknown>[]>) {
     supabaseAnonKey: "anon",
     supabaseServiceRoleKey: "service",
     accessToken: "token-a",
+    apiBaseUrl: "https://itg-traderos.vercel.app",
     configured: true,
   };
   const callTool = createToolCaller({
@@ -145,10 +146,14 @@ const RANGE = { from: "2026-10-01", to: "2026-10-31" };
 // ------------------------------------------------------------ catalog
 
 describe("tool catalog", () => {
-  it("exposes exactly 12 tools and NOT compute_coach_insights", () => {
+  it("exposes the 12 DB tools; compute_coach_insights arrived in Phase 20 (13 total)", () => {
     const names = TOOL_DEFINITIONS.map((t) => t.name);
-    expect(names).toHaveLength(12);
-    expect(names).not.toContain("compute_coach_insights");
+    // Stage 4 deferred compute_coach_insights to avoid copying
+    // the coach engine into this server; Phase 20 implemented
+    // it as an endpoint call instead (see coach.test.ts), so
+    // the catalog is now 13 — asserted in full in server.test.ts.
+    expect(names).toHaveLength(13);
+    expect(names).toContain("compute_coach_insights");
   });
 });
 

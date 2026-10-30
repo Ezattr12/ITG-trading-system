@@ -65,7 +65,7 @@ describe("JSON-RPC / MCP protocol subset", () => {
     ).toBeNull();
   });
 
-  it("tools/list exposes exactly the 12 read-only tools (Stages 3 + 4)", async () => {
+  it("tools/list exposes exactly the 13 read-only tools (Stages 3 + 4, Phase 20)", async () => {
     const { handleLine } = handler();
     const res = parse(
       await handleLine(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })),
@@ -84,6 +84,7 @@ describe("JSON-RPC / MCP protocol subset", () => {
       "get_discipline_status",
       "get_level_status",
       "get_weekly_review",
+      "compute_coach_insights",
     ]);
   });
 

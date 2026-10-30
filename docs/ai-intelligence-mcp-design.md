@@ -141,8 +141,11 @@ Status as of 2026-10-29 (Stage 4): ten of the eleven tools
 below are **Implemented (Stage 4)** — see
 `docs/stage-4-ai-tools.md` for inputs/outputs/sources, the
 aggregation-semantics mirroring notes, and the live
-cross-check table. `compute_coach_insights` is **Deferred**
-with the reason recorded under the table.
+cross-check table. `compute_coach_insights` was **Deferred**
+at Stage 4 for the reason recorded under the table, and was
+then **Implemented in Phase 20 (2026-10-30)** via the
+internal-endpoint route described there — all eleven tools
+are now implemented.
 
 | Tool | Purpose | Inputs | Key outputs | Sources / logic | Status |
 |---|---|---|---|---|---|
@@ -156,18 +159,21 @@ with the reason recorded under the table.
 | `get_level_status` | Level + XP standing | — | level, score by dimension, XP total, recent XP events (capped) | lib/gamification | Implemented (Stage 4) |
 | `get_discipline_status` | Discipline reminders state | — | current reminder level + recent events | lib/discipline engine | Implemented (Stage 4) |
 | `get_weekly_review` | One week's review + aggregates | week_start | review text (capped), aggregates snapshot | lib/reviews | Implemented (Stage 4) |
-| `compute_coach_insights` | The deterministic coach analysis for a week, computed on demand | week_start | insights with metrics_snapshot (NOT persisted — persistence stays in the app action) | lib/coach/insights | **Deferred** |
+| `compute_coach_insights` | The deterministic coach analysis for a week, computed on demand | week_start | insights with metrics_snapshot (NOT persisted — persistence stays in the app action) | lib/coach/insights, via the app's internal endpoint | **Implemented (Phase 20)** |
 
-**`compute_coach_insights` — Deferred.** The deterministic
-coach engine exists only as web-app code
-(`apps/web/lib/coach/insights.ts`). Copying it into the MCP
-server would create a second source of truth for coach
+**`compute_coach_insights` — Implemented (Phase 20).** The
+Stage 4 deferral reason stands: the deterministic coach
+engine exists only as web-app code
+(`apps/web/lib/coach/insights.ts`), and copying it into the
+MCP server would create a second source of truth for coach
 logic, which §4's own rule ("the MCP layer is a transport,
 never a second implementation of a calculation") forbids.
-It stays a design entry until it can call the app's engine
-directly (e.g. a shared package extraction or an internal
-app endpoint), at which point it can be implemented without
-duplication.
+Phase 20 took the endpoint route the deferral anticipated:
+the web app exposes `POST /api/internal/coach-insights`
+(Bearer-token authenticated, token-derived identity only,
+compute-only — see `docs/phase-20.md`), and the MCP tool is
+a thin HTTP client for it, forwarding the caller's validated
+access token. The engine still exists in exactly one place.
 
 Implementation rule: a tool is built only when (a) its
 underlying app logic already exists and is tested, (b) the

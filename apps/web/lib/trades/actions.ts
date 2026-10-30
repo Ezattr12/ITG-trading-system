@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  createServerSupabaseClient,
+  createServiceRoleSupabaseClient,
+} from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { checkPresetRateLimit, rateLimitMessage, TRADE_RATE_LIMIT, UPLOAD_RATE_LIMIT } from "@/lib/auth/rate-limit";
@@ -18,6 +21,7 @@ import {
 import { logRiskEvent } from "@/lib/risk/actions";
 import { getRecentClosedTrades, getRiskDayContext, getRiskRules } from "@/lib/risk/queries";
 import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { refreshCoachInsightsSafely } from "@/lib/coach/service";
 import { createNotification } from "@/lib/discipline/actions";
 import {
   advancedReviewSchema,
@@ -48,6 +52,35 @@ export interface TradeActionResult {
 
 function notConfigured(): TradeActionResult {
   return { ok: false, error: supabaseNotConnectedMessage() };
+}
+
+/**
+ * Phase 20 — automatic coach refresh on closed-trade change.
+ *
+ * After a closed trade is created, corrected or re-reviewed,
+ * the week's deterministic coach insights are refreshed
+ * through the shared coach service (the same idempotent
+ * persist as the manual refresh). Failure isolation is
+ * total: `refreshCoachInsightsSafely` never throws, and this
+ * helper never changes the calling action's result, redirect,
+ * XP or error behaviour. The refresh itself awards no XP and
+ * creates no notifications.
+ */
+async function refreshCoachAfterClosedTradeChange(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  userId: string,
+  closedAtIso: string | null,
+  openedAtIso: string,
+): Promise<void> {
+  const admin = createServiceRoleSupabaseClient();
+  if (!admin) return;
+  const dateIso = closedAtIso ?? openedAtIso;
+  await refreshCoachInsightsSafely({
+    supabase,
+    admin,
+    userId,
+    weekStartDate: dateIso.slice(0, 10),
+  });
 }
 
 function toNumberOrNull(v: FormDataEntryValue | null): number | null {
@@ -282,6 +315,12 @@ export async function createTradeAction(
     entityId: data.id,
     details: { pair: input.pair, direction: input.direction, status: metrics.status },
   });
+  // Phase 20 hook: a newly closed trade changes its week's
+  // coach evidence — refresh that week's insights. Never
+  // throws; never changes this action's outcome.
+  if (metrics.status === "closed") {
+    await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
+  }
   revalidatePath("/trades");
   revalidatePath("/dashboard");
   // ?saved=1 shows the animated "Trade saved" confirmation on
@@ -318,7 +357,7 @@ export async function saveAdvancedReviewAction(
 
   const { data: trade } = await supabase
     .from("trades")
-    .select("id, status")
+    .select("id, status, closed_at, opened_at")
     .eq("id", v.tradeId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -399,6 +438,18 @@ export async function saveAdvancedReviewAction(
     entityType: "trades",
     entityId: v.tradeId,
   });
+  // Phase 20 hook: this action never changes status/closed_at/
+  // pnl, but it does change review fields, psychology and
+  // lessons — all coach evidence. When the trade is closed,
+  // its week's data changed, so refresh that week's insights.
+  if (trade.status === "closed") {
+    await refreshCoachAfterClosedTradeChange(
+      supabase,
+      userId,
+      (trade.closed_at as string | null) ?? null,
+      trade.opened_at as string,
+    );
+  }
   revalidatePath(`/trades/${v.tradeId}`);
   revalidatePath("/trades");
   return { ok: true, message: "Review saved.", redirectTo: `/trades/${v.tradeId}` };
@@ -487,6 +538,11 @@ export async function correctTradeAction(
     entityId: tradeId,
     details: { correctingTradeId: corrected.id },
   });
+  // Phase 20 hook: the correcting trade replaces the original
+  // in its week's evidence — refresh when it is closed.
+  if (metrics.status === "closed") {
+    await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
+  }
   revalidatePath("/trades");
   revalidatePath(`/trades/${tradeId}`);
   // Same ?saved=1 confirmation as a new trade (Phase 16).

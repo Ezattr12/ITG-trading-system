@@ -24,6 +24,11 @@ import {
   INTELLIGENCE_TOOL_DEFINITIONS,
   INTELLIGENCE_TOOLS,
 } from "./intelligence.js";
+import {
+  COACH_TOOL_DEFINITIONS,
+  COACH_TOOLS,
+  CoachHttpError,
+} from "./coach.js";
 import type { McpConfig } from "./config.js";
 import type { Authenticator } from "./auth.js";
 import { writeAuditLog, type AuditOutcome } from "./audit.js";
@@ -84,6 +89,7 @@ const TRADE_TOOL_DEFINITIONS = [
 export const TOOL_DEFINITIONS = [
   ...TRADE_TOOL_DEFINITIONS,
   ...INTELLIGENCE_TOOL_DEFINITIONS,
+  ...COACH_TOOL_DEFINITIONS,
 ];
 
 export type ToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
@@ -99,6 +105,8 @@ export interface ToolCallerDeps {
   /** Service-role client used ONLY for the audit insert; null disables audit writes. */
   serviceClient: DbClient | null;
   rateLimiter: RateLimiter;
+  /** Injectable fetch for the coach endpoint call (tests); defaults to global fetch. */
+  fetchImpl?: typeof fetch;
 }
 
 // ---------------------------------------------------------------- rows
@@ -729,6 +737,13 @@ export function createToolCaller(deps: ToolCallerDeps) {
     // through the same auth/rate-limit/audit path below.
     const intelSpec = INTELLIGENCE_TOOLS[name];
     const intelParsed = intelSpec ? intelSpec.parse(args) : null;
+    // Phase 20: compute_coach_insights validates the same way
+    // but runs as an HTTP call to the web app's internal coach
+    // endpoint (coach.ts) — no coach logic lives in this server.
+    const coachSpec = COACH_TOOLS[name];
+    const coachParsed = coachSpec ? coachSpec.parse(args) : null;
+    const specParsed = intelParsed ?? coachParsed;
+    const specEntityType = intelSpec?.entityType ?? coachSpec?.entityType;
 
     interface AuditOverrides {
       entityType?: string;
@@ -808,16 +823,16 @@ export function createToolCaller(deps: ToolCallerDeps) {
         auth.userId,
       );
     }
-    if (intelSpec && intelParsed) {
-      if (intelParsed.invalidMessage) {
+    if (specParsed) {
+      if (specParsed.invalidMessage) {
         return fail(
           "invalid_argument",
-          `invalid_argument: ${intelParsed.invalidMessage}`,
+          `invalid_argument: ${specParsed.invalidMessage}`,
           auth.userId,
           {
-            entityType: intelSpec.entityType,
+            entityType: specEntityType,
             entityId: null,
-            arguments: intelParsed.auditArgs,
+            arguments: specParsed.auditArgs,
           },
         );
       }
@@ -830,6 +845,29 @@ export function createToolCaller(deps: ToolCallerDeps) {
     }
 
     try {
+      if (coachSpec && coachParsed) {
+        const outcome = await withTimeout(
+          coachSpec.run(
+            {
+              fetchImpl: deps.fetchImpl ?? fetch,
+              baseUrl: config.apiBaseUrl,
+              accessToken: config.accessToken,
+            },
+            coachParsed.value,
+          ),
+          CALL_TIMEOUT_MS,
+        );
+        return finish(
+          "ok",
+          auth.userId,
+          { isError: false, payload: outcome.payload },
+          {
+            entityType: coachSpec.entityType,
+            entityId: null,
+            arguments: coachParsed.auditArgs,
+          },
+        );
+      }
       if (intelSpec && intelParsed) {
         const outcome = await withTimeout(
           intelSpec.run(auth.client, auth.userId, intelParsed.value),
@@ -862,6 +900,13 @@ export function createToolCaller(deps: ToolCallerDeps) {
       }
       return finish("ok", auth.userId, { isError: false, payload });
     } catch (err) {
+      if (coachSpec && coachParsed && err instanceof CoachHttpError) {
+        return fail(err.code, `${err.code}: ${err.message}`, auth.userId, {
+          entityType: coachSpec.entityType,
+          entityId: null,
+          arguments: coachParsed.auditArgs,
+        });
+      }
       if (err instanceof TimeoutError) {
         return fail("upstream_error", "upstream_error: timeout", auth.userId);
       }

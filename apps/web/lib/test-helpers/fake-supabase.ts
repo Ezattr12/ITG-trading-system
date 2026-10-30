@@ -34,14 +34,28 @@ export class FakeQuery {
   readonly table: string;
   readonly ops: Op[] = [];
   private readonly rows: Row[];
+  private readonly onInsert?: (table: string, row: Row) => Row;
 
-  constructor(table: string, rows: Row[]) {
+  constructor(table: string, rows: Row[], onInsert?: (table: string, row: Row) => Row) {
     this.table = table;
     this.rows = rows;
+    this.onInsert = onInsert;
   }
 
   select(): this {
     return this;
+  }
+
+  /**
+   * Insert support (Phase 20): records the row on the owning
+   * client and appends it to the table, so a later select in
+   * the same test observes it — the behaviour the coach
+   * refresh idempotency tests rely on.
+   */
+  insert(row: Row | Row[]): FakeInsert {
+    const rows = Array.isArray(row) ? row : [row];
+    const stored = rows.map((r) => (this.onInsert ? this.onInsert(this.table, r) : r));
+    return new FakeInsert(stored);
   }
 
   eq(col: string, value: unknown): this {
@@ -165,19 +179,64 @@ export class FakeQuery {
   }
 }
 
+/** Result of a fake insert: awaitable, plus .select().single() chains. */
+export class FakeInsert {
+  private readonly stored: Row[];
+
+  constructor(stored: Row[]) {
+    this.stored = stored;
+  }
+
+  select(): this {
+    return this;
+  }
+
+  async single(): Promise<{ data: Row | null; error: null }> {
+    return { data: this.stored[0] ?? null, error: null };
+  }
+
+  async maybeSingle(): Promise<{ data: Row | null; error: null }> {
+    return this.single();
+  }
+
+  then<TResult1 = { data: null; error: null }, TResult2 = never>(
+    onFulfilled?: ((value: { data: null; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+    onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    return Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected);
+  }
+}
+
 export class FakeSupabaseClient {
   /** Every query built, in call order — tests assert on these. */
   readonly queries: FakeQuery[] = [];
+  /** Every inserted row, in call order: { table, row } (Phase 20). */
+  readonly inserts: { table: string; row: Row }[] = [];
   private readonly tables: Record<string, Row[]>;
+  private insertSeq = 0;
 
   constructor(tables: Record<string, Row[]>) {
     this.tables = tables;
   }
 
   from(table: string): FakeQuery {
-    const q = new FakeQuery(table, this.tables[table] ?? []);
+    const q = new FakeQuery(table, this.tables[table] ?? [], (t, row) => {
+      const stored: Row = { ...row };
+      if (stored.id === undefined) {
+        this.insertSeq += 1;
+        stored.id = `fake-${t}-${this.insertSeq}`;
+      }
+      (this.tables[t] ??= []).push(stored);
+      this.inserts.push({ table: t, row: stored });
+      return stored;
+    });
     this.queries.push(q);
     return q;
+  }
+
+  /** All recorded inserts into one table, in call order. */
+  insertsFor(table: string): Row[] {
+    return this.inserts.filter((i) => i.table === table).map((i) => i.row);
   }
 
   /** All queries run against one table, in call order. */
