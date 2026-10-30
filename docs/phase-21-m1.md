@@ -385,3 +385,23 @@ e.g. an authenticated `POST /api/mobile/session` bootstrap
 that reuses the web's profile-creation path — and the API
 should return a distinct, client-actionable error for this
 state instead of the generic save failure.
+
+**RESOLVED by M2-A (2026-10-30, Phase 21 M2 — see
+`docs/phase-21-m2.md`).** The mechanism, exactly as
+required above: the web's first-login profile creation was
+extracted from `getCurrentUser` into
+`ensureProfileCore(supabase, user)` (`lib/profile/
+service.ts`) — insert payload exactly `{ id, full_name
+from auth metadata }` under the caller's RLS client — and
+`POST /api/mobile/session` runs it with the caller's
+token client, then reports onboarding state. The endpoint
+is idempotent (repeat calls return `created: false` and
+insert nothing), race-safe (a unique-violation re-reads
+and returns `created: false`), and writes its
+`api.mobile.session_bootstrap` audit row AFTER the
+bootstrap, so a first-time user's audit insert satisfies
+the profiles FK — bootstrapped users are auditable from
+their very first call. A genuine creation failure returns
+the distinct, client-actionable
+`422 { error: "profile_bootstrap_failed" }` instead of the
+generic save failure this finding described.

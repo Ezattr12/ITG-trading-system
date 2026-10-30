@@ -85,6 +85,69 @@ export async function createNotification(input: {
   return !error;
 }
 
+/* ------------------------------------------------- notification read marks */
+
+export type MarkNotificationReadCoreResult =
+  | { ok: true; updated: number }
+  | CoreFailure;
+
+/**
+ * Mark one notification read (Phase 21, M2 extraction of
+ * markNotificationReadAction). The notification must belong
+ * to the caller — enforced by RLS and by the explicit
+ * user_id scoping — or the result is not_found (the API
+ * maps that to the same 404 a nonexistent id gets; the web
+ * adapter keeps its historic message behaviour).
+ */
+export async function markNotificationReadCore(
+  supabase: SupabaseClient,
+  userId: string,
+  notificationId: string,
+): Promise<MarkNotificationReadCoreResult> {
+  if (!notificationId) return fail("invalid_input", "Choose a notification first.");
+  const { data: owned } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("id", notificationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!owned) return fail("not_found", "Notification not found.");
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId)
+    .eq("user_id", userId);
+  if (error) {
+    return fail("save_failed", "Could not mark the notification as read. Please try again.");
+  }
+  return { ok: true, updated: 1 };
+}
+
+/**
+ * Mark every notification of the caller read (Phase 21, M2
+ * extraction of markAllNotificationsReadAction). Returns
+ * the number of previously-unread rows actually flipped,
+ * counted before the update under the same scoping.
+ */
+export async function markAllNotificationsReadCore(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<MarkNotificationReadCoreResult> {
+  const { data: unread } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_read", false);
+  const count = (unread ?? []).length;
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+  if (error) return fail("save_failed", "Could not mark notifications as read. Please try again.");
+  return { ok: true, updated: count };
+}
+
 function todayString(): string {
   return new Date().toISOString().slice(0, 10);
 }

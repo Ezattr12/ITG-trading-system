@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
-import { writeAuditLog } from "@/lib/auth/audit";
-import { checkPresetRateLimit, rateLimitMessage, UPLOAD_RATE_LIMIT } from "@/lib/auth/rate-limit";
 import {
+  cancelTradeCore,
   correctTradeCore,
   createTradeCore,
+  deleteScreenshotCore,
   saveAdvancedReviewCore,
+  uploadScreenshotCore,
 } from "./service";
 import {
   advancedReviewSchema,
@@ -26,9 +27,10 @@ import {
  * cores shared with the mobile API — these actions are now
  * thin adapters (session auth + FormData → core →
  * revalidate/redirect/message), with identical behaviour,
- * messages and ordering of outcomes. Cancel and screenshot
- * actions were not extracted in M1 (see
- * docs/phase-21-m1.md) and are unchanged.
+ * messages and ordering of outcomes. Phase 21 (M2) extended
+ * the same extraction to cancel and the screenshot actions
+ * (cancelAction / uploadScreenshotAction /
+ * deleteScreenshotAction).
  *
  * Financial facts are never silently overwritten and never
  * deleted (migration 0004): a closed trade is corrected by a
@@ -185,18 +187,11 @@ export async function cancelTradeAction(formData: FormData): Promise<void> {
   const userId = await currentUserId();
   if (!userId) redirect("/login");
   const supabase = await createServerSupabaseClient();
-  const { data: trade } = await supabase
-    .from("trades")
-    .select("id, status")
-    .eq("id", tradeId)
-    .eq("user_id", userId)
-    .maybeSingle();
   // Only an open trade can be cancelled. A closed trade is a financial
   // fact: it is corrected by reversal, never deleted (migration 0004).
-  if (trade && trade.status === "open") {
-    await supabase.from("trades").update({ status: "cancelled" }).eq("id", tradeId).eq("user_id", userId);
-    await writeAuditLog({ userId, action: "trade.cancelled", entityType: "trades", entityId: tradeId });
-  }
+  // The core enforces that; this void action keeps its historic
+  // redirect-either-way behaviour and ignores the outcome.
+  await cancelTradeCore(supabase, userId, tradeId);
   revalidatePath("/trades");
   redirect("/trades");
 }
@@ -208,7 +203,8 @@ export async function cancelTradeAction(formData: FormData): Promise<void> {
  * configured, otherwise an honest error. Images only, 5 MB max,
  * per-user path in the `trade-screenshots` bucket. OCR status
  * stays `not_applicable` — no OCR service is connected, and no
- * extraction is faked (see lib/trades/ocr.ts).
+ * extraction is faked (see lib/trades/ocr.ts). The write logic
+ * lives in uploadScreenshotCore (Phase 21, M2).
  */
 export async function uploadScreenshotAction(
   _prev: TradeActionResult,
@@ -218,6 +214,9 @@ export async function uploadScreenshotAction(
   const tradeId = toText(formData.get("tradeId"));
   if (!tradeId) return { ok: false, error: "Trade is not valid." };
   const file = formData.get("screenshot");
+  // File checks first (historic message precedence — fetch-free
+  // pre-validation, as in createTradeAction); the core repeats
+  // them for its other callers.
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Choose an image file first." };
   }
@@ -229,48 +228,14 @@ export async function uploadScreenshotAction(
   }
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
-  // Rate limit (Phase 11): at most 10 uploads per 10 minutes per trader.
-  const uploadRate = checkPresetRateLimit(`upload:${userId}`, UPLOAD_RATE_LIMIT);
-  if (!uploadRate.allowed) return { ok: false, error: rateLimitMessage("screenshot upload", uploadRate) };
   const supabase = await createServerSupabaseClient();
-  const { data: trade } = await supabase
-    .from("trades")
-    .select("id")
-    .eq("id", tradeId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!trade) return { ok: false, error: "Trade not found." };
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "screenshot";
-  const path = `${userId}/${tradeId}/${Date.now()}-${safeName}`;
-  const { error: uploadError } = await supabase.storage
-    .from("trade-screenshots")
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (uploadError) {
-    return {
-      ok: false,
-      error:
-        "Screenshot upload failed — the 'trade-screenshots' Storage bucket may not exist yet in this Supabase project. Ask an admin to create it, then try again.",
-    };
-  }
-  const { error: rowError } = await supabase.from("trade_screenshots").insert({
-    trade_id: tradeId,
-    user_id: userId,
-    storage_path: path,
-    file_name: file.name,
-    ocr_status: "not_applicable",
-    verified_by_user: false,
-  });
-  if (rowError) {
-    await supabase.storage.from("trade-screenshots").remove([path]);
-    return { ok: false, error: "Screenshot uploaded but could not be linked to the trade. Please try again." };
-  }
-  await writeAuditLog({
+  const result = await uploadScreenshotCore(
+    supabase,
     userId,
-    action: "trade.screenshot_uploaded",
-    entityType: "trade_screenshots",
-    entityId: tradeId,
-  });
+    tradeId,
+    file instanceof File ? file : null,
+  );
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath(`/trades/${tradeId}`);
   return { ok: true, message: "Screenshot uploaded." };
 }
@@ -283,16 +248,9 @@ export async function deleteScreenshotAction(formData: FormData): Promise<void> 
     const userId = await currentUserId();
     if (userId) {
       const supabase = await createServerSupabaseClient();
-      const { data: shot } = await supabase
-        .from("trade_screenshots")
-        .select("id, storage_path")
-        .eq("id", screenshotId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (shot) {
-        await supabase.storage.from("trade-screenshots").remove([shot.storage_path as string]);
-        await supabase.from("trade_screenshots").delete().eq("id", screenshotId).eq("user_id", userId);
-      }
+      // The core scopes the row to the owner; this void action
+      // keeps its historic redirect-either-way behaviour.
+      await deleteScreenshotCore(supabase, userId, screenshotId);
     }
   }
   revalidatePath(`/trades/${tradeId}`);

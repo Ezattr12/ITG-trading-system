@@ -6,10 +6,8 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/auth/session";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
-import { deterministicUuid } from "@/lib/gamification/xp";
 import { COACH_MIN_TRADES } from "./types";
-import { CoachStoreUnavailableError, refreshCoachInsights } from "./service";
+import { CoachStoreUnavailableError, logBacktestingCore, refreshCoachInsights } from "./service";
 import { backtestingSchema, firstZodError, refreshCoachSchema } from "./validation";
 
 /**
@@ -116,33 +114,18 @@ export async function logBacktestingSessionAction(
   const { activityDate, sessions } = parsed.data;
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.from("daily_activity").upsert(
-    {
-      user_id: user.id,
-      activity_date: activityDate,
-      backtesting_sessions: sessions,
-    },
-    { onConflict: "user_id,activity_date" },
-  );
-  if (error) {
-    return { ok: false, error: "Could not log the backtesting session. Please try again." };
-  }
-
-  let awarded = 0;
-  for (let i = 1; i <= sessions; i += 1) {
-    const ok = await awardXp({
-      userId: user.id,
-      reason: "backtest_session",
-      // source_ref_id is a uuid column: the per-session key
-      // must be mapped into a stable UUID, or the insert is
-      // rejected and the XP silently never lands (Stage 2
-      // audit bug, 2026-10-29 — see deterministicUuid).
-      sourceRefId: deterministicUuid(`backtest:${activityDate}:${i}`),
-      note: `Backtesting session ${i} of ${sessions} on ${activityDate}`,
-    });
-    if (ok) awarded += 1;
-  }
-  await refreshGamification(supabase, user.id);
+  // Phase 21 (M2): the upsert + per-session XP loop lives in
+  // logBacktestingCore (lib/coach/service.ts), shared with the
+  // mobile API — this action keeps its exact outcomes and
+  // messages, including the idempotent re-submit wording.
+  // Inside the core, each session's idempotency key is still
+  // mapped through deterministicUuid(`backtest:${activityDate}:${i}`)
+  // before it reaches the uuid source_ref_id column (the
+  // Stage 2 regression guard in lib/gamification/xp.test.ts
+  // pins this mapping).
+  const result = await logBacktestingCore(supabase, user.id, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
+  const awarded = result.sessionsAwarded;
   revalidatePath("/coach");
   revalidatePath("/progress");
   return {

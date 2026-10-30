@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/auth/actions";
-import { writeAuditLog } from "@/lib/auth/audit";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import {
@@ -10,14 +9,18 @@ import {
   riskRulesSchema,
   tradingPlanSchema,
 } from "./validation";
+import { saveRiskRulesCore, saveTradingPlanCore } from "./service";
 import type { RiskEventType } from "./types";
 
 /**
  * Risk & trading-plan Server Actions (Phase 5, spec §19–20).
  *
- * Same pattern as Phase 2/3: Zod first, Supabase second, RLS
- * enforces that a trader only touches their own rows. One active
- * rules row and one active plan per trader (upsert by user).
+ * Phase 21 (M2): the rules/plan write logic lives in
+ * lib/risk/service.ts as cores shared with the mobile API —
+ * these actions are now thin adapters (session auth +
+ * FormData → core → revalidate/message), with identical
+ * behaviour, messages and ordering of outcomes. The
+ * resolve-event action is unchanged.
  *
  * Risk events are written server-side only, via the service-role
  * client, because `risk_events` has no client INSERT policy
@@ -102,37 +105,8 @@ export async function saveRiskRulesAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const v = parsed.data;
-
-  const { data: existing } = await supabase
-    .from("risk_rules")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const row = {
-    user_id: userId,
-    max_risk_per_trade_pct: v.maxRiskPerTradePct,
-    max_daily_loss: v.maxDailyLoss,
-    max_trades_per_day: v.maxTradesPerDay,
-    max_consecutive_losses: v.maxConsecutiveLosses,
-    max_leverage: v.maxLeverage,
-    is_active: true,
-  };
-  const { error } = existing
-    ? await supabase.from("risk_rules").update(row).eq("id", existing.id)
-    : await supabase.from("risk_rules").insert(row);
-  if (error) return { ok: false, error: "Could not save your risk rules. Please try again." };
-  await writeAuditLog({
-    userId,
-    action: "risk_rules.saved",
-    entityType: "risk_rules",
-    details: { maxRiskPerTradePct: v.maxRiskPerTradePct, maxDailyLoss: v.maxDailyLoss },
-  });
+  const result = await saveRiskRulesCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/risk");
   return { ok: true, message: "Risk rules saved." };
 }
@@ -160,42 +134,8 @@ export async function saveTradingPlanAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const v = parsed.data;
-
-  const { data: existing } = await supabase
-    .from("trading_plans")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const row = {
-    user_id: userId,
-    name: v.name,
-    markets: v.markets,
-    sessions: v.sessions,
-    risk_per_trade_pct: v.riskPerTradePct,
-    max_daily_loss: v.maxDailyLoss,
-    max_daily_trades: v.maxDailyTrades,
-    preferred_setup_ids: v.preferredSetupIds,
-    no_trade_conditions: v.noTradeConditions,
-    psychology_rules: v.psychologyRules,
-    schedule: v.scheduleNotes ? { notes: v.scheduleNotes } : {},
-    is_active: true,
-  };
-  const { error } = existing
-    ? await supabase.from("trading_plans").update(row).eq("id", existing.id)
-    : await supabase.from("trading_plans").insert(row);
-  if (error) return { ok: false, error: "Could not save your trading plan. Please try again." };
-  await writeAuditLog({
-    userId,
-    action: "trading_plan.saved",
-    entityType: "trading_plans",
-    details: { name: v.name, markets: v.markets, sessions: v.sessions },
-  });
+  const result = await saveTradingPlanCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/plan");
   return { ok: true, message: "Trading plan saved." };
 }

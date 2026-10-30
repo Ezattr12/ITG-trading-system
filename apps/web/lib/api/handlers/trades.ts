@@ -7,9 +7,12 @@ import {
   type ApiHandlerResult,
 } from "@/lib/api/auth";
 import {
+  cancelTradeCore,
   correctTradeCore,
   createTradeCore,
+  deleteScreenshotCore,
   saveAdvancedReviewCore,
+  uploadScreenshotCore,
 } from "@/lib/trades/service";
 import {
   checkApiRateLimit,
@@ -190,4 +193,148 @@ export async function handleCorrectTrade(
   }
   return finish(deps, CORRECT_CTX, begun.userId, "ok", result.tradeId,
     apiOk({ trade_id: result.tradeId, reversed_trade_id: result.reversedTradeId }, 201));
+}
+
+/* ------------------------------------------- cancel (Phase 21, M2) */
+
+const CANCEL_CTX: HandlerContext = { operation: "trade_cancelled", entityType: "trades" };
+
+/**
+ * POST /api/mobile/trades/[id]/cancel — cancel an OPEN
+ * trade via cancelTradeCore. The body is optional (the
+ * route's lenient parse turns a bodiless POST into {}), but
+ * when sent it must be empty: any key is a smuggled identity
+ * field or unknown.
+ */
+export async function handleCancelTrade(
+  input: JsonHandlerInput & { tradeId: string },
+  deps: ApiDeps,
+): Promise<ApiHandlerResult> {
+  const gate = await requireApiAuth(input.token, deps, CANCEL_CTX);
+  if (!gate.ok) return gate.response;
+  const { userId, supabase } = gate.auth;
+
+  if (input.bodyError) {
+    return finish(deps, CANCEL_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", input.bodyError));
+  }
+  const validated = validateBody(input.body ?? {}, []);
+  if (!validated.ok) {
+    return finish(deps, CANCEL_CTX, userId, "invalid_argument", null, validated.response);
+  }
+  if (!isUuid(input.tradeId)) {
+    return finish(deps, CANCEL_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "trade id must be a valid UUID"));
+  }
+  const limited = checkApiRateLimit(deps, CANCEL_CTX, userId);
+  if (limited) {
+    return finish(deps, CANCEL_CTX, userId, "rate_limited", null, limited);
+  }
+  let result: Awaited<ReturnType<typeof cancelTradeCore>>;
+  try {
+    result = await cancelTradeCore(supabase, userId, input.tradeId);
+  } catch {
+    return finish(deps, CANCEL_CTX, userId, "error", null, apiError(500, "internal"));
+  }
+  if (!result.ok) {
+    const { response, outcome } = coreFailureResponse(result);
+    return finish(deps, CANCEL_CTX, userId, outcome, input.tradeId, response);
+  }
+  return finish(deps, CANCEL_CTX, userId, "ok", result.tradeId,
+    apiOk({ trade_id: result.tradeId, status: result.status }));
+}
+
+/* --------------------------------------- screenshots (Phase 21, M2) */
+
+const SCREENSHOT_UPLOAD_CTX: HandlerContext = {
+  operation: "trade_screenshot_uploaded",
+  entityType: "trade_screenshots",
+};
+
+export interface ScreenshotUploadInput {
+  token: string | null;
+  tradeId: string;
+  /** The multipart `file` part, or null when absent/not a file. */
+  file: File | null;
+  /** Set by the route when the multipart body itself is unreadable. */
+  formError?: string | null;
+}
+
+/**
+ * POST /api/mobile/trades/[id]/screenshots (multipart) —
+ * upload via uploadScreenshotCore: same private bucket,
+ * path, validation and upload rate limit as the web. The
+ * API-layer rate limit is deliberately NOT applied here —
+ * the core's upload limiter is the operation's one limiter
+ * (the M1 split: exactly one limiter per operation).
+ */
+export async function handleUploadScreenshot(
+  input: ScreenshotUploadInput,
+  deps: ApiDeps,
+): Promise<ApiHandlerResult> {
+  const gate = await requireApiAuth(input.token, deps, SCREENSHOT_UPLOAD_CTX);
+  if (!gate.ok) return gate.response;
+  const { userId, supabase } = gate.auth;
+
+  if (input.formError) {
+    return finish(deps, SCREENSHOT_UPLOAD_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", input.formError));
+  }
+  if (!isUuid(input.tradeId)) {
+    return finish(deps, SCREENSHOT_UPLOAD_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "trade id must be a valid UUID"));
+  }
+  let result: Awaited<ReturnType<typeof uploadScreenshotCore>>;
+  try {
+    result = await uploadScreenshotCore(supabase, userId, input.tradeId, input.file);
+  } catch {
+    return finish(deps, SCREENSHOT_UPLOAD_CTX, userId, "error", null, apiError(500, "internal"));
+  }
+  if (!result.ok) {
+    const { response, outcome } = coreFailureResponse(result);
+    return finish(deps, SCREENSHOT_UPLOAD_CTX, userId, outcome, input.tradeId, response);
+  }
+  return finish(deps, SCREENSHOT_UPLOAD_CTX, userId, "ok", result.screenshotId,
+    apiOk({ screenshot_id: result.screenshotId }, 201));
+}
+
+const SCREENSHOT_DELETE_CTX: HandlerContext = {
+  operation: "trade_screenshot_deleted",
+  entityType: "trade_screenshots",
+};
+
+/**
+ * DELETE /api/mobile/trades/[id]/screenshots/[screenshotId]
+ * — delete via deleteScreenshotCore. A screenshot id that
+ * is another trader's (or belongs to a different trade) is
+ * the identical 404 as a nonexistent one.
+ */
+export async function handleDeleteScreenshot(
+  input: { token: string | null; tradeId: string; screenshotId: string },
+  deps: ApiDeps,
+): Promise<ApiHandlerResult> {
+  const gate = await requireApiAuth(input.token, deps, SCREENSHOT_DELETE_CTX);
+  if (!gate.ok) return gate.response;
+  const { userId, supabase } = gate.auth;
+
+  if (!isUuid(input.tradeId) || !isUuid(input.screenshotId)) {
+    return finish(deps, SCREENSHOT_DELETE_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "trade and screenshot ids must be valid UUIDs"));
+  }
+  const limited = checkApiRateLimit(deps, SCREENSHOT_DELETE_CTX, userId);
+  if (limited) {
+    return finish(deps, SCREENSHOT_DELETE_CTX, userId, "rate_limited", null, limited);
+  }
+  let result: Awaited<ReturnType<typeof deleteScreenshotCore>>;
+  try {
+    result = await deleteScreenshotCore(supabase, userId, input.screenshotId, input.tradeId);
+  } catch {
+    return finish(deps, SCREENSHOT_DELETE_CTX, userId, "error", null, apiError(500, "internal"));
+  }
+  if (!result.ok) {
+    const { response, outcome } = coreFailureResponse(result);
+    return finish(deps, SCREENSHOT_DELETE_CTX, userId, outcome, input.screenshotId, response);
+  }
+  return finish(deps, SCREENSHOT_DELETE_CTX, userId, "ok", result.screenshotId,
+    apiOk({ ok: true }));
 }

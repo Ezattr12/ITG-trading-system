@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
 import {
   checkPresetRateLimit,
@@ -161,6 +161,43 @@ export async function parseJsonBody(
   return { ok: true, value };
 }
 
+/**
+ * Optional-body variant (Phase 21, M2) for endpoints whose
+ * body may be omitted entirely (session bootstrap, trade
+ * cancel): an empty body parses as `{}`, so the pipeline's
+ * identity/unknown-key checks still run when a body IS sent,
+ * and bodiless calls are not refused for having no body.
+ */
+export async function parseOptionalJsonBody(
+  request: Request,
+  maxBytes: number = MAX_JSON_BODY_BYTES,
+): Promise<ParsedJsonBody> {
+  const text = await request.text();
+  if (text.trim() === "") return { ok: true, value: {} };
+  if (new TextEncoder().encode(text).length > maxBytes) {
+    return {
+      ok: false,
+      result: apiError(400, "invalid_argument", "request body is too large"),
+    };
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      result: apiError(400, "invalid_argument", "request body must be valid JSON"),
+    };
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      ok: false,
+      result: apiError(400, "invalid_argument", "request body must be a JSON object"),
+    };
+  }
+  return { ok: true, value };
+}
+
 /* --------------------------------------------------------------- deps */
 
 export interface ApiAuditEntry {
@@ -230,6 +267,8 @@ export type ApiAuth =
   | {
       ok: true;
       userId: string;
+      /** The validated Supabase user (identity + metadata source). */
+      user: User;
       /** Token-scoped RLS client — the only client cores write through. */
       supabase: SupabaseClient;
       /** Service-role client (server-side engines only), or null. */
@@ -258,6 +297,7 @@ export async function authenticateApiToken(
   return {
     ok: true,
     userId: data.user.id,
+    user: data.user,
     supabase,
     admin: deps.makeAdminClient(),
   };

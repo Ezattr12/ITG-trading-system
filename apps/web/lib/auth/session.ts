@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { ensureProfileCore } from "@/lib/profile/service";
 
 export interface ProfileRow {
   id: string;
@@ -56,19 +57,15 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  let { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    const { data: created } = await supabase
-      .from("profiles")
-      .insert({ id: user.id, full_name: user.user_metadata?.full_name ?? null })
-      .select("*")
-      .single();
-    profile = created ?? null;
+  // First-login profile creation lives in the profile
+  // service (Phase 21, M2) so the mobile session bootstrap
+  // runs the identical path. A bootstrap failure keeps this
+  // function's historic outcome: profile is simply null.
+  let profile: ProfileRow | null = null;
+  try {
+    ({ profile } = await ensureProfileCore(supabase, user));
+  } catch {
+    profile = null;
   }
 
   const { data: onboarding } = await supabase
@@ -80,7 +77,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   return {
     id: user.id,
     email: user.email ?? null,
-    profile: (profile as ProfileRow | null) ?? null,
+    profile,
     onboarding: (onboarding as OnboardingRow | null) ?? null,
   };
 }

@@ -33,10 +33,34 @@ type Op =
 interface FakeWriteHooks {
   onUpsert?: (table: string, row: Row, conflictCols: string[]) => Row;
   onUpdate?: (table: string, values: Row, matched: Row[]) => void;
+  onDelete?: (table: string, matched: Row[]) => void;
 }
 
-/** Result of a fake update/upsert: awaitable, error always null. */
+/**
+ * Result of a fake update/upsert: awaitable, error always
+ * null. Phase 21 (M2): an upsert also carries the stored row
+ * so `.select(...).single()` chains resolve it, as Postgrest
+ * does for `upsert(...).select("id").single()`.
+ */
 export class FakeWrite {
+  private readonly stored: Row | null;
+
+  constructor(stored: Row | null = null) {
+    this.stored = stored;
+  }
+
+  select(): this {
+    return this;
+  }
+
+  async single(): Promise<{ data: Row | null; error: null }> {
+    return { data: this.stored, error: null };
+  }
+
+  async maybeSingle(): Promise<{ data: Row | null; error: null }> {
+    return this.single();
+  }
+
   then<TResult1 = { data: null; error: null }, TResult2 = never>(
     onFulfilled?: ((value: { data: null; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -52,6 +76,7 @@ export class FakeQuery {
   private readonly onInsert?: (table: string, row: Row) => Row;
   private readonly hooks?: FakeWriteHooks;
   private pendingUpdate: Row | null = null;
+  private pendingDelete = false;
 
   constructor(
     table: string,
@@ -103,8 +128,20 @@ export class FakeQuery {
       .split(",")
       .map((c) => c.trim())
       .filter(Boolean);
-    this.hooks?.onUpsert?.(this.table, row, conflictCols);
-    return new FakeWrite();
+    const stored = this.hooks?.onUpsert?.(this.table, row, conflictCols) ?? null;
+    return new FakeWrite(stored);
+  }
+
+  /**
+   * Delete support (Phase 21, M2): records the pending
+   * delete; the rows matched by the recorded filters are
+   * removed from the table when the query is awaited —
+   * mirroring Postgrest, where `.delete().eq(...)` executes
+   * on the request, not on the builder call.
+   */
+  delete(): this {
+    this.pendingDelete = true;
+    return this;
   }
 
   eq(col: string, value: unknown): this {
@@ -223,6 +260,22 @@ export class FakeQuery {
     onFulfilled?: ((value: { data: Row[]; count: number }) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
+    if (this.pendingDelete) {
+      this.pendingDelete = false;
+      const matched = this.filteredRows();
+      for (const row of matched) {
+        const idx = this.rows.indexOf(row);
+        if (idx >= 0) this.rows.splice(idx, 1);
+      }
+      this.hooks?.onDelete?.(this.table, matched);
+      return Promise.resolve({ data: null, error: null }).then(
+        onFulfilled as unknown as
+          | ((value: { data: null; error: null }) => TResult1 | PromiseLike<TResult1>)
+          | null
+          | undefined,
+        onRejected,
+      );
+    }
     if (this.pendingUpdate) {
       const values = this.pendingUpdate;
       this.pendingUpdate = null;
@@ -282,6 +335,8 @@ export class FakeSupabaseClient {
   readonly updates: { table: string; values: Row; matched: Row[] }[] = [];
   /** Every upserted row, in call order (Phase 21). */
   readonly upserts: { table: string; row: Row }[] = [];
+  /** Every deleted row, in call order (Phase 21, M2). */
+  readonly deletes: { table: string; row: Row }[] = [];
   private readonly tables: Record<string, Row[]>;
   private insertSeq = 0;
 
@@ -327,6 +382,9 @@ export class FakeSupabaseClient {
         onUpdate: (t, values, matched) => {
           this.updates.push({ table: t, values, matched });
         },
+        onDelete: (t, matched) => {
+          for (const row of matched) this.deletes.push({ table: t, row });
+        },
       },
     );
     this.queries.push(q);
@@ -346,6 +404,11 @@ export class FakeSupabaseClient {
   /** All recorded upserts into one table, in call order. */
   upsertsFor(table: string): Row[] {
     return this.upserts.filter((u) => u.table === table).map((u) => u.row);
+  }
+
+  /** All deleted rows from one table, in call order. */
+  deletesFor(table: string): Row[] {
+    return this.deletes.filter((d) => d.table === table).map((d) => d.row);
   }
 
   /** All queries run against one table, in call order. */

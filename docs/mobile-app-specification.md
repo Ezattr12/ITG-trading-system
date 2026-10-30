@@ -172,3 +172,47 @@ full contract in `docs/phase-21-m1.md`):
 Deferred to M2 (reasons in `docs/phase-21-m1.md` §5):
 risk rules/plan, weekly review, trade screenshots,
 cancel-trade, notification mark-read, backtesting log.
+
+**M2 backend status (2026-10-30, Phase 21): DONE** — all
+six deferred write areas are extracted to service cores
+and exposed on the same M1 pipeline, plus the session
+bootstrap that opens the mobile flow and the API's one
+justified read endpoint (full contract in
+`docs/phase-21-m2.md`):
+
+- `POST /api/mobile/session` — profile bootstrap
+  (idempotent; call FIRST after sign-in, before any write)
+- `PUT /api/mobile/risk-rules`
+- `PUT /api/mobile/risk-plan`
+- `POST /api/mobile/reviews/weekly`
+- `POST /api/mobile/trades/[id]/screenshots` (multipart, field `file`)
+- `DELETE /api/mobile/trades/[id]/screenshots/[screenshotId]`
+- `POST /api/mobile/trades/[id]/cancel`
+- `POST /api/mobile/notifications/read`
+- `POST /api/mobile/backtesting`
+- `GET /api/mobile/summary?range=week|month` — the only
+  read endpoint; lists/details stay on direct Supabase
+  reads under RLS (evaluation in `docs/phase-21-m2.md` §4)
+
+The RN app shell (auth + read-only screens) is the other
+half of M2 and ships separately; its first authenticated
+call after sign-in must be `POST /api/mobile/session`.
+
+**M2 shell status (2026-10-30, Phase 21): DONE** —
+`apps/mobile` contains the React Native + Expo shell
+(Expo SDK 58, TypeScript, expo-router): Supabase
+email/password auth with the session persisted through a
+chunked SecureStore adapter, `POST /api/mobile/session`
+bootstrap as the first call after sign-in, an optional
+biometric unlock gate (expo-local-authentication), and
+read-only screens over real data — Dashboard (summary
+endpoint + stored level/XP), Trades + trade detail,
+Analytics (week/month summary), Goals, Coach (stored
+`ai_insights` only; the Interactive AI Coach is a later
+phase), and Profile. No write workflows and no fake data.
+The package installs standalone (`--workspaces=false`) so
+the web install graph is untouched. Verified in the
+sandbox by typecheck (`tsc --noEmit` clean) and a
+successful `expo export` Android bundle; device runs go
+through Expo Go with a local `.env` (see
+`apps/mobile/README.md`). Write workflows remain M3.

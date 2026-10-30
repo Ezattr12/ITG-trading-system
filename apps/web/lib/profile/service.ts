@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
+import type { ProfileRow } from "@/lib/auth/session";
 import {
   checkPresetRateLimit,
   rateLimitMessage,
@@ -22,6 +23,76 @@ import type { CoreFailure } from "@/lib/trades/service";
  * `invalid_input | rate_limited | not_found | business |
  * save_failed` (see that module for the mapping contract).
  */
+
+/* ------------------------------------------------------- session bootstrap */
+
+/** Thrown when a first-login profile cannot be created for a real reason. */
+export class ProfileBootstrapError extends Error {
+  constructor(message = "Profile bootstrap failed.") {
+    super(message);
+    this.name = "ProfileBootstrapError";
+  }
+}
+
+export interface EnsureProfileResult {
+  profile: ProfileRow | null;
+  /** True only when this call inserted the row. */
+  created: boolean;
+}
+
+/**
+ * Ensure the trader's `profiles` row exists (Phase 21, M2) —
+ * the single home of the first-login profile creation that
+ * used to live inline in `getCurrentUser` (lib/auth/session).
+ * The insert runs under the caller's RLS client (the web
+ * session client, or the mobile token client) and carries
+ * exactly `{ id, full_name }` — the name from the auth
+ * metadata, never from request input.
+ *
+ * Idempotent: an existing row is returned with
+ * `created: false` and nothing is inserted. Race-safe: if a
+ * concurrent first login wins the insert (unique violation),
+ * the row is re-read and returned with `created: false`.
+ * Any other insert failure throws `ProfileBootstrapError`
+ * so API callers can answer a distinct, client-actionable
+ * error; `getCurrentUser` catches it and keeps its historic
+ * null-profile outcome.
+ */
+export async function ensureProfileCore(
+  supabase: SupabaseClient,
+  user: { id: string; user_metadata?: Record<string, unknown> | null },
+): Promise<EnsureProfileResult> {
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (existing) {
+    return { profile: existing as ProfileRow, created: false };
+  }
+  const { data: created, error } = await supabase
+    .from("profiles")
+    .insert({
+      id: user.id,
+      full_name: (user.user_metadata?.full_name as string | null) ?? null,
+    })
+    .select("*")
+    .single();
+  if (!error && created) {
+    return { profile: created as ProfileRow, created: true };
+  }
+  if (error && error.code === "23505") {
+    // A concurrent first login inserted first — re-read and
+    // report the row as pre-existing.
+    const { data: raced } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (raced) return { profile: raced as ProfileRow, created: false };
+  }
+  throw new ProfileBootstrapError();
+}
 
 /* ------------------------------------------------------------ profile edit */
 

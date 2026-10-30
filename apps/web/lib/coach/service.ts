@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
+import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { deterministicUuid, XP_TABLE } from "@/lib/gamification/xp";
+import type { CoreFailure } from "@/lib/trades/service";
 import { generateCoachInsights } from "./insights";
 import { getAiInsightsForWeek, getCoachWeekData } from "./queries";
+import { backtestingSchema, firstZodError } from "./validation";
 import type { CoachAnalysis } from "./types";
 
 /**
@@ -154,6 +158,80 @@ export async function refreshCoachInsights(
     }
   }
   return { inserted, skipped, analysis, insufficientData: false };
+}
+
+/* ------------------------------------------------------- backtesting log */
+
+function fail(code: CoreFailure["code"], error: string): CoreFailure {
+  return { ok: false, code, error };
+}
+
+export type LogBacktestingCoreResult =
+  | {
+      ok: true;
+      activityDate: string;
+      /** Total sessions recorded for the day (the caller's value). */
+      sessions: number;
+      /** Sessions newly awarded XP by this call (0 on a repeat). */
+      sessionsAwarded: number;
+      xpAwarded: number;
+    }
+  | CoreFailure;
+
+/**
+ * Backtesting session log (Phase 21, M2 extraction of
+ * logBacktestingSessionAction, spec §24). The caller
+ * records the TOTAL sessions for a day; XP (+15 per
+ * session) is awarded once per session index through the
+ * existing `awardXp` path with the existing deterministic
+ * UUID mapping (`backtest:<date>:<n>`) — reused, never
+ * reimplemented — so re-submitting the same total awards
+ * nothing new and raising the total awards only the new
+ * sessions. A failed XP insert never loses the logged day.
+ */
+export async function logBacktestingCore(
+  supabase: SupabaseClient,
+  userId: string,
+  rawInput: unknown,
+): Promise<LogBacktestingCoreResult> {
+  const parsed = backtestingSchema.safeParse(rawInput);
+  if (!parsed.success) return fail("invalid_input", firstZodError(parsed.error));
+  const { activityDate, sessions } = parsed.data;
+
+  const { error } = await supabase.from("daily_activity").upsert(
+    {
+      user_id: userId,
+      activity_date: activityDate,
+      backtesting_sessions: sessions,
+    },
+    { onConflict: "user_id,activity_date" },
+  );
+  if (error) {
+    return fail("save_failed", "Could not log the backtesting session. Please try again.");
+  }
+
+  let awarded = 0;
+  for (let i = 1; i <= sessions; i += 1) {
+    const ok = await awardXp({
+      userId,
+      reason: "backtest_session",
+      // source_ref_id is a uuid column: the per-session key
+      // must be mapped into a stable UUID, or the insert is
+      // rejected and the XP silently never lands (Stage 2
+      // audit bug, 2026-10-29 — see deterministicUuid).
+      sourceRefId: deterministicUuid(`backtest:${activityDate}:${i}`),
+      note: `Backtesting session ${i} of ${sessions} on ${activityDate}`,
+    });
+    if (ok) awarded += 1;
+  }
+  await refreshGamification(supabase, userId);
+  return {
+    ok: true,
+    activityDate,
+    sessions,
+    sessionsAwarded: awarded,
+    xpAwarded: awarded * XP_TABLE.backtest_session,
+  };
 }
 
 /**

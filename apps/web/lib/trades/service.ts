@@ -6,6 +6,7 @@ import {
   checkPresetRateLimit,
   rateLimitMessage,
   TRADE_RATE_LIMIT,
+  UPLOAD_RATE_LIMIT,
 } from "@/lib/auth/rate-limit";
 import {
   countDisciplinedStreak,
@@ -533,4 +534,171 @@ export async function correctTradeCore(
     await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
   }
   return { ok: true, tradeId: corrected.id as string, reversedTradeId: tradeId };
+}
+
+/* ------------------------------------------------------------------ cancel */
+
+export type CancelTradeCoreResult =
+  | { ok: true; tradeId: string; status: string }
+  | CoreFailure;
+
+/**
+ * Cancel an OPEN trade (Phase 21, M2 extraction of
+ * cancelTradeAction). Only an open trade can be cancelled:
+ * a closed trade is a financial fact — it is corrected by
+ * reversal, never deleted or cancelled (migration 0004).
+ * The web action keeps its redirect-based void signature
+ * and ignores the outcome (it redirects either way); the
+ * API maps not_found / business onto 404 / 422.
+ */
+export async function cancelTradeCore(
+  supabase: SupabaseClient,
+  userId: string,
+  tradeId: string,
+): Promise<CancelTradeCoreResult> {
+  if (!tradeId) return fail("invalid_input", "Trade is not valid.");
+  const { data: trade } = await supabase
+    .from("trades")
+    .select("id, status")
+    .eq("id", tradeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!trade) return fail("not_found", "Trade not found.");
+  if (trade.status !== "open") {
+    return fail(
+      "business",
+      "Only an open trade can be cancelled — a closed trade is corrected by reversal, never cancelled.",
+    );
+  }
+  const { error } = await supabase
+    .from("trades")
+    .update({ status: "cancelled" })
+    .eq("id", tradeId)
+    .eq("user_id", userId);
+  if (error) return fail("save_failed", "Could not cancel the trade. Please try again.");
+  await writeAuditLog({ userId, action: "trade.cancelled", entityType: "trades", entityId: tradeId });
+  return { ok: true, tradeId, status: "cancelled" };
+}
+
+/* -------------------------------------------------------------- screenshots */
+
+export type UploadScreenshotCoreResult =
+  | { ok: true; screenshotId: string; tradeId: string }
+  | CoreFailure;
+
+/**
+ * Screenshot upload core (Phase 21, M2 extraction of
+ * uploadScreenshotAction, spec §10). Real Supabase Storage,
+ * honest errors. Images only, 5 MB max, per-user path in
+ * the private `trade-screenshots` bucket. OCR status stays
+ * `not_applicable` — no OCR service is connected, and no
+ * extraction is faked (see lib/trades/ocr.ts).
+ */
+export async function uploadScreenshotCore(
+  supabase: SupabaseClient,
+  userId: string,
+  tradeId: string,
+  file: File | null,
+): Promise<UploadScreenshotCoreResult> {
+  if (!tradeId) return fail("invalid_input", "Trade is not valid.");
+  if (!(file instanceof File) || file.size === 0) {
+    return fail("invalid_input", "Choose an image file first.");
+  }
+  if (!file.type.startsWith("image/")) {
+    return fail("invalid_input", "Only image files can be uploaded as screenshots.");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return fail("invalid_input", "Screenshot must be 5 MB or smaller.");
+  }
+  // Rate limit (Phase 11): at most 10 uploads per 10 minutes per trader.
+  const uploadRate = checkPresetRateLimit(`upload:${userId}`, UPLOAD_RATE_LIMIT);
+  if (!uploadRate.allowed) {
+    return fail("rate_limited", rateLimitMessage("screenshot upload", uploadRate));
+  }
+  const { data: trade } = await supabase
+    .from("trades")
+    .select("id")
+    .eq("id", tradeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!trade) return fail("not_found", "Trade not found.");
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "screenshot";
+  const path = `${userId}/${tradeId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await supabase.storage
+    .from("trade-screenshots")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadError) {
+    return fail(
+      "save_failed",
+      "Screenshot upload failed — the 'trade-screenshots' Storage bucket may not exist yet in this Supabase project. Ask an admin to create it, then try again.",
+    );
+  }
+  const { data: row, error: rowError } = await supabase
+    .from("trade_screenshots")
+    .insert({
+      trade_id: tradeId,
+      user_id: userId,
+      storage_path: path,
+      file_name: file.name,
+      ocr_status: "not_applicable",
+      verified_by_user: false,
+    })
+    .select("id")
+    .single();
+  if (rowError || !row) {
+    await supabase.storage.from("trade-screenshots").remove([path]);
+    return fail(
+      "save_failed",
+      "Screenshot uploaded but could not be linked to the trade. Please try again.",
+    );
+  }
+  await writeAuditLog({
+    userId,
+    action: "trade.screenshot_uploaded",
+    entityType: "trade_screenshots",
+    entityId: tradeId,
+  });
+  return { ok: true, screenshotId: row.id as string, tradeId };
+}
+
+export type DeleteScreenshotCoreResult =
+  | { ok: true; screenshotId: string }
+  | CoreFailure;
+
+/**
+ * Screenshot delete core (Phase 21, M2 extraction of
+ * deleteScreenshotAction). Screenshot rows may be deleted
+ * (their RLS allows it): the storage object is removed
+ * first, then the row — both scoped to the owner, so
+ * another trader's screenshot id is indistinguishable from
+ * a nonexistent one (not_found either way).
+ */
+export async function deleteScreenshotCore(
+  supabase: SupabaseClient,
+  userId: string,
+  screenshotId: string,
+  /** When given (the API nests screenshots under a trade),
+   *  a screenshot of a different trade is also not_found. */
+  expectedTradeId?: string,
+): Promise<DeleteScreenshotCoreResult> {
+  if (!screenshotId) return fail("invalid_input", "Screenshot is not valid.");
+  const { data: shot } = await supabase
+    .from("trade_screenshots")
+    .select("id, storage_path, trade_id")
+    .eq("id", screenshotId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!shot) return fail("not_found", "Screenshot not found.");
+  if (expectedTradeId && (shot as { trade_id?: string }).trade_id !== expectedTradeId) {
+    return fail("not_found", "Screenshot not found.");
+  }
+  await supabase.storage.from("trade-screenshots").remove([shot.storage_path as string]);
+  const { error } = await supabase
+    .from("trade_screenshots")
+    .delete()
+    .eq("id", screenshotId)
+    .eq("user_id", userId);
+  if (error) return fail("save_failed", "Could not delete the screenshot. Please try again.");
+  return { ok: true, screenshotId };
 }

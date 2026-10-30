@@ -20,6 +20,8 @@ import {
   createGoalCore,
   createNotification as createNotificationCore,
   logDisciplineEvent as logDisciplineEventCore,
+  markAllNotificationsReadCore,
+  markNotificationReadCore,
   recordGoalProgressCore,
   updateGoalStatusCore,
 } from "./service";
@@ -210,12 +212,15 @@ export async function markNotificationReadAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase
-    .from("notifications")
-    .update({ is_read: true })
-    .eq("id", id)
-    .eq("user_id", userId);
-  if (error) return { ok: false, error: "Could not mark the notification as read. Please try again." };
+  // The core scopes the row to the owner. A notification
+  // that is not the caller's updates zero rows — exactly
+  // what this action did before the extraction, and it
+  // reported success (an update of zero rows is not an
+  // error), so only a real save failure surfaces here.
+  const result = await markNotificationReadCore(supabase, userId, id);
+  if (!result.ok && result.code === "save_failed") {
+    return { ok: false, error: result.error };
+  }
   revalidatePath("/notifications");
   return { ok: true };
 }
@@ -227,12 +232,8 @@ export async function markAllNotificationsReadAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase
-    .from("notifications")
-    .update({ is_read: true })
-    .eq("user_id", userId)
-    .eq("is_read", false);
-  if (error) return { ok: false, error: "Could not mark notifications as read. Please try again." };
+  const result = await markAllNotificationsReadCore(supabase, userId);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/notifications");
   return { ok: true, message: "All notifications marked as read." };
 }
