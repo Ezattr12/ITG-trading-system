@@ -17,13 +17,11 @@ import {
   type OnboardingStep,
 } from "@/lib/auth/validation";
 import {
-  checkPresetRateLimit,
   checkRateLimit,
-  rateLimitMessage,
   AUTH_RATE_LIMIT,
   RESET_RATE_LIMIT,
-  UPLOAD_RATE_LIMIT,
 } from "@/lib/auth/rate-limit";
+import { updateProfileCore, uploadAvatarCore } from "@/lib/profile/service";
 import { writeAuditLog } from "@/lib/auth/audit";
 
 export interface ActionResult {
@@ -374,29 +372,10 @@ export async function updateProfileAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "You are not logged in." };
-  const v = parsed.data;
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: v.fullName,
-      father_name: v.fatherName,
-      date_of_birth: v.dateOfBirth,
-      country: v.country,
-      trading_experience: v.tradingExperience,
-      trading_education: v.tradingEducation,
-      backtesting_experience: v.backtestingExperience,
-      backtested_trades: v.backtestedTrades,
-      real_trading_experience: v.realTradingExperience,
-      real_trades_count: v.realTradesCount,
-      demo_trading: v.demoTrading,
-      employment_status: v.employmentStatus,
-      monthly_income: v.monthlyIncome,
-      trading_capital: v.tradingCapital,
-      trades_real_money: v.tradesRealMoney,
-    })
-    .eq("id", user.id);
-  if (error) return { ok: false, error: "Could not save your profile. Please try again." };
-  await writeAuditLog({ userId: user.id, action: "profile.updated", entityType: "profiles", entityId: user.id });
+  // Phase 21 (M1): the update itself lives in the shared
+  // profile service core (lib/profile/service.ts).
+  const result = await updateProfileCore(supabase, user.id, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   return { ok: true, message: "Profile saved." };
 }
 
@@ -422,29 +401,11 @@ export async function uploadAvatarAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "You are not logged in." };
-  // Rate limit (Phase 11): at most 10 uploads per 10 minutes per trader.
-  const uploadRate = checkPresetRateLimit(`upload:${user.id}`, UPLOAD_RATE_LIMIT);
-  if (!uploadRate.allowed) return { ok: false, error: rateLimitMessage("photo upload", uploadRate) };
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(path, file, { contentType: file.type, upsert: true });
-  if (uploadError) {
-    return {
-      ok: false,
-      error:
-        "Photo upload failed — the 'avatars' Storage bucket may not exist yet in this Supabase project. Ask an admin to create it, then try again.",
-    };
-  }
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("avatars").getPublicUrl(path);
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ avatar_url: publicUrl })
-    .eq("id", user.id);
-  if (updateError) return { ok: false, error: "Photo uploaded but the profile could not be updated. Please try again." };
+  // Phase 21 (M1): rate limit, storage upload and the
+  // profile update live in the shared profile service core
+  // (lib/profile/service.ts).
+  const result = await uploadAvatarCore(supabase, user.id, file);
+  if (!result.ok) return { ok: false, error: result.error };
   // Show the new photo immediately: without this, the profile
   // page kept rendering the previous avatar until the next
   // navigation/reload even though the upload had succeeded.

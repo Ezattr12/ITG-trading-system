@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/auth/actions";
-import { writeAuditLog } from "@/lib/auth/audit";
-import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import {
   buildDisciplineReminder,
@@ -16,26 +15,54 @@ import {
   goalSchema,
   goalStatusSchema,
 } from "./validation";
+import { getLatestDisciplineEvent } from "./queries";
 import {
-  getGoalById,
-  getLatestDisciplineEvent,
-} from "./queries";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
-import type { DisciplineEventKind, NotificationType } from "./types";
+  createGoalCore,
+  createNotification as createNotificationCore,
+  logDisciplineEvent as logDisciplineEventCore,
+  recordGoalProgressCore,
+  updateGoalStatusCore,
+} from "./service";
 
 /**
  * Goals, discipline & notification Server Actions (Phase 6, spec §21–23, §30).
  *
- * Same pattern as Phases 2/3/5: Zod first, Supabase second, RLS
- * enforces that a trader only touches their own rows. One goal row
- * per goal; progress is recorded per goal per day (upsert).
+ * Phase 21 (M1): the goal write logic lives in
+ * lib/discipline/service.ts as cores shared with the mobile
+ * API — these actions are now thin adapters (session auth +
+ * FormData → core → revalidate/message), with identical
+ * behaviour and messages. The notification mark-read actions
+ * were not extracted in M1 (see docs/phase-21-m1.md) and are
+ * unchanged.
  *
  * `discipline_events` and `notifications` have no client INSERT
  * policy (migrations 0010/0012, append-only like `audit_logs`) —
  * rows are written server-side via the service-role client, by
- * `logDisciplineEvent` / `createNotification`. Both are
- * best-effort and never block a page or a save.
+ * `logDisciplineEvent` / `createNotification` (defined in
+ * lib/discipline/service.ts and re-exported below so existing
+ * import sites are unchanged). Both are best-effort and never
+ * block a page or a save.
  */
+
+/**
+ * The discipline/notification write engines live in
+ * lib/discipline/service.ts (Phase 21). They are re-exported
+ * here — as delegating async functions, since a "use server"
+ * module may only export async functions — so every
+ * existing import site (`@/lib/discipline/actions`) keeps
+ * working unchanged.
+ */
+export async function logDisciplineEvent(
+  input: Parameters<typeof logDisciplineEventCore>[0],
+): ReturnType<typeof logDisciplineEventCore> {
+  return logDisciplineEventCore(input);
+}
+
+export async function createNotification(
+  input: Parameters<typeof createNotificationCore>[0],
+): ReturnType<typeof createNotificationCore> {
+  return createNotificationCore(input);
+}
 
 function notConfigured(): ActionResult {
   return { ok: false, error: supabaseNotConnectedMessage() };
@@ -53,63 +80,12 @@ function toText(v: FormDataEntryValue | null): string | null {
   return s === "" ? null : s;
 }
 
-function todayString(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 async function currentUserId(): Promise<string | null> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user?.id ?? null;
-}
-
-/* ------------------------------------------------------- server-side writes */
-
-/** Log a discipline reminder event. Returns true only when a row was inserted. */
-export async function logDisciplineEvent(input: {
-  userId: string;
-  eventDate: string;
-  kind: DisciplineEventKind;
-  level: 1 | 2 | 3;
-  message: string;
-  details?: Record<string, unknown>;
-}): Promise<boolean> {
-  const admin = createServiceRoleSupabaseClient();
-  if (!admin) return false;
-  const { error } = await admin.from("discipline_events").insert({
-    user_id: input.userId,
-    event_date: input.eventDate,
-    kind: input.kind,
-    level: input.level,
-    message: input.message,
-    details: input.details ?? {},
-  });
-  return !error;
-}
-
-/** Create one in-app notification. Returns true only when a row was inserted. */
-export async function createNotification(input: {
-  userId: string;
-  type: NotificationType;
-  title: string;
-  body?: string | null;
-  relatedEntityType?: string | null;
-  relatedEntityId?: string | null;
-}): Promise<boolean> {
-  const admin = createServiceRoleSupabaseClient();
-  if (!admin) return false;
-  const { error } = await admin.from("notifications").insert({
-    user_id: input.userId,
-    type: input.type,
-    title: input.title,
-    body: input.body ?? null,
-    related_entity_type: input.relatedEntityType ?? null,
-    related_entity_id: input.relatedEntityId ?? null,
-    is_read: false,
-  });
-  return !error;
 }
 
 /**
@@ -174,25 +150,8 @@ export async function createGoalAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const v = parsed.data;
-  const { error } = await supabase.from("goals").insert({
-    user_id: userId,
-    title: v.title,
-    period: v.period,
-    goal_type: v.goalType,
-    target_value: v.targetValue,
-    target_unit: v.targetUnit,
-    start_date: v.startDate,
-    end_date: v.endDate,
-    status: "active",
-  });
-  if (error) return { ok: false, error: "Could not save your goal. Please try again." };
-  await writeAuditLog({
-    userId,
-    action: "goal.created",
-    entityType: "goals",
-    details: { title: v.title, period: v.period, goalType: v.goalType },
-  });
+  const result = await createGoalCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/goals");
   revalidatePath("/dashboard");
   return { ok: true, message: "Goal created." };
@@ -212,29 +171,8 @@ export async function recordGoalProgressAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const goal = await getGoalById(supabase, userId, parsed.data.goalId);
-  if (!goal) return { ok: false, error: "That goal was not found." };
-  const { error } = await supabase.from("goal_progress").upsert(
-    {
-      goal_id: goal.id,
-      user_id: userId,
-      current_value: parsed.data.currentValue,
-      recorded_date: todayString(),
-      note: parsed.data.note,
-    },
-    { onConflict: "goal_id,recorded_date" },
-  );
-  if (error) return { ok: false, error: "Could not record your progress. Please try again." };
-  if (parsed.data.currentValue >= goal.target_value && goal.status === "active") {
-    await createNotification({
-      userId,
-      type: "goal_reminder",
-      title: `Goal reached: ${goal.title}`,
-      body: `You reached ${parsed.data.currentValue} of your ${goal.target_value} target. Mark it complete when you're ready.`,
-      relatedEntityType: "goal",
-      relatedEntityId: goal.id,
-    });
-  }
+  const result = await recordGoalProgressCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/goals");
   revalidatePath("/dashboard");
   return { ok: true, message: "Progress recorded." };
@@ -253,54 +191,8 @@ export async function updateGoalStatusAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-  const goal = await getGoalById(supabase, userId, parsed.data.goalId);
-  if (!goal) return { ok: false, error: "That goal was not found." };
-  const { error } = await supabase
-    .from("goals")
-    .update({ status: parsed.data.status })
-    .eq("id", goal.id);
-  if (error) return { ok: false, error: "Could not update your goal. Please try again." };
-  if (parsed.data.status === "completed") {
-    await createNotification({
-      userId,
-      type: "goal_reminder",
-      title: `Goal completed: ${goal.title}`,
-      body: "Well done — you completed this goal. Your progress is saved on the Goals page.",
-      relatedEntityType: "goal",
-      relatedEntityId: goal.id,
-    });
-    // +20 XP for a completed goal (spec §24, Phase 7), idempotent
-    // per goal, then achievements + stored level (best-effort).
-    await awardXp({
-      userId,
-      reason: "daily_goal",
-      sourceRefId: goal.id,
-      note: `Goal completed: ${goal.title}`,
-    });
-    const gamification = await refreshGamification(supabase, userId);
-    for (const achievement of gamification.unlocked) {
-      await createNotification({
-        userId,
-        type: "achievement",
-        title: `Achievement unlocked: ${achievement.name}`,
-        body: achievement.description ?? `You earned ${achievement.xp_reward} XP.`,
-        relatedEntityType: "achievement",
-        relatedEntityId: achievement.id,
-      });
-    }
-    if (
-      gamification.currentLevel !== null &&
-      gamification.previousLevel !== null &&
-      gamification.currentLevel !== gamification.previousLevel
-    ) {
-      await createNotification({
-        userId,
-        type: "level_up",
-        title: `Level up: ${gamification.currentLevel}`,
-        body: `Your multi-dimensional score reached the ${gamification.currentLevel} level.`,
-      });
-    }
-  }
+  const result = await updateGoalStatusCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/goals");
   revalidatePath("/dashboard");
   return { ok: true, message: `Goal marked as ${parsed.data.status}.` };

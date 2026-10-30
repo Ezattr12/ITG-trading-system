@@ -2,27 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import {
-  createServerSupabaseClient,
-  createServiceRoleSupabaseClient,
-} from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { writeAuditLog } from "@/lib/auth/audit";
-import { checkPresetRateLimit, rateLimitMessage, TRADE_RATE_LIMIT, UPLOAD_RATE_LIMIT } from "@/lib/auth/rate-limit";
-import { computeTradeMetrics } from "./calculations";
-import { normalizeLesson } from "./lessons";
-import { calcRiskAmount } from "@itg/calc";
+import { checkPresetRateLimit, rateLimitMessage, UPLOAD_RATE_LIMIT } from "@/lib/auth/rate-limit";
 import {
-  countDisciplinedStreak,
-  evaluateTradeRisk,
-  hasCriticalBreach,
-  utcDate,
-} from "@/lib/risk/engine";
-import { logRiskEvent } from "@/lib/risk/actions";
-import { getRecentClosedTrades, getRiskDayContext, getRiskRules } from "@/lib/risk/queries";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
-import { refreshCoachInsightsSafely } from "@/lib/coach/service";
-import { createNotification } from "@/lib/discipline/actions";
+  correctTradeCore,
+  createTradeCore,
+  saveAdvancedReviewCore,
+} from "./service";
 import {
   advancedReviewSchema,
   firstZodError,
@@ -32,10 +20,15 @@ import {
 
 /**
  * Trade Server Actions (Phase 3, spec §9–16, §32–33).
- * Same pattern as Phase 2 auth actions: Zod first, Supabase
- * second, RLS enforces that a trader only touches their own
- * rows. Calculated values come from `computeTradeMetrics` —
- * the client never sends them.
+ *
+ * Phase 21 (M1): the write logic for create / advanced
+ * review / correction lives in lib/trades/service.ts as
+ * cores shared with the mobile API — these actions are now
+ * thin adapters (session auth + FormData → core →
+ * revalidate/redirect/message), with identical behaviour,
+ * messages and ordering of outcomes. Cancel and screenshot
+ * actions were not extracted in M1 (see
+ * docs/phase-21-m1.md) and are unchanged.
  *
  * Financial facts are never silently overwritten and never
  * deleted (migration 0004): a closed trade is corrected by a
@@ -52,35 +45,6 @@ export interface TradeActionResult {
 
 function notConfigured(): TradeActionResult {
   return { ok: false, error: supabaseNotConnectedMessage() };
-}
-
-/**
- * Phase 20 — automatic coach refresh on closed-trade change.
- *
- * After a closed trade is created, corrected or re-reviewed,
- * the week's deterministic coach insights are refreshed
- * through the shared coach service (the same idempotent
- * persist as the manual refresh). Failure isolation is
- * total: `refreshCoachInsightsSafely` never throws, and this
- * helper never changes the calling action's result, redirect,
- * XP or error behaviour. The refresh itself awards no XP and
- * creates no notifications.
- */
-async function refreshCoachAfterClosedTradeChange(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-  userId: string,
-  closedAtIso: string | null,
-  openedAtIso: string,
-): Promise<void> {
-  const admin = createServiceRoleSupabaseClient();
-  if (!admin) return;
-  const dateIso = closedAtIso ?? openedAtIso;
-  await refreshCoachInsightsSafely({
-    supabase,
-    admin,
-    userId,
-    weekStartDate: dateIso.slice(0, 10),
-  });
 }
 
 function toNumberOrNull(v: FormDataEntryValue | null): number | null {
@@ -144,189 +108,15 @@ export async function createTradeAction(
   }
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
-  // Rate limit (Phase 11): at most 30 trades per 10 minutes per trader.
-  const tradeRate = checkPresetRateLimit(`trade:${userId}`, TRADE_RATE_LIMIT);
-  if (!tradeRate.allowed) return { ok: false, error: rateLimitMessage("trade creation", tradeRate) };
-
-  const metrics = computeTradeMetrics(input);
   const supabase = await createServerSupabaseClient();
-
-  // Risk check (Phase 5, spec §19): evaluate the trade against
-  // the trader's active risk rules BEFORE saving. A breached
-  // CRITICAL rule (daily loss limit, leverage above maximum)
-  // blocks the save with a clear message. WARNING breaches are
-  // logged to risk_events and the trade is still journaled — a
-  // journal that refuses to record a breach would hide the very
-  // behaviour it exists to show. Nothing here closes or executes
-  // a real trade (spec §41).
-  const rules = await getRiskRules(supabase, userId);
-  if (rules) {
-    const today = utcDate(new Date().toISOString());
-    const [day, recentClosed] = await Promise.all([
-      getRiskDayContext(supabase, userId, today),
-      getRecentClosedTrades(supabase, userId),
-    ]);
-    let riskPct: number | null = null;
-    if (input.sl !== null) {
-      // Capture before the await below: `input` is a `let`, so
-      // TypeScript drops the null narrowing across the await.
-      const stopLoss = input.sl;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("trading_capital")
-        .eq("id", userId)
-        .maybeSingle();
-      const capital = (profile as { trading_capital: number | null } | null)?.trading_capital;
-      if (capital !== null && capital !== undefined && capital > 0) {
-        const riskAmount = calcRiskAmount({
-          entryPrice: input.entryPrice,
-          stopLoss,
-          positionSize: input.positionSize,
-        });
-        if (riskAmount !== null) riskPct = (riskAmount / capital) * 100;
-      }
-    }
-    const checks = evaluateTradeRisk(
-      rules,
-      { leverage: input.leverage, riskPct },
-      day,
-      countDisciplinedStreak(recentClosed, rules),
-    );
-    if (hasCriticalBreach(checks)) {
-      const critical = checks.filter((c) => c.breached && c.severity === "critical");
-      for (const check of critical) {
-        await logRiskEvent({
-          userId,
-          type: check.rule,
-          severity: "critical",
-          message: check.message,
-          riskRuleId: rules.id,
-          details: { value: check.value, limit: check.limit, pair: input.pair },
-        });
-      }
-      return {
-        ok: false,
-        error: critical.map((c) => c.message).join(" "),
-      };
-    }
-    for (const check of checks.filter((c) => c.breached && c.severity === "warning")) {
-      await logRiskEvent({
-        userId,
-        type: check.rule,
-        severity: "warning",
-        message: check.message,
-        riskRuleId: rules.id,
-        details: { value: check.value, limit: check.limit, pair: input.pair },
-      });
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("trades")
-    .insert({
-      user_id: userId,
-      pair: input.pair,
-      direction: input.direction,
-      entry_price: input.entryPrice,
-      exit_price: input.exitPrice,
-      tp: input.tp,
-      sl: input.sl,
-      position_size: input.positionSize,
-      strategy_id: input.strategyId ?? null,
-      leverage: input.leverage,
-      fees: input.fees ?? 0,
-      opened_at: input.openedAt,
-      closed_at: input.closedAt,
-      status: metrics.status,
-      pnl: metrics.pnl,
-      roi_pct: metrics.roiPct,
-      r_multiple: metrics.rMultiple,
-      risk_reward: metrics.riskReward,
-      is_win: metrics.isWin,
-      duration_seconds: metrics.durationSeconds,
-    })
-    .select("id")
-    .single();
-  if (error || !data) return { ok: false, error: "Could not save the trade. Please try again." };
-
-  // +10 XP for a completed journal entry (spec §24, Phase 7).
-  // Written via the service-role client — xp_transactions has no
-  // client INSERT policy, so the Phase 3 signed-in-client insert
-  // was silently rejected by RLS. Idempotent per trade, and a
-  // failed XP insert never loses the trade.
-  await awardXp({
-    userId,
-    reason: "trade_journal",
-    sourceRefId: data.id,
-    note: "Trade journal completed",
-  });
-  // Positive reinforcement (spec §19): log a milestone when the
-  // trader's risk-disciplined streak reaches 3, then every 5 —
-  // and award +25 XP for risk discipline (spec §24).
-  if (rules && metrics.status === "closed" && input.sl !== null) {
-    const recentClosed = await getRecentClosedTrades(supabase, userId);
-    const streak = countDisciplinedStreak(recentClosed, rules);
-    if (streak >= 3 && (streak === 3 || streak % 5 === 0)) {
-      await logRiskEvent({
-        userId,
-        type: "positive_streak",
-        severity: "positive",
-        message: `You followed your risk plan for ${streak} consecutive trades.`,
-        riskRuleId: rules.id,
-        tradeId: data.id,
-        details: { streak },
-      });
-      await awardXp({
-        userId,
-        reason: "risk_discipline",
-        sourceRefId: data.id,
-        note: `Followed the risk plan for ${streak} consecutive trades`,
-      });
-    }
-  }
-  // Achievements + stored level: best-effort, never blocks the save.
-  const gamification = await refreshGamification(supabase, userId);
-  for (const achievement of gamification.unlocked) {
-    await createNotification({
-      userId,
-      type: "achievement",
-      title: `Achievement unlocked: ${achievement.name}`,
-      body: achievement.description ?? `You earned ${achievement.xp_reward} XP.`,
-      relatedEntityType: "achievement",
-      relatedEntityId: achievement.id,
-    });
-  }
-  if (
-    gamification.currentLevel !== null &&
-    gamification.previousLevel !== null &&
-    gamification.currentLevel !== gamification.previousLevel
-  ) {
-    await createNotification({
-      userId,
-      type: "level_up",
-      title: `Level up: ${gamification.currentLevel}`,
-      body: `Your multi-dimensional score reached the ${gamification.currentLevel} level.`,
-    });
-  }
-  await writeAuditLog({
-    userId,
-    action: "trade.created",
-    entityType: "trades",
-    entityId: data.id,
-    details: { pair: input.pair, direction: input.direction, status: metrics.status },
-  });
-  // Phase 20 hook: a newly closed trade changes its week's
-  // coach evidence — refresh that week's insights. Never
-  // throws; never changes this action's outcome.
-  if (metrics.status === "closed") {
-    await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
-  }
+  const result = await createTradeCore(supabase, userId, input);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/trades");
   revalidatePath("/dashboard");
   // ?saved=1 shows the animated "Trade saved" confirmation on
   // the trade page (Phase 16). It is only a display flag — the
   // trade is already saved and the dashboard is revalidated.
-  return { ok: true, redirectTo: `/trades/${data.id}?saved=1` };
+  return { ok: true, redirectTo: `/trades/${result.trade.id}?saved=1` };
 }
 
 /* --------------------------------------------------------- advanced review */
@@ -350,109 +140,14 @@ export async function saveAdvancedReviewAction(
     notes: toText(formData.get("notes")),
   });
   if (!parsed.success) return { ok: false, error: firstZodError(parsed.error) };
-  const v = parsed.data;
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-
-  const { data: trade } = await supabase
-    .from("trades")
-    .select("id, status, closed_at, opened_at")
-    .eq("id", v.tradeId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!trade) return { ok: false, error: "Trade not found." };
-  if (trade.status === "reversed") {
-    return { ok: false, error: "This trade was corrected by a reversal — review the correcting trade instead." };
-  }
-
-  let setupId: string | null = null;
-  if (v.setupName) {
-    const { data: existing } = await supabase
-      .from("setups")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("name", v.setupName)
-      .maybeSingle();
-    if (existing) {
-      setupId = existing.id as string;
-    } else {
-      const { data: created, error: setupError } = await supabase
-        .from("setups")
-        .insert({ user_id: userId, strategy_id: v.strategyId, name: v.setupName })
-        .select("id")
-        .single();
-      if (setupError || !created) return { ok: false, error: "Could not save the setup. Please try again." };
-      setupId = created.id as string;
-    }
-  }
-
-  const { error: tradeError } = await supabase
-    .from("trades")
-    .update({
-      strategy_id: v.strategyId,
-      setup_id: setupId,
-      market_condition: v.marketCondition,
-      trade_reason: v.tradeReason,
-      session: v.session,
-      notes: v.notes,
-    })
-    .eq("id", v.tradeId)
-    .eq("user_id", userId);
-  if (tradeError) return { ok: false, error: "Could not save the review. Please try again." };
-
-  const { data: existingPsych } = await supabase
-    .from("psychology_records")
-    .select("id")
-    .eq("trade_id", v.tradeId)
-    .maybeSingle();
-  const psychRow = {
-    trade_id: v.tradeId,
-    user_id: userId,
-    confidence: v.confidence,
-    emotion: v.emotion,
-    discipline: v.discipline,
-  };
-  if (existingPsych) {
-    await supabase.from("psychology_records").update(psychRow).eq("id", existingPsych.id);
-  } else {
-    await supabase.from("psychology_records").insert(psychRow);
-  }
-
-  if (v.lesson) {
-    const { data: lessons } = await supabase
-      .from("lessons")
-      .select("text")
-      .eq("trade_id", v.tradeId);
-    const already = ((lessons ?? []) as { text: string }[]).some(
-      (l) => normalizeLesson(l.text) === normalizeLesson(v.lesson as string),
-    );
-    if (!already) {
-      await supabase.from("lessons").insert({ trade_id: v.tradeId, user_id: userId, text: v.lesson });
-    }
-  }
-
-  await writeAuditLog({
-    userId,
-    action: "trade.review_saved",
-    entityType: "trades",
-    entityId: v.tradeId,
-  });
-  // Phase 20 hook: this action never changes status/closed_at/
-  // pnl, but it does change review fields, psychology and
-  // lessons — all coach evidence. When the trade is closed,
-  // its week's data changed, so refresh that week's insights.
-  if (trade.status === "closed") {
-    await refreshCoachAfterClosedTradeChange(
-      supabase,
-      userId,
-      (trade.closed_at as string | null) ?? null,
-      trade.opened_at as string,
-    );
-  }
-  revalidatePath(`/trades/${v.tradeId}`);
+  const result = await saveAdvancedReviewCore(supabase, userId, parsed.data);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath(`/trades/${result.tradeId}`);
   revalidatePath("/trades");
-  return { ok: true, message: "Review saved.", redirectTo: `/trades/${v.tradeId}` };
+  return { ok: true, message: "Review saved.", redirectTo: `/trades/${result.tradeId}` };
 }
 
 /* -------------------------------------------------------------- correction */
@@ -473,80 +168,12 @@ export async function correctTradeAction(
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
   const supabase = await createServerSupabaseClient();
-
-  const { data: original } = await supabase
-    .from("trades")
-    .select("*")
-    .eq("id", tradeId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!original) return { ok: false, error: "Trade not found." };
-  if (original.status === "reversed" || original.status === "cancelled") {
-    return { ok: false, error: "This trade has already been corrected or cancelled." };
-  }
-
-  const metrics = computeTradeMetrics(input);
-  const { data: corrected, error: insertError } = await supabase
-    .from("trades")
-    .insert({
-      user_id: userId,
-      pair: input.pair,
-      direction: input.direction,
-      entry_price: input.entryPrice,
-      exit_price: input.exitPrice,
-      tp: input.tp,
-      sl: input.sl,
-      position_size: input.positionSize,
-      leverage: input.leverage,
-      fees: input.fees ?? 0,
-      opened_at: input.openedAt,
-      closed_at: input.closedAt,
-      status: metrics.status,
-      strategy_id: original.strategy_id,
-      setup_id: original.setup_id,
-      market_condition: original.market_condition,
-      trade_reason: original.trade_reason,
-      session: original.session,
-      notes: original.notes,
-      pnl: metrics.pnl,
-      roi_pct: metrics.roiPct,
-      r_multiple: metrics.rMultiple,
-      risk_reward: metrics.riskReward,
-      is_win: metrics.isWin,
-      duration_seconds: metrics.durationSeconds,
-    })
-    .select("id")
-    .single();
-  if (insertError || !corrected) return { ok: false, error: "Could not save the correction. Please try again." };
-
-  const { error: reverseError } = await supabase
-    .from("trades")
-    .update({ status: "reversed", reversal_trade_id: corrected.id })
-    .eq("id", tradeId)
-    .eq("user_id", userId);
-  if (reverseError) {
-    return {
-      ok: false,
-      error:
-        "The correction was saved as a new trade, but the original could not be marked as reversed. Please check the trade list.",
-    };
-  }
-  await writeAuditLog({
-    userId,
-    action: "trade.corrected",
-    entityType: "trades",
-    entityId: tradeId,
-    details: { correctingTradeId: corrected.id },
-  });
-  // Phase 20 hook: the correcting trade replaces the original
-  // in its week's evidence — refresh when it is closed.
-  if (metrics.status === "closed") {
-    await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
-  }
+  const result = await correctTradeCore(supabase, userId, tradeId, input);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/trades");
   revalidatePath(`/trades/${tradeId}`);
   // Same ?saved=1 confirmation as a new trade (Phase 16).
-  return { ok: true, redirectTo: `/trades/${corrected.id}?saved=1` };
+  return { ok: true, redirectTo: `/trades/${result.tradeId}?saved=1` };
 }
 
 /* ------------------------------------------------------------------ cancel */

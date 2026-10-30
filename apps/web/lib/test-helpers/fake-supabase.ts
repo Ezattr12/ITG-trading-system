@@ -30,16 +30,39 @@ type Op =
   | { kind: "order"; col: string; ascending: boolean }
   | { kind: "limit"; n: number };
 
+interface FakeWriteHooks {
+  onUpsert?: (table: string, row: Row, conflictCols: string[]) => Row;
+  onUpdate?: (table: string, values: Row, matched: Row[]) => void;
+}
+
+/** Result of a fake update/upsert: awaitable, error always null. */
+export class FakeWrite {
+  then<TResult1 = { data: null; error: null }, TResult2 = never>(
+    onFulfilled?: ((value: { data: null; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+    onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    return Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected);
+  }
+}
+
 export class FakeQuery {
   readonly table: string;
   readonly ops: Op[] = [];
   private readonly rows: Row[];
   private readonly onInsert?: (table: string, row: Row) => Row;
+  private readonly hooks?: FakeWriteHooks;
+  private pendingUpdate: Row | null = null;
 
-  constructor(table: string, rows: Row[], onInsert?: (table: string, row: Row) => Row) {
+  constructor(
+    table: string,
+    rows: Row[],
+    onInsert?: (table: string, row: Row) => Row,
+    hooks?: FakeWriteHooks,
+  ) {
     this.table = table;
     this.rows = rows;
     this.onInsert = onInsert;
+    this.hooks = hooks;
   }
 
   select(): this {
@@ -56,6 +79,32 @@ export class FakeQuery {
     const rows = Array.isArray(row) ? row : [row];
     const stored = rows.map((r) => (this.onInsert ? this.onInsert(this.table, r) : r));
     return new FakeInsert(stored);
+  }
+
+  /**
+   * Update support (Phase 21): records the pending values;
+   * the mutation is applied to the rows matched by the
+   * recorded filters when the query is awaited — mirroring
+   * Postgrest, where `.update(...).eq(...)` executes on the
+   * request, not on the builder call.
+   */
+  update(values: Row): this {
+    this.pendingUpdate = values;
+    return this;
+  }
+
+  /**
+   * Upsert support (Phase 21): merges the row into the table
+   * immediately, replacing the row that matches every
+   * `onConflict` column (or the id), else appending.
+   */
+  upsert(row: Row, opts?: { onConflict?: string }): FakeWrite {
+    const conflictCols = (opts?.onConflict ?? "id")
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    this.hooks?.onUpsert?.(this.table, row, conflictCols);
+    return new FakeWrite();
   }
 
   eq(col: string, value: unknown): this {
@@ -166,11 +215,28 @@ export class FakeQuery {
   }
 
   // Thenable, so `await query` and destructuring `{ data }` work
-  // exactly as they do with the real Postgrest builder.
+  // exactly as they do with the real Postgrest builder. When an
+  // update is pending, awaiting applies it to the matched rows
+  // and resolves the write result ({ data: null, error: null }),
+  // as Postgrest does for `.update(...)` without `.select()`.
   then<TResult1 = { data: Row[]; count: number }, TResult2 = never>(
     onFulfilled?: ((value: { data: Row[]; count: number }) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
+    if (this.pendingUpdate) {
+      const values = this.pendingUpdate;
+      this.pendingUpdate = null;
+      const matched = this.filteredRows();
+      for (const row of matched) Object.assign(row, values);
+      this.hooks?.onUpdate?.(this.table, values, matched);
+      return Promise.resolve({ data: null, error: null }).then(
+        onFulfilled as unknown as
+          | ((value: { data: null; error: null }) => TResult1 | PromiseLike<TResult1>)
+          | null
+          | undefined,
+        onRejected,
+      );
+    }
     const rows = this.filteredRows();
     return Promise.resolve({ data: rows, count: rows.length }).then(
       onFulfilled,
@@ -212,6 +278,10 @@ export class FakeSupabaseClient {
   readonly queries: FakeQuery[] = [];
   /** Every inserted row, in call order: { table, row } (Phase 20). */
   readonly inserts: { table: string; row: Row }[] = [];
+  /** Every applied update, in call order (Phase 21). */
+  readonly updates: { table: string; values: Row; matched: Row[] }[] = [];
+  /** Every upserted row, in call order (Phase 21). */
+  readonly upserts: { table: string; row: Row }[] = [];
   private readonly tables: Record<string, Row[]>;
   private insertSeq = 0;
 
@@ -220,16 +290,45 @@ export class FakeSupabaseClient {
   }
 
   from(table: string): FakeQuery {
-    const q = new FakeQuery(table, this.tables[table] ?? [], (t, row) => {
-      const stored: Row = { ...row };
-      if (stored.id === undefined) {
-        this.insertSeq += 1;
-        stored.id = `fake-${t}-${this.insertSeq}`;
-      }
-      (this.tables[t] ??= []).push(stored);
-      this.inserts.push({ table: t, row: stored });
-      return stored;
-    });
+    const q = new FakeQuery(
+      table,
+      this.tables[table] ?? [],
+      (t, row) => {
+        const stored: Row = { ...row };
+        if (stored.id === undefined) {
+          this.insertSeq += 1;
+          stored.id = `fake-${t}-${this.insertSeq}`;
+        }
+        (this.tables[t] ??= []).push(stored);
+        this.inserts.push({ table: t, row: stored });
+        return stored;
+      },
+      {
+        onUpsert: (t, row, conflictCols) => {
+          const rows = (this.tables[t] ??= []);
+          const idx = rows.findIndex((r) =>
+            conflictCols.every((c) => r[c] === row[c]),
+          );
+          let stored: Row;
+          if (idx >= 0) {
+            stored = { ...rows[idx], ...row };
+            rows[idx] = stored;
+          } else {
+            stored = { ...row };
+            if (stored.id === undefined) {
+              this.insertSeq += 1;
+              stored.id = `fake-${t}-${this.insertSeq}`;
+            }
+            rows.push(stored);
+          }
+          this.upserts.push({ table: t, row: stored });
+          return stored;
+        },
+        onUpdate: (t, values, matched) => {
+          this.updates.push({ table: t, values, matched });
+        },
+      },
+    );
     this.queries.push(q);
     return q;
   }
@@ -237,6 +336,16 @@ export class FakeSupabaseClient {
   /** All recorded inserts into one table, in call order. */
   insertsFor(table: string): Row[] {
     return this.inserts.filter((i) => i.table === table).map((i) => i.row);
+  }
+
+  /** All recorded updates applied to one table, in call order. */
+  updatesFor(table: string): { values: Row; matched: Row[] }[] {
+    return this.updates.filter((u) => u.table === table);
+  }
+
+  /** All recorded upserts into one table, in call order. */
+  upsertsFor(table: string): Row[] {
+    return this.upserts.filter((u) => u.table === table).map((u) => u.row);
   }
 
   /** All queries run against one table, in call order. */

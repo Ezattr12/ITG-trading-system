@@ -151,3 +151,24 @@ screenshots, goals, risk, plan, weekly review). M4:
 offline drafts + push. M5: store submission. Each phase
 ends with the Stage 2-style production audit before the
 next begins.
+
+**M1 status (2026-10-30, Phase 21): DONE** — the priority
+write operations now live on a shared service layer
+(`lib/trades/service.ts`, `lib/profile/service.ts`,
+`lib/discipline/service.ts`) with the web actions as thin
+adapters, and the following authenticated endpoints exist
+(Bearer Supabase token, identity from the token only;
+full contract in `docs/phase-21-m1.md`):
+
+- `POST /api/mobile/trades`
+- `POST /api/mobile/trades/[id]/review`
+- `POST /api/mobile/trades/[id]/correct`
+- `PATCH /api/mobile/profile`
+- `POST /api/mobile/profile/avatar` (multipart, field `file`)
+- `POST /api/mobile/goals`
+- `POST /api/mobile/goals/[id]/progress`
+- `PATCH /api/mobile/goals/[id]`
+
+Deferred to M2 (reasons in `docs/phase-21-m1.md` §5):
+risk rules/plan, weekly review, trade screenshots,
+cancel-trade, notification mark-read, backtesting log.
