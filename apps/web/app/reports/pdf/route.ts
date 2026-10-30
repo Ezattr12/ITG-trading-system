@@ -3,8 +3,13 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getReportSummary } from "@/lib/reports/queries";
-import { buildReportPdf } from "@/lib/reports/pdf";
+import { buildCatalogReportPdf, buildReportPdf } from "@/lib/reports/pdf";
 import type { ReportType } from "@/lib/reports/types";
+import {
+  CATALOG_REPORT_KINDS,
+  getCatalogReport,
+  type CatalogReportKind,
+} from "@/lib/reports/catalog";
 
 /**
  * Report PDF download (Phase 8, spec §27).
@@ -37,13 +42,55 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Please log in first." }, { status: 401 });
 
   const supabase = await createServerSupabaseClient();
+  const traderName =
+    user.profile?.full_name?.trim() || user.email || "ITG Trader";
+
+  // Phase 24: an optional `report` parameter selects a catalog
+  // report (Performance / Psychology / Risk / Strategy / Coach).
+  // The catalog grains are weekly | monthly; the PDF renders
+  // the same composed object as the Reports page and computes
+  // nothing itself. Without `report`, the legacy summary PDF
+  // below is produced exactly as before.
+  const reportParam = url.searchParams.get("report");
+  if (reportParam !== null) {
+    const validKind = (CATALOG_REPORT_KINDS as string[]).includes(reportParam);
+    const validGrain = type === "weekly" || type === "monthly";
+    if (!validKind || !validGrain) {
+      return NextResponse.json(
+        { error: "Choose a valid catalog report and a weekly or monthly period." },
+        { status: 400 },
+      );
+    }
+    const kind = reportParam as CatalogReportKind;
+    const report = await getCatalogReport(
+      supabase,
+      user.id,
+      kind,
+      type === "monthly" ? "month" : "week",
+      start,
+    );
+    if (!report || report.periodStart !== start || report.periodEnd !== end) {
+      return NextResponse.json(
+        { error: "Choose a valid catalog report and a weekly or monthly period." },
+        { status: 400 },
+      );
+    }
+    const pdf = await buildCatalogReportPdf(report, traderName);
+    return new NextResponse(new Uint8Array(pdf), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="itg-report-${kind}-${type}-${start}-to-${end}.pdf"`,
+        "Content-Length": String(pdf.length),
+      },
+    });
+  }
+
   const summary = await getReportSummary(supabase, user.id, {
     type: type as ReportType,
     periodStart: start,
     periodEnd: end,
   });
-  const traderName =
-    user.profile?.full_name?.trim() || user.email || "ITG Trader";
   const pdf = await buildReportPdf(summary, traderName);
 
   return new NextResponse(new Uint8Array(pdf), {
