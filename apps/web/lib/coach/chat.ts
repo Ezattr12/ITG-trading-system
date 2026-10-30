@@ -10,6 +10,13 @@ import type {
   ReportTrade,
 } from "@/lib/reports/types";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
+import {
+  drawdownAnswer,
+  improvementPlanAnswer,
+  monthlyReviewAnswer,
+  riskBehaviorAnswer,
+  tradingConditionsAnswer,
+} from "@/lib/intelligence/coach-answers";
 import { generateCoachInsights } from "./insights";
 import {
   narrateWithGuard,
@@ -67,7 +74,16 @@ export type CoachChatIntent =
   | "month_compare"
   | "weekly_focus"
   | "loss_patterns"
-  | "weekly_overview";
+  | "weekly_overview"
+  // Phase 23: intelligence intents, answered by
+  // lib/intelligence/coach-answers from the intelligence
+  // analyses — composition over the same engines, no second
+  // coach.
+  | "drawdown_analysis"
+  | "risk_behavior"
+  | "trading_conditions"
+  | "improvement_plan"
+  | "monthly_review";
 
 export interface CoachChatHistoryTurn {
   role: "user" | "assistant";
@@ -208,6 +224,13 @@ function rankedRows(
  */
 const INTENT_RULES: { intent: CoachChatIntent; patterns: RegExp[] }[] = [
   {
+    // Phase 23: a monthly REVIEW is a digest, not a
+    // comparison — it must win over month_compare's
+    // "this month" pattern when the trader asks for one.
+    intent: "monthly_review",
+    patterns: [/monthly review/, /review (of |for )?(this|last|the) month/, /month'?s review/],
+  },
+  {
     intent: "month_compare",
     patterns: [/compar/, /last month/, /this month/, /month (vs|versus|to|over)/],
   },
@@ -258,6 +281,40 @@ const INTENT_RULES: { intent: CoachChatIntent; patterns: RegExp[] }[] = [
     patterns: [/weakness/, /weak point/, /biggest problem/, /holding me back/, /struggl/, /what.*wrong/],
   },
   {
+    // Phase 23 intelligence intents. Patterns are kept
+    // narrow and sit after every Phase 22 rule except the
+    // weekly_focus fallback family, so no Phase 22 phrase
+    // changes destination.
+    intent: "drawdown_analysis",
+    patterns: [/drawdown/, /underwater/, /peak to trough/, /how far (am i|have i) fallen/],
+  },
+  {
+    intent: "risk_behavior",
+    patterns: [
+      /risk behavio/,
+      /over.?risk/,
+      /risk management/,
+      /risk per trade/,
+      /how much (am i|do i) risk/,
+      /am i risking/,
+      /position siz/,
+    ],
+  },
+  {
+    intent: "trading_conditions",
+    patterns: [/condition/, /when do i trade best/, /trade best/, /best time to trade/],
+  },
+  {
+    intent: "improvement_plan",
+    patterns: [
+      /improvement plan/,
+      /plan to improve/,
+      /how (can|could|do) i improve/,
+      /improve my/,
+      /personal(ized)? plan/,
+    ],
+  },
+  {
     intent: "weekly_focus",
     patterns: [/focus/, /work on/, /this week/, /next week/, /should i/, /improve/],
   },
@@ -298,10 +355,10 @@ async function getLessonsForTrades(
   if (tradeIds.length === 0) return [];
   const { data } = await supabase
     .from("lessons")
-    .select("trade_id, text, repeated_mistake")
+    .select("trade_id, text, is_repeated_mistake")
     .in("trade_id", tradeIds);
-  return ((data ?? []) as { trade_id: string; text: string; repeated_mistake: boolean }[]).map(
-    (l) => ({ tradeId: l.trade_id, text: l.text ?? "", repeatedMistake: Boolean(l.repeated_mistake) }),
+  return ((data ?? []) as { trade_id: string; text: string; is_repeated_mistake: boolean }[]).map(
+    (l) => ({ tradeId: l.trade_id, text: l.text ?? "", repeatedMistake: Boolean(l.is_repeated_mistake) }),
   );
 }
 
@@ -1071,6 +1128,19 @@ async function buildDeterministicAnswer(
       return lossPatternsAnswer(supabase, userId);
     case "biggest_weakness":
       return biggestWeaknessAnswer(supabase, userId);
+    // Phase 23: delegated to the intelligence answer
+    // builders (lib/intelligence/coach-answers), which
+    // assemble evidence from the intelligence analyses.
+    case "drawdown_analysis":
+      return drawdownAnswer(supabase, userId);
+    case "risk_behavior":
+      return riskBehaviorAnswer(supabase, userId);
+    case "trading_conditions":
+      return tradingConditionsAnswer(supabase, userId);
+    case "improvement_plan":
+      return improvementPlanAnswer(supabase, userId);
+    case "monthly_review":
+      return monthlyReviewAnswer(supabase, userId, today);
   }
 }
 

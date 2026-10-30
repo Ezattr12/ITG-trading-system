@@ -25,6 +25,8 @@ import {
   PeriodPnlChart,
   RDistributionChart,
 } from "@/components/analytics/charts";
+import { IntelligenceSection } from "@/components/analytics/intelligence";
+import { getIntelligenceOverview } from "@/lib/intelligence/queries";
 import { Money, Pct, StatCard, type StatCardGlow } from "@/components/analytics/stat-card";
 
 export const metadata = { title: "Analytics — ITG TraderOS" };
@@ -120,6 +122,12 @@ export default async function AnalyticsPage({
   const bundle = isSupabaseConfigured()
     ? await getAnalyticsBundle(await createServerSupabaseClient(), user.id)
     : EMPTY_BUNDLE;
+  // Advanced intelligence (Phase 23): the deeper analyses
+  // over the same real trades, rendered as their own section
+  // below — existing figures above are untouched.
+  const intelligence = isSupabaseConfigured()
+    ? await getIntelligenceOverview(await createServerSupabaseClient(), user.id)
+    : null;
   const summary = summarizeTrades(bundle.trades);
   const equity = buildEquityCurve(bundle.trades);
   const periods = periodPnl(bundle.trades, period);
@@ -414,6 +422,8 @@ export default async function AnalyticsPage({
             )}
           </section>
         </div>
+
+        {intelligence ? <IntelligenceSection data={intelligence} /> : null}
         </div>
       </div>
     </AppShell>

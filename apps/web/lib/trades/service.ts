@@ -423,6 +423,34 @@ export async function saveAdvancedReviewCore(
     if (!already) {
       await supabase.from("lessons").insert({ trade_id: v.tradeId, user_id: userId, text: v.lesson });
     }
+    // Repetition maintenance (Phase 23 follow-up): the
+    // is_repeated_mistake flag is DERIVED from text recurrence
+    // — the same definition lib/trades/lessons.ts uses for the
+    // trade page. Before this, nothing in the app ever set the
+    // flag, so the report/chat "most repeated mistake" reads
+    // (which gate on it) could never fire from real journaling.
+    // When this lesson's normalized text now appears on 2+
+    // distinct trades, every matching lesson carries the flag.
+    const { data: userLessons } = await supabase
+      .from("lessons")
+      .select("id, trade_id, text, is_repeated_mistake")
+      .eq("user_id", userId)
+      .is("deleted_at", null);
+    const lessonKey = normalizeLesson(v.lesson as string);
+    const matching = (
+      (userLessons ?? []) as {
+        id: string;
+        trade_id: string | null;
+        text: string;
+        is_repeated_mistake: boolean;
+      }[]
+    ).filter((l) => normalizeLesson(l.text) === lessonKey);
+    if (new Set(matching.map((l) => l.trade_id)).size >= 2) {
+      const toFlag = matching.filter((l) => !l.is_repeated_mistake).map((l) => l.id);
+      if (toFlag.length > 0) {
+        await supabase.from("lessons").update({ is_repeated_mistake: true }).in("id", toFlag);
+      }
+    }
   }
 
   await writeAuditLog({

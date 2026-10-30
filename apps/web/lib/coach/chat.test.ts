@@ -95,9 +95,9 @@ function mainTables(): Record<string, Row[]> {
       { id: BETA, name: "Beta Reversion" },
     ],
     lessons: [
-      { trade_id: "t-w2", user_id: USER_A, text: "Entered before confirmation", repeated_mistake: true },
-      { trade_id: "t-o2", user_id: USER_A, text: "Entered before confirmation", repeated_mistake: true },
-      { trade_id: "t-o5", user_id: USER_A, text: "Chased the move", repeated_mistake: true },
+      { trade_id: "t-w2", user_id: USER_A, text: "Entered before confirmation", is_repeated_mistake: true },
+      { trade_id: "t-o2", user_id: USER_A, text: "Entered before confirmation", is_repeated_mistake: true },
+      { trade_id: "t-o5", user_id: USER_A, text: "Chased the move", is_repeated_mistake: true },
     ],
     goals: [],
     goal_progress: [],

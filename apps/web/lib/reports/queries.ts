@@ -50,7 +50,7 @@ export async function getReportSummary(
         .in("id", trades.map((t) => t.strategy_id).filter(Boolean) as string[]),
       supabase
         .from("lessons")
-        .select("trade_id, text, repeated_mistake")
+        .select("trade_id, text, is_repeated_mistake")
         .in("trade_id", tradeIds),
     ]);
     psychByTrade = new Map(
@@ -64,11 +64,11 @@ export async function getReportSummary(
     lessons = ((lessonsRes.data ?? []) as {
       trade_id: string;
       text: string;
-      repeated_mistake: boolean;
+      is_repeated_mistake: boolean;
     }[]).map((l) => ({
       tradeId: l.trade_id,
       text: l.text ?? "",
-      repeatedMistake: Boolean(l.repeated_mistake),
+      repeatedMistake: Boolean(l.is_repeated_mistake),
     }));
     lessonTradeIds = new Set(lessons.map((l) => l.tradeId));
   }

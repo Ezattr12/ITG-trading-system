@@ -239,6 +239,36 @@ describe("saveAdvancedReviewCore", () => {
     ).toBe(true);
   });
 
+  it("flags every matching lesson once its text recurs on a second trade (Phase 23 flag writer)", async () => {
+    const tables = baseTables();
+    tables.trades.push(existingClosed(REVIEW_TRADE, 40, "2026-10-13T12:00:00Z"));
+    // The same lesson already sits on t1, unflagged; a
+    // different lesson on t2 must stay unflagged.
+    tables.lessons.push(
+      { id: "l1", trade_id: "t1", user_id: USER, text: "Wait for the retest.", is_repeated_mistake: false, deleted_at: null },
+      { id: "l2", trade_id: "t2", user_id: USER, text: "Chased the move.", is_repeated_mistake: false, deleted_at: null },
+    );
+    const { user, tables: t } = setup(tables);
+    const result = await saveAdvancedReviewCore(user.client, USER, {
+      tradeId: REVIEW_TRADE,
+      strategyId: null,
+      setupName: null,
+      marketCondition: null,
+      tradeReason: null,
+      session: null,
+      confidence: null,
+      emotion: null,
+      discipline: null,
+      lesson: "Wait for the retest.",
+      notes: null,
+    });
+    expect(result.ok).toBe(true);
+    const retest = t.lessons.filter((r) => r.text === "Wait for the retest.");
+    expect(retest).toHaveLength(2);
+    expect(retest.every((r) => r.is_repeated_mistake === true)).toBe(true);
+    expect(t.lessons.find((r) => r.id === "l2")?.is_repeated_mistake).toBe(false);
+  });
+
   it("another trader's trade is not_found and untouched", async () => {
     const { user, tables } = setup();
     const result = await saveAdvancedReviewCore(user.client, OTHER, {
