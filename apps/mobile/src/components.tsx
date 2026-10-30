@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { shared, tokens } from "./theme";
@@ -14,11 +15,14 @@ import { shared, tokens } from "./theme";
 export function Screen({
   children,
   scroll = true,
+  contentStyle,
 }: {
   children: ReactNode;
   scroll?: boolean;
+  /** Extra style for the content container (e.g. flex: 1 for a pinned-composer layout). */
+  contentStyle?: ViewStyle;
 }) {
-  const inner = <View style={shared.content}>{children}</View>;
+  const inner = <View style={[shared.content, contentStyle]}>{children}</View>;
   return (
     <SafeAreaView style={shared.screen} edges={["top", "left", "right"]}>
       <View pointerEvents="none" style={styles.auroraTop} />

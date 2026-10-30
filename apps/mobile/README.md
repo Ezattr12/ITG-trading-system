@@ -6,10 +6,14 @@ M2** (secure sign-in, a biometric unlock gate, read-only screens);
 correct / cancel), trade reviews, screenshots, goals, risk rules &
 trading plan, weekly review, backtesting and notifications — all
 through the `/api/mobile/*` endpoints from Phases 21 M1/M2, all over
-the trader's **real** data. There is **no fake or demo data
-anywhere** — every screen renders real authenticated data or an
-honest empty state, and every number shown is a stored value or a
-server-computed aggregate (never calculated in the app).
+the trader's **real** data. **Phase 26 added the Interactive AI
+Coach**: the Coach tab now opens on a chat that talks to
+`POST /api/mobile/coach/chat` — the Bearer surface of the web chat,
+one shared engine — with the stored weekly insights and the
+review/backtesting forms one segment away. There is **no fake or
+demo data anywhere** — every screen renders real authenticated data
+or an honest empty state, and every number shown is a stored value
+or a server-computed aggregate (never calculated in the app).
 
 Stack: Expo SDK 58 · React Native 0.88 · React 19 · TypeScript ·
 expo-router · @supabase/supabase-js · expo-secure-store ·
@@ -69,6 +73,15 @@ placeholder values only.
   mobile-first signup would otherwise hit.
 - **Aggregates:** `GET /api/mobile/summary?range=week|month` —
   the web report engine's `ReportSummary`, computed server-side.
+- **Interactive coach (Phase 26):** `POST /api/mobile/coach/chat`
+  with body `{ message, history }` (message ≤ 1000 chars, history
+  the last 6 turns) — the same shared handler + chat core as the
+  web chat, behind Bearer auth. The response is the structured
+  answer (facts / inferences / recommendations + evidence +
+  narration mode) and is rendered as-is; the app contains no coach
+  or intent logic. One `coach.chat` audit row per question
+  server-side (never the message text); no `api.mobile.*` row —
+  see `docs/phase-26.md` §3.
 - **Writes (Phase 25)** go through `src/api.ts`, one helper per
   endpoint: trades (create / correct / cancel), trade review,
   screenshot upload (multipart, field `file`) + delete, goals
@@ -141,7 +154,7 @@ placeholder values only.
 | `(app)/goal/new` | **Create goal** |
 | `(app)/goal/[id]` | Goal detail: **record progress**, **change status**, progress history |
 | `(app)/risk` | **Risk rules editor** + **trading plan editor** (full-form PUT saves, pre-filled from RLS) |
-| `(app)/coach` | Latest stored `ai_insights` cards + **weekly review form** + **backtesting log** (XP figures are the endpoints' responses) |
+| `(app)/coach` | Three segments — **Ask the coach** (interactive chat over `POST /api/mobile/coach/chat`: structured FACTS / INFERENCES / RECOMMENDATIONS answers, evidence line, honest narration-mode badge, suggested-question chips, last-6-turns history, New chat reset), **Insights** (stored `ai_insights` cards), **Review** (**weekly review form** + **backtesting log**; XP figures are the endpoints' responses) |
 | `(app)/notifications` | Notification list with unread state; tap to mark one read, or mark all read |
 | `(app)/profile` | Own profile row, avatar, level, links to Risk & plan / Notifications, sign out |
 
@@ -177,7 +190,6 @@ placeholder values only.
   changes and says so plainly.
 - **Profile editing / avatar upload from the app** — endpoints
   exist (M1) but were outside Phase 25's workflow list.
-- Interactive AI Coach / chat (Phase 26).
 - Offline drafts and push notifications (M4 in the spec).
 - EAS builds and store submission (M5 in the spec).
 
@@ -208,3 +220,17 @@ Phase 25 (2026-10-30):
 - Payload audit — every request body diffed against the
   handler allow-lists (`apps/web/lib/api/handlers/*.ts`); see
   `docs/phase-25.md` §2.
+
+Phase 26 (2026-10-30):
+
+- Backend: `POST /api/mobile/coach/chat` added (shared chat
+  handler + core, Bearer adapter) with 20 new handler tests —
+  root `npm test` 724/724 passing, typecheck/lint clean,
+  `security:check` passed, production build contains both
+  `/api/coach/chat` and `/api/mobile/coach/chat`.
+- `npx tsc --noEmit` — clean.
+- `npx expo export --platform android` — succeeded (Hermes
+  bundle ~3.3 MB).
+- Not verified here: running on a physical device / emulator
+  (no device in the sandbox) — first device run is via Expo Go
+  with a real `.env`.

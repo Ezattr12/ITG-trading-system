@@ -239,3 +239,32 @@ Device verification remains Ezat-side (Expo Go + local
 `.env`), as in M2. Next: M4 (offline drafts + push) per
 §10, and the Interactive AI Coach is Phase 26 on the
 roadmap (separate from this spec's phasing).
+
+**Phase 26 status (2026-10-30): DONE** — the Interactive
+AI Coach (§8's "in-app conversational coaching") is live
+in the app on the same authenticated-endpoint rule §8
+prescribed: `POST /api/mobile/coach/chat` is the Bearer
+surface of the Phase 22 web chat — one shared handler
+(`lib/coach/chat-handler.ts`) and one shared core
+(`lib/coach/chat.ts`, 17 intents), with session resolution
+as the only surface-specific dependency. The body contract
+(message ≤ 1000 chars, history ≤ 6 turns, identity fields
+refused by name), the 20/minute per-trader limit (one
+bucket shared with web), the response shape, and the audit
+rule (exactly one `coach.chat` row per question, details
+limited to outcome / intent / narration — never the
+message text; deliberately NO `api.mobile.*` row, see
+`docs/phase-26.md` §3) are the web endpoint's, unchanged.
+The Coach tab is now three segments — Ask the coach
+(chat with structured FACTS / INFERENCES /
+RECOMMENDATIONS answers, evidence line, honest
+narration-mode badge, suggested-question chips, New chat
+reset), Insights (the stored `ai_insights` surface,
+unchanged), Review (weekly review + backtesting,
+unchanged). The coach runs in deterministic mode until an
+LLM key is connected; the app renders the response's
+narration mode either way. Root suite 724/724 (20 new
+handler tests incl. a real-core two-user scoping test);
+mobile `tsc` clean and `expo export` succeeding. Full
+record: `docs/phase-26.md`. Remaining in this spec: M4
+(offline drafts + push) and M5 (store submission).

@@ -440,3 +440,55 @@ export interface MarkReadResponse {
 export interface UploadScreenshotResponse {
   screenshot_id: string;
 }
+
+/* ---------------- Phase 26 coach chat contracts ----------------
+ *
+ * Mirror lib/coach/chat.ts (CoachChatAnswer) and the request
+ * contract lib/coach/chat-handler.ts enforces: the body is
+ * { message, history? } — message ≤ 1000 chars, history the
+ * last 6 turns of { role, content }. POST
+ * /api/mobile/coach/chat returns the web chat response shape
+ * verbatim. The app renders the answer; it never computes
+ * any part of it.
+ */
+
+/** One history turn (lib/coach/chat.ts CoachChatHistoryTurn). */
+export interface CoachChatHistoryTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** POST /api/mobile/coach/chat request body. */
+export interface CoachChatPayload {
+  message: string;
+  history: CoachChatHistoryTurn[];
+}
+
+/** The numbers behind an answer (lib/coach/chat.ts CoachChatEvidence). */
+export interface CoachChatEvidence {
+  scope: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  tradesCount: number | null;
+  wins: number | null;
+  losses: number | null;
+  totalPnl: number | null;
+  winRate: number | null;
+  profitFactor: number | null;
+  expectancy: number | null;
+  avgR: number | null;
+}
+
+/** POST /api/mobile/coach/chat → 200 (lib/coach/chat.ts CoachChatAnswer). */
+export interface CoachChatAnswer {
+  status: "ok" | "insufficient_data";
+  intent: string;
+  facts: string[];
+  inferences: string[];
+  recommendations: string[];
+  evidence: CoachChatEvidence;
+  /** Which rendering produced the sections — surfaced as the mode badge. */
+  narration: "llm" | "deterministic";
+  /** Provider name when narration is "llm" ("anthropic" / "openai"). */
+  narrationProvider?: string;
+}

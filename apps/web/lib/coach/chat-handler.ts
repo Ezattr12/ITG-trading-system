@@ -40,8 +40,10 @@ import {
  * - Per-user rate limit: 20 questions per minute.
  * - The handler is transport-shaped, not transport-bound:
  *   the session resolution is one injected dependency, so
- *   the Phase 26 mobile variant can supply a Bearer-token
- *   resolution and reuse this exact pipeline + core.
+ *   the Phase 26 mobile variant supplies a Bearer-token
+ *   resolution (lib/api/handlers/coach-chat.ts) and reuses
+ *   this exact pipeline + core — one contract, one audit
+ *   ledger (`coach.chat`), two auth adapters.
  */
 
 export const COACH_CHAT_RATE_LIMIT: RateLimitPreset = {
@@ -91,6 +93,18 @@ export interface CoachChatInput {
   body: unknown;
   /** True when a body was present but was not valid JSON. */
   jsonMalformed?: boolean;
+  /**
+   * Transport-level body failure message (e.g. the mobile
+   * route's 64 KB cap: "request body is too large"). The
+   * body never reached JSON parsing, so there is nothing
+   * to validate — the call is refused 400 with this
+   * message and audited once with a null actor, exactly
+   * like malformed JSON. The web route never sets this
+   * (it has no transport cap beyond the message limits);
+   * it exists so the mobile adapter enforces the M1 body
+   * cap without bypassing the handler's audit-once rule.
+   */
+  bodyError?: string | null;
 }
 
 export interface CoachChatResponse {
@@ -120,6 +134,11 @@ export async function handleCoachChat(
     status,
     body: message ? { error, message } : { error },
   });
+
+  if (input.bodyError) {
+    await deps.audit({ userId: null, outcome: "invalid_argument", intent: null, narration: null });
+    return fail(400, "invalid_argument", input.bodyError);
+  }
 
   if (input.jsonMalformed) {
     await deps.audit({ userId: null, outcome: "invalid_argument", intent: null, narration: null });
@@ -219,20 +238,25 @@ export async function handleCoachChat(
 }
 
 /**
- * Production dependencies: the web cookie session via the
- * server Supabase client, audit through the existing
- * service-role helper, the shared rate limiter, and the
- * real chat core.
+ * The shared production tail of the chat deps: audit
+ * through the existing service-role helper (the ONE
+ * `coach.chat` row per call, on every surface), the shared
+ * rate limiter (one `coach-chat:<userId>` bucket per
+ * trader, shared across surfaces), the real chat core, and
+ * the wall clock. The only surface-specific dependency is
+ * session resolution — the auth adapter — so this factory
+ * takes it as the argument and lets a surface override a
+ * tail piece (the mobile factory routes the rate limit
+ * through the API deps; nothing else differs).
  */
-export function createDefaultCoachChatDeps(): CoachChatHandlerDeps {
+export function createCoachChatDeps(
+  getSession: CoachChatHandlerDeps["getSession"],
+  overrides: Partial<
+    Pick<CoachChatHandlerDeps, "audit" | "rateLimit" | "answer" | "now">
+  > = {},
+): CoachChatHandlerDeps {
   return {
-    async getSession() {
-      if (!isSupabaseConfigured()) return null;
-      const supabase = await createServerSupabaseClient();
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) return null;
-      return { userId: data.user.id, client: supabase };
-    },
+    getSession,
     async audit(entry) {
       try {
         await writeAuditLog({
@@ -255,5 +279,21 @@ export function createDefaultCoachChatDeps(): CoachChatHandlerDeps {
     },
     answer: (args) => answerCoachQuestion(args),
     now: () => new Date(),
+    ...overrides,
   };
+}
+
+/**
+ * Production dependencies for the WEB surface: the cookie
+ * session via the server Supabase client, plus the shared
+ * tail from createCoachChatDeps.
+ */
+export function createDefaultCoachChatDeps(): CoachChatHandlerDeps {
+  return createCoachChatDeps(async () => {
+    if (!isSupabaseConfigured()) return null;
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return null;
+    return { userId: data.user.id, client: supabase };
+  });
 }

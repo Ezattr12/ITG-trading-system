@@ -3,6 +3,8 @@ import type {
   AdvancedReviewPayload,
   BacktestingResponse,
   CancelTradeResponse,
+  CoachChatAnswer,
+  CoachChatHistoryTurn,
   CorrectTradeResponse,
   CreateGoalResponse,
   CreateTradeResponse,
@@ -272,5 +274,26 @@ export async function markNotificationsRead(
   return apiFetch<MarkReadResponse>("/api/mobile/notifications/read", {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+/* ---------------- Phase 26 interactive coach ---------------- */
+
+/**
+ * POST /api/mobile/coach/chat — ask the Interactive AI Coach
+ * (Phase 26; the Bearer surface of the web chat). The body is
+ * { message, history } exactly as the shared handler's
+ * contract requires — never an identity field. The response
+ * is the server's structured answer (facts / inferences /
+ * recommendations + evidence + narration mode), rendered
+ * as-is: the app contains no coach or intent logic.
+ */
+export async function askCoach(
+  message: string,
+  history: CoachChatHistoryTurn[],
+): Promise<CoachChatAnswer> {
+  return apiFetch<CoachChatAnswer>("/api/mobile/coach/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, history }),
   });
 }
