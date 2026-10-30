@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "../../src/auth";
 import { fetchSummary } from "../../src/api";
 import { supabase } from "../../src/supabase";
@@ -23,6 +24,7 @@ import type { SummaryResponse, UserLevelRow } from "../../src/types";
  */
 export default function DashboardScreen() {
   const { session } = useAuth();
+  const router = useRouter();
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [level, setLevel] = useState<UserLevelRow | null>(null);
   const [xpTotal, setXpTotal] = useState<number | null>(null);
@@ -68,6 +70,14 @@ export default function DashboardScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+  // Reload on focus so the unread count (and the summary)
+  // reflect writes made on other screens — e.g. notifications
+  // marked read on the Notifications screen.
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (loading) return <LoadingState label="Loading your dashboard…" />;
   if (error) {
@@ -88,11 +98,22 @@ export default function DashboardScreen() {
     <Screen>
       <View style={shared.rowBetween}>
         <Text style={shared.title}>Dashboard</Text>
-        {unread > 0 ? (
-          <Text style={{ color: tokens.auroraCyan, fontSize: 13, fontWeight: "600" }}>
-            {unread} unread notification{unread === 1 ? "" : "s"}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/(app)/notifications")}
+        >
+          <Text
+            style={{
+              color: unread > 0 ? tokens.auroraCyan : tokens.textMuted,
+              fontSize: 13,
+              fontWeight: "600",
+            }}
+          >
+            {unread > 0
+              ? `${unread} unread notification${unread === 1 ? "" : "s"}`
+              : "Notifications"}
           </Text>
-        ) : null}
+        </Pressable>
       </View>
       <Text style={shared.muted}>
         Week of {summary?.period_start ?? "—"} to {summary?.period_end ?? "—"}
@@ -147,7 +168,7 @@ export default function DashboardScreen() {
       ) : (
         <EmptyState
           title="No closed trades this week"
-          body="Once you close trades in the web app, this week's performance will appear here automatically."
+          body="Record a trade from the Trades tab — once trades close, this week's performance appears here automatically."
         />
       )}
     </Screen>

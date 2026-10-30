@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Image, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuth } from "../../src/auth";
 import { supabase } from "../../src/supabase";
 import {
@@ -16,11 +17,13 @@ import type { ProfileRow, UserLevelRow } from "../../src/types";
 
 /**
  * Profile — the caller's own `profiles` row (RLS read), their
- * stored level, and sign-out. Editing stays in the web app in
- * M2; everything shown here is a stored field.
+ * stored level, and sign-out. Phase 25 adds entry points to
+ * the Risk & plan editors and Notifications; profile field
+ * editing itself is not part of this phase's workflows.
  */
 export default function ProfileScreen() {
   const { session, bootstrap, signOut } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [level, setLevel] = useState<UserLevelRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -150,6 +153,14 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
+      <GhostButton
+        label="Risk rules & trading plan"
+        onPress={() => router.push("/(app)/risk")}
+      />
+      <GhostButton
+        label="Notifications"
+        onPress={() => router.push("/(app)/notifications")}
+      />
       <GhostButton label="Sign out" onPress={() => void signOut()} />
     </Screen>
   );

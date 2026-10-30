@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "../../src/auth";
 import { supabase } from "../../src/supabase";
 import {
@@ -8,6 +8,7 @@ import {
   ErrorState,
   GlassCard,
   LoadingState,
+  PrimaryButton,
   Screen,
 } from "../../src/components";
 import { formatDate, formatMoney, titleCase } from "../../src/format";
@@ -16,8 +17,10 @@ import type { TradeRow } from "../../src/types";
 
 /**
  * Trades list — direct RLS read of the caller's own trades,
- * newest first, capped at 100. Read-only: trades are created
- * and managed in the web app in M2.
+ * newest first, capped at 100. Phase 25: trades are created
+ * and managed in the app (Add Trade button → trade detail
+ * actions); the list reloads on focus so it always shows
+ * server-confirmed state.
  */
 const LIST_LIMIT = 100;
 
@@ -49,17 +52,23 @@ export default function TradesScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (loading) return <LoadingState label="Loading your trades…" />;
 
   return (
     <Screen>
       <Text style={shared.title}>Trades</Text>
+      <PrimaryButton label="Add trade" onPress={() => router.push("/(app)/trade/new")} />
       {error ? <ErrorState message={error} /> : null}
       {!error && trades.length === 0 ? (
         <EmptyState
           title="No trades yet"
-          body="Trades you record in the ITG TraderOS web app will appear here."
+          body="Record your first trade with Add trade — it takes under a minute, and P&L is calculated for you."
         />
       ) : null}
       {trades.map((trade) => {

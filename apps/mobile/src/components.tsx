@@ -104,23 +104,31 @@ export function PrimaryButton({
   label,
   onPress,
   disabled = false,
+  loading = false,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** Shows a spinner and blocks presses — double-submit protection. */
+  loading?: boolean;
 }) {
+  const blocked = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
+      disabled={blocked}
       onPress={onPress}
       style={({ pressed }) => [
         styles.primaryButton,
         pressed && { opacity: 0.85 },
-        disabled && { opacity: 0.45 },
+        blocked && { opacity: 0.45 },
       ]}
     >
-      <Text style={styles.primaryButtonText}>{label}</Text>
+      {loading ? (
+        <ActivityIndicator color={tokens.textPrimary} />
+      ) : (
+        <Text style={styles.primaryButtonText}>{label}</Text>
+      )}
     </Pressable>
   );
 }

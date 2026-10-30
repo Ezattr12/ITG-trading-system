@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "../../src/auth";
 import { supabase } from "../../src/supabase";
 import {
@@ -7,6 +8,7 @@ import {
   ErrorState,
   GlassCard,
   LoadingState,
+  PrimaryButton,
   Screen,
 } from "../../src/components";
 import { formatDate, formatNumber, titleCase } from "../../src/format";
@@ -22,6 +24,7 @@ import type { GoalProgressRow, GoalRow } from "../../src/types";
  */
 export default function GoalsScreen() {
   const { session } = useAuth();
+  const router = useRouter();
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [progress, setProgress] = useState<Map<string, GoalProgressRow>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -60,17 +63,23 @@ export default function GoalsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (loading) return <LoadingState label="Loading your goals…" />;
 
   return (
     <Screen>
       <Text style={shared.title}>Goals</Text>
+      <PrimaryButton label="New goal" onPress={() => router.push("/(app)/goal/new")} />
       {error ? <ErrorState message={error} /> : null}
       {!error && goals.length === 0 ? (
         <EmptyState
           title="No goals yet"
-          body="Goals you set in the ITG TraderOS web app will appear here with their recorded progress."
+          body="Set your first goal with New goal, then record progress from the goal's page."
         />
       ) : null}
       {goals.map((goal) => {
@@ -80,7 +89,12 @@ export default function GoalsScreen() {
             ? Math.min(100, Math.max(0, (latest.current_value / goal.target_value) * 100))
             : null;
         return (
-          <GlassCard key={goal.id}>
+          <Pressable
+            key={goal.id}
+            accessibilityRole="button"
+            onPress={() => router.push(`/(app)/goal/${goal.id}`)}
+          >
+          <GlassCard>
             <View style={shared.rowBetween}>
               <Text style={[shared.heading, { flex: 1, paddingRight: 8 }]}>{goal.title}</Text>
               <Text
@@ -128,10 +142,11 @@ export default function GoalsScreen() {
               </>
             ) : (
               <Text style={shared.muted}>
-                No recorded progress yet — measured goals are tracked in the web app.
+                No recorded progress yet — tap to record progress.
               </Text>
             )}
           </GlassCard>
+          </Pressable>
         );
       })}
     </Screen>

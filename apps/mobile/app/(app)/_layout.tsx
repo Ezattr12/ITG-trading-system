@@ -40,6 +40,15 @@ export default function AppLayout() {
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       {/* Trade detail is reachable from the trades list, not a tab. */}
       <Tabs.Screen name="trade/[id]" options={{ href: null, title: "Trade" }} />
+      {/* Phase 25 write-workflow routes — reachable from their parent screens, not tabs. */}
+      <Tabs.Screen name="trade/new" options={{ href: null, title: "Add trade" }} />
+      <Tabs.Screen name="trade/[id]/close" options={{ href: null, title: "Close trade" }} />
+      <Tabs.Screen name="trade/[id]/correct" options={{ href: null, title: "Correct trade" }} />
+      <Tabs.Screen name="trade/[id]/review" options={{ href: null, title: "Review trade" }} />
+      <Tabs.Screen name="goal/new" options={{ href: null, title: "New goal" }} />
+      <Tabs.Screen name="goal/[id]" options={{ href: null, title: "Goal" }} />
+      <Tabs.Screen name="risk" options={{ href: null, title: "Risk & plan" }} />
+      <Tabs.Screen name="notifications" options={{ href: null, title: "Notifications" }} />
     </Tabs>
   );
 }

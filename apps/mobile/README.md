@@ -1,15 +1,20 @@
 # ITG TraderOS — Mobile (React Native + Expo)
 
-The mobile shell for ITG TraderOS, built in **Phase 21 M2**. It is
-**read-oriented**: secure sign-in, a biometric unlock gate, and
-read-only screens over the trader's **real** data. There are **no
-financial write workflows** in M2 (no trade creation/editing) and
-**no fake or demo data anywhere** — every screen renders real
-authenticated data or an honest empty state.
+The mobile app for ITG TraderOS. The shell was built in **Phase 21
+M2** (secure sign-in, a biometric unlock gate, read-only screens);
+**Phase 25 activated the write workflows** — trades (add / close /
+correct / cancel), trade reviews, screenshots, goals, risk rules &
+trading plan, weekly review, backtesting and notifications — all
+through the `/api/mobile/*` endpoints from Phases 21 M1/M2, all over
+the trader's **real** data. There is **no fake or demo data
+anywhere** — every screen renders real authenticated data or an
+honest empty state, and every number shown is a stored value or a
+server-computed aggregate (never calculated in the app).
 
 Stack: Expo SDK 58 · React Native 0.88 · React 19 · TypeScript ·
 expo-router · @supabase/supabase-js · expo-secure-store ·
-expo-local-authentication.
+expo-local-authentication · expo-image-picker (Phase 25, for
+screenshot attachment — the only dependency Phase 25 added).
 
 ## Setup
 
@@ -64,12 +69,27 @@ placeholder values only.
   mobile-first signup would otherwise hit.
 - **Aggregates:** `GET /api/mobile/summary?range=week|month` —
   the web report engine's `ReportSummary`, computed server-side.
+- **Writes (Phase 25)** go through `src/api.ts`, one helper per
+  endpoint: trades (create / correct / cancel), trade review,
+  screenshot upload (multipart, field `file`) + delete, goals
+  (create / progress / status), risk rules + trading plan (PUT),
+  weekly review, backtesting, notification mark-read. Bodies are
+  exactly the web schema fields (camelCase) — **never an
+  identity field**: identity comes from the Bearer token, and
+  the API rejects `user_id`/`profile_id`/`userId` bodies with a
+  400. Server error messages are thrown verbatim and shown
+  unchanged in the forms. The full screen → endpoint → fields →
+  response contract table is in `docs/phase-25.md` §2.
 - **Everything else is a direct Supabase read under RLS** with
   the signed-in client: `trades`, `psychology_records`,
-  `lessons`, `trade_screenshots` (count only in M2),
-  `strategies`/`setups` (names), `goals`, `goal_progress`,
+  `lessons`, `trade_screenshots` (full rows; images displayed
+  via `createSignedUrl(path, 3600)` from the user's client —
+  the same mechanism as the web trade page; the bucket stays
+  private), `strategies`/`setups` (names + form pickers),
+  `goals`, `goal_progress`, `risk_rules`, `trading_plans`,
+  `weekly_reviews`, `daily_activity` (backtesting pre-fill),
   `profiles`, `user_levels` (+ `levels` name), `xp_transactions`,
-  `notifications` (unread count), `ai_insights`.
+  `notifications`, `ai_insights`.
 - **No client-side financial calculations.** P&L, ROI, R
   multiples, win rates and profit factors are all stored values
   or server-computed aggregates. `@itg/calc` is therefore NOT
@@ -103,31 +123,67 @@ placeholder values only.
   screen. Devices without biometrics skip the gate entirely
   and fall back to the session.
 
-## Screens (all read-only, real data)
+## Screens
 
-| Route | Data |
+| Route | Data / actions |
 | --- | --- |
 | `(auth)/login` | Supabase password sign-in → session bootstrap → biometric prompt |
 | `lock` | Biometric unlock gate |
-| `(app)` Dashboard | Week summary (API) + stored level/XP + unread notifications |
-| `(app)/trades` | Own trades list (RLS, newest first, cap 100) |
-| `(app)/trade/[id]` | Trade detail: stored fields/metrics, psychology, lessons |
+| `(app)` Dashboard | Week summary (API) + stored level/XP + notifications link with live unread count |
+| `(app)/trades` | Own trades list (RLS, newest first, cap 100) + **Add trade** |
+| `(app)/trade/new` | **Add Trade** form (quick-trade fields; server computes P&L/R/ROI) |
+| `(app)/trade/[id]` | Trade detail: stored fields/metrics, psychology, lessons, **actions (Review / Close / Correct / Cancel)** and the **screenshots manager** (signed-URL display, add via photo library, remove) |
+| `(app)/trade/[id]/close` | **Close trade** for an open trade (see the note below) |
+| `(app)/trade/[id]/correct` | **Correct trade** — full-form; saving creates a reversal, never overwrites |
+| `(app)/trade/[id]/review` | **Review** — journal + psychology full-form save (see the ⚠ warning below) |
 | `(app)/analytics` | Week/month summary: win rate, profit factor, avg R, strategy/session breakdowns, best/worst |
-| `(app)/goals` | Goals + latest recorded progress (honest "no recorded progress" state) |
-| `(app)/coach` | Latest stored `ai_insights` cards + note that the Interactive AI Coach arrives next phase — no chat UI, no generated replies |
-| `(app)/profile` | Own profile row, avatar, level, sign out |
+| `(app)/goals` | Goals + latest recorded progress + **New goal** |
+| `(app)/goal/new` | **Create goal** |
+| `(app)/goal/[id]` | Goal detail: **record progress**, **change status**, progress history |
+| `(app)/risk` | **Risk rules editor** + **trading plan editor** (full-form PUT saves, pre-filled from RLS) |
+| `(app)/coach` | Latest stored `ai_insights` cards + **weekly review form** + **backtesting log** (XP figures are the endpoints' responses) |
+| `(app)/notifications` | Notification list with unread state; tap to mark one read, or mark all read |
+| `(app)/profile` | Own profile row, avatar, level, links to Risk & plan / Notifications, sign out |
 
-## What M2 deliberately excludes
+> **Why "Close trade" creates a reversal:** TraderOS never updates
+> a trade's financial fields in place — the web app closes an open
+> trade the same way. Closing submits the trade's values plus the
+> exit price/time to the correct endpoint: the core creates the
+> closed trade and marks the original open trade `reversed`, audit
+> trail intact. The close screen explains this before submitting.
 
-- Any write workflow (add/edit/review/correct trades, goals,
-  risk, uploads) — the endpoints exist (M1/M2 backend) but the
-  shell does not call them yet; that is M3 in the spec's
-  phasing.
-- Interactive AI Coach / chat (next major phase).
-- Offline drafts and push notifications (M4).
-- EAS builds and store submission (M5).
+> ⚠ **Review round-trip warning (Phase 24 finding):** the review
+> save is a FULL-FORM save — it overwrites the trade's strategy,
+> setup, market condition, reason, session and notes, and the
+> psychology record, with exactly what is sent. The review screen
+> therefore pre-fills **every** field from the current trade +
+> psychology reads and always sends the complete payload:
+> `strategyId` round-trips the trade's current strategy and
+> `setupName` round-trips the current setup's name (the core
+> resolves the name back to the setup row). Sending
+> `strategyId: null` unintentionally **clears** the trade's
+> strategy — this already happened once during Phase 23
+> verification. Never build a review payload from partial state.
+
+## What is still excluded / known gaps
+
+- **Standalone discipline-event logging** — no endpoint exists
+  (`logDisciplineEvent` is an internal engine with no API
+  surface). Discipline is covered via the review's discipline
+  rating, goals, and the summary's discipline %. See
+  `docs/phase-25.md` §3.
+- **Editing a goal's title/target/dates** — the API's goal PATCH
+  accepts `{ status }` only; the goal screen offers status
+  changes and says so plainly.
+- **Profile editing / avatar upload from the app** — endpoints
+  exist (M1) but were outside Phase 25's workflow list.
+- Interactive AI Coach / chat (Phase 26).
+- Offline drafts and push notifications (M4 in the spec).
+- EAS builds and store submission (M5 in the spec).
 
 ## Verification performed (sandbox)
+
+M2 (2026-10-30):
 
 - `npm install --workspaces=false` — standalone install OK;
   root `package.json`/`package-lock.json` byte-identical after.
@@ -139,3 +195,16 @@ placeholder values only.
 - Not verified here: running on a physical device / emulator
   (no device in the sandbox) — first device run is via Expo Go
   with a real `.env`.
+
+Phase 25 (2026-10-30):
+
+- `expo-image-picker` installed via `npm install
+  --workspaces=false` (SDK 58 line, `~58.0.10`, plus its
+  `expo-image-loader` dependency) — the only new dependency.
+- `npx tsc --noEmit` — clean.
+- `npx expo export --platform android` — succeeded.
+- Root `npm test` — 704/704 passing, unchanged (no web file
+  touched; the root suite baseline was 704 before Phase 25).
+- Payload audit — every request body diffed against the
+  handler allow-lists (`apps/web/lib/api/handlers/*.ts`); see
+  `docs/phase-25.md` §2.

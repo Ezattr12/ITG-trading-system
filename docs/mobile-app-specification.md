@@ -216,3 +216,26 @@ sandbox by typecheck (`tsc --noEmit` clean) and a
 successful `expo export` Android bundle; device runs go
 through Expo Go with a local `.env` (see
 `apps/mobile/README.md`). Write workflows remain M3.
+
+**M3 status (2026-10-30, Phase 25): DONE** — the write
+workflows are activated in `apps/mobile` against the
+M1/M2 endpoints, with no backend changes: add trade,
+close trade (via the correct-by-reversal mechanics the
+product uses everywhere — there is no in-place update),
+correct trade, full-form trade review (with the Phase 24
+strategy/setup round-trip requirement implemented),
+screenshots (picker upload, signed-URL display, delete),
+goals (create, progress, status — field editing has no
+endpoint and remains a documented gap), risk rules +
+trading plan editors, weekly review, backtesting log,
+and notifications (list + mark-read wired to the
+Dashboard unread count). One new dependency:
+`expo-image-picker`. Standalone discipline-event logging
+remains impossible — no endpoint exists; see
+`docs/phase-25.md` §3 for the precise gaps. Verified in
+the sandbox: `tsc --noEmit` clean, `expo export` Android
+bundle succeeds, root web suite unchanged at 704/704.
+Device verification remains Ezat-side (Expo Go + local
+`.env`), as in M2. Next: M4 (offline drafts + push) per
+§10, and the Interactive AI Coach is Phase 26 on the
+roadmap (separate from this spec's phasing).
