@@ -11,19 +11,24 @@ import { COACH_MIN_TRADES } from "@/lib/coach/types";
 import type { AiInsightRow } from "@/lib/coach/types";
 import { RefreshCoachForm } from "@/components/coach/refresh-coach-form";
 import { BacktestingForm } from "@/components/coach/backtesting-form";
+import { CoachChat } from "@/components/coach/coach-chat";
 
 export const metadata = { title: "AI Coach — ITG TraderOS" };
 
 /**
- * AI Coach (Phase 9, spec §28, §39).
+ * AI Coach (Phase 9, spec §28, §39; interactive chat Phase 22).
  *
- * Deterministic, data-grounded coach — no external LLM is
- * called and none is claimed. The page shows this week's
- * analysis computed live from the trader's real trades (with
- * an honest "not enough trades yet" state when there are fewer
- * than 3 closed trades), the stored insight history, a refresh
- * action that stores only new or changed insights, and a
- * backtesting log that wires the +15 XP trigger.
+ * Deterministic, data-grounded coach. The page shows this
+ * week's analysis computed live from the trader's real trades
+ * (with an honest "not enough trades yet" state when there are
+ * fewer than 3 closed trades), the stored insight history, a
+ * refresh action that stores only new or changed insights, a
+ * backtesting log that wires the +15 XP trigger, and the
+ * interactive chat (lib/coach/chat.ts): questions answered
+ * from the same engine's evidence, optionally narrated by a
+ * connected LLM under the number guard — each answer badges
+ * which of the two produced it, so a model is never claimed
+ * when none was involved.
  */
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -136,8 +141,9 @@ export default async function CoachPage() {
         <p className="page-lede">
           Weekly analysis of your own trading data — performance, mistakes, strategies, psychology,
           risk, goals and discipline. Every insight cites the real numbers it was computed from.
-          No external AI service is connected yet: this coach is a deterministic analysis of your
-          stored trades, not a language model.
+          Ask the coach a question below: answers are computed from your stored trades by the
+          deterministic coach engine, and each answer shows whether it was narrated by a
+          connected AI model or produced by that built-in analysis.
         </p>
 
         {/* AI intelligence hero (Phase 18): the week's analysis
@@ -179,6 +185,21 @@ export default async function CoachPage() {
             </div>
           )}
           <RefreshCoachForm defaultWeekStart={monday} />
+        </section>
+
+        {/* Interactive coach (Phase 22): question answering over
+            the same deterministic engine + report evidence. The
+            chat is read-only and every answer labels its facts,
+            inferences and recommendations, plus how it was
+            produced (AI-narrated vs deterministic analysis). */}
+        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Ask the coach">
+          <h2 className="section-title flex items-center gap-2">
+            <span aria-hidden="true" className="motion-ai-dot inline-block h-2 w-2 shrink-0 rounded-full bg-ai" />
+            Ask the coach
+          </h2>
+          <div className="mt-4">
+            <CoachChat />
+          </div>
         </section>
 
         <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Backtesting">

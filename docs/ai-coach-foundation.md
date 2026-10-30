@@ -104,7 +104,21 @@ certificates (eligibility state).
 4. Only then evaluate an LLM narration layer behind a
    config flag, default off, with snapshot-diff checks in
    tests (narration may not introduce numbers absent from
-   the snapshot). **Future — not started.**
+   the snapshot). **Done in Phase 22 (2026-10-30)** — the
+   narration layer exists (`lib/coach/llm.ts`), is off by
+   default (no provider key configured = deterministic
+   mode, stated per-answer), and the snapshot-diff check
+   is implemented as a hard number guard: every figure in
+   a narration must be a formatting variant of a number in
+   the deterministic answer, or the narration is discarded
+   whole. Its first surface is the Interactive Coach chat
+   (`lib/coach/chat.ts`, `POST /api/coach/chat`), which
+   answers questions over the same engine + report
+   evidence; stored weekly-insight narration can adopt the
+   same layer later. See `docs/phase-22.md`. Enabling live
+   narration needs one provider API key from Ezat (Secure
+   Vault → Vercel env) — until then the coach runs, and
+   labels itself, deterministic.
 
 ## 5. Verification
 
