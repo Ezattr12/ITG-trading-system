@@ -1,8 +1,11 @@
 # ITG TraderOS mobile app — architecture & specification (Stage 6)
 
-Status: specification only. No mobile implementation is
-authorized yet; this document is written to be
-implementation-ready once Ezat approves it. The mobile app
+Status: IMPLEMENTED — M1 + M2 (Phase 21), M3 write
+activation (Phase 25) and the Interactive AI Coach
+(Phase 26) are DONE; per-milestone status lines appear at
+the end of each section below, and `docs/phase-29.md`
+carries the final audit. This document remains the
+architecture record the implementation follows. The mobile app
 is a **client of the existing system** — same Supabase
 backend, same auth, same RLS, same business logic. It must
 never become a second implementation of financial

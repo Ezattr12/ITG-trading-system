@@ -18,25 +18,27 @@ levels, certificates, AI coaching, reports, notifications, administration.
 > trades. No autonomous order placement, no fund transfers, no withdrawals.
 > Future exchange integration is read-only initially.
 
-## Status (Phase 14 — Production Verification)
+## Status (Phase 29 — Final Audit, 2026-10-30)
 
 **Live: https://itg-traderos.vercel.app** — deployment READY
-(`dpl_GPjGVbmcqRuJg3iUFfZt6hBte5Q4`, production). Migrations 0001–0018
-applied to the live Supabase project (32 tables, RLS 32/32); env vars
-set; live checks pass (`/` 200, `/login` 200, `/dashboard` 307 →
-`/login`, all security headers). Production config seed applied and
+(`dpl_F9GjGimc2hGR4zV2ogKb8keztcpy`, production, Phase 27).
+Migrations 0001–0018 applied to the live Supabase project (32
+tables, RLS 32/32 — re-verified live in Phase 27: 72 policies,
+89 indexes, zero drift). Production config seed applied and
 verified (9 strategies, 4 levels, 11 achievements, 8 motivation
-messages). **Not committed to GitHub** — push still fails 403 (App
-installation needs `ITG-trading-system` with Contents write); the
-deployment was built from a staging tree, see `docs/phase-13.md`.
-**Verdict: not yet fully verified for real users** — see
-`docs/phase-14.md`. Two critical bugs found live in Phase 14 are
-fixed (migration 0018: `TG_OP` case bug that blocked profile creation
-for every new trader; migration 0017 seed idempotency). Still open:
-signed-in app flows were not exercised live from a real browser
-(this test environment's network blocks the required requests —
-see `docs/phase-14.md`), PITR is off with no backups listed, and
-password-reset email delivery is unverified.
+messages). Committed to GitHub (`Ezattr12/ITG-trading-system`;
+the Phase 13/14 GitHub 403 blocker was closed 2026-10-27).
+Phases 15–29 shipped the app-shell/glass redesigns, the
+read-only MCP tool set, the interactive AI Coach (deterministic
+engine authoritative; LLM narration guarded, awaiting Ezat's API
+key), advanced trading intelligence, the five-kind report
+catalog, the mobile write API + Expo app (writes + coach), and
+production hardening — every phase deployed and
+production-verified on the test account. PITR remains OFF
+(Ezat's dashboard/billing decision — see `docs/phase-28.md`).
+The per-phase history below (Phases 1–14) is preserved as
+written at the time; see `docs/phase-15.md` … `docs/phase-29.md`
+for everything after.
 
 - ✅ Phase 1: scaffold, 10 migrations (29 tables, RLS), calc package, CI.
 - ✅ Phase 2: auth (login/register/forgot/reset/callback/logout), protected routes via middleware, 5-step onboarding, profile + avatar upload, dashboard empty state. Tested locally — see `docs/phase-2.md`.
@@ -52,7 +54,18 @@ password-reset email delivery is unverified.
 - ✅ Phase 12: Testing — full local suite green: Vitest **326/326** (296 before + 30 new: query-layer user-isolation tests for trades/analytics/goals via an in-memory fake Supabase client, certificate eligibility boundary tests, and a 6-test end-to-end workflow through the pure layers from raw trade prices to P&L, analytics, risk, report, coach insights, level score and certificate eligibility); Playwright **6/6** smoke tests running against the production build (landing, login/register forms, signed-out redirects, security headers); fixed two real bugs found while testing — certificate percentages were rounded before comparison (79.59% wrongly passed an 80% rule) and Vitest had no `@/` alias so two production query modules could not be loaded by any test. Live-database tests (signup/login, trade CRUD, uploads, live RLS matrix, restore drill) are explicitly pending for Phases 13/14 — nothing live was claimed. Tested locally — see `docs/phase-12.md`.
 - ✅ Phase 13: Production deployment — **live at https://itg-traderos.vercel.app** (Vercel project `itg-traderos`, deployment `dpl_GPjGVbmcqRuJg3iUFfZt6hBte5Q4`, READY). Migrations 0001–0016 applied to the live Supabase project via the Management API query endpoint (32 tables, RLS 32/32, 2 Storage buckets, 8 policies; migration 0016's redundant ALTER skipped — RLS was already on — buckets + policies applied in two parts, file untouched). Env vars set (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`). Live checks pass: `/` 200, `/login` 200, `/dashboard` 307 → `/login`, all six security headers. GitHub push still fails 403, so the deploy used the Vercel MCP file-upload route from a self-contained staging tree (`~/workspace/.itg-deploy-staging/`, vendored `@itg/calc`, pinned deps) — the repo and the deployment will drift until the GitHub route works. See `docs/phase-13.md`.
 - ⚠️ Phase 14: Production verification — live API-level verification passed (84/88 harness checks; the 4 failures are explained in `docs/phase-14.md`: Supabase email rate limits and a PostgREST 204 misread — the trade was confirmed still present). Production seed applied and verified (9 strategies, 4 levels, 11 achievements, 8 motivation messages). Two real bugs found live and fixed in the live DB: migration 0018 fixes a `TG_OP` case bug in the privilege guards that blocked profile creation for every new trader, and migration 0017's seed is now idempotent. Full 32-table live RLS matrix in `docs/production-verification.md`. **Verdict: not yet fully verified for real users** — signed-in app flows were not exercised live from a real browser (this test environment's network blocks the required requests), PITR is off with no backups listed, and password-reset email delivery is unverified. See `docs/phase-14.md`.
-- ⛔ **Still blocked:** GitHub commit (403 — App installation needs `ITG-trading-system` selected with Contents write).
+- ✅ Phases 15–19: app-shell, motion and glass design system, premium Profile/Dashboard/Add Trade/Analytics — see `docs/phase-19.md`.
+- ✅ 12-hour mandate (2026-10-29): avatar-upload fix, Stage 2 audit fixes, read-only MCP server (13 tools), AI Coach foundation + mobile specification — see `docs/12h-mandate-final-report-2026-10-29.md`.
+- ✅ Phase 20: Coach Engine behind a service layer + internal compute endpoint + MCP tool — see `docs/phase-20.md`.
+- ✅ Phase 21 (M1+M2): mobile write API on shared service cores, session bootstrap, Expo shell — see `docs/phase-21-m1.md`, `docs/phase-21-m2.md`.
+- ✅ Phase 22: Interactive AI Trading Coach (deterministic; guarded LLM narration ready, key pending) — see `docs/phase-22.md`.
+- ✅ Phase 23: Advanced Trading Intelligence — see `docs/phase-23.md`.
+- ✅ Phase 24: Advanced Reporting (five-kind catalog + PDFs) — see `docs/phase-24.md`.
+- ✅ Phase 25: Mobile Write Activation — see `docs/phase-25.md`.
+- ✅ Phase 26: Mobile AI Coach — see `docs/phase-26.md`.
+- ✅ Phase 27: Institutional Production Hardening — see `docs/phase-27.md`.
+- ✅ Phase 28: Backup & Disaster Recovery (PITR decision outstanding, Ezat-side) — see `docs/phase-28.md`.
+- ✅ Phase 29: Final Audit — see `docs/phase-29.md`.
 
 ## Stack
 
