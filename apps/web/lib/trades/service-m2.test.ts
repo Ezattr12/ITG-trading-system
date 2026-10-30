@@ -163,13 +163,19 @@ describe("uploadScreenshotCore", () => {
 
 describe("deleteScreenshotCore", () => {
   it("without an expected trade (the web path) the owner's row deletes by id alone", async () => {
-    const { user, tables, storageCalls } = setup();
+    const { user, admin, tables, storageCalls } = setup();
     const res = await deleteScreenshotCore(user.client, USER_A, SHOT);
     expect(res).toEqual({ ok: true, screenshotId: SHOT });
     expect(tables.trade_screenshots).toHaveLength(0);
     expect(storageCalls).toEqual([
       { op: "remove", bucket: "trade-screenshots", path: `${USER_A}/${OPEN_A}/1-a.png` },
     ]);
+    // Phase 27: the destructive delete writes an audit row,
+    // mirroring trade.screenshot_uploaded on the upload path.
+    const audit = admin.fake.insertsFor("audit_logs");
+    expect(
+      audit.some((r) => r.action === "trade.screenshot_deleted" && r.entity_id === SHOT),
+    ).toBe(true);
   });
 
   it("with a mismatched expected trade → not_found, nothing removed", async () => {

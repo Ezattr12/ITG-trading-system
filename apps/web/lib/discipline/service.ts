@@ -244,6 +244,15 @@ export async function recordGoalProgressCore(
     { onConflict: "goal_id,recorded_date" },
   );
   if (error) return fail("save_failed", "Could not record your progress. Please try again.");
+  // Phase 27: goal progress feeds measured-goal scoring — audit
+  // it like goal.created already is.
+  await writeAuditLog({
+    userId,
+    action: "goal.progress_recorded",
+    entityType: "goals",
+    entityId: goal.id,
+    details: { currentValue: parsed.data.currentValue },
+  });
   if (parsed.data.currentValue >= goal.target_value && goal.status === "active") {
     await createNotification({
       userId,
@@ -275,6 +284,15 @@ export async function updateGoalStatusCore(
     .update({ status: parsed.data.status })
     .eq("id", goal.id);
   if (error) return fail("save_failed", "Could not update your goal. Please try again.");
+  // Phase 27: a completion awards XP below — the status change
+  // itself belongs in the audit log like goal.created.
+  await writeAuditLog({
+    userId,
+    action: "goal.status_changed",
+    entityType: "goals",
+    entityId: goal.id,
+    details: { status: parsed.data.status },
+  });
   if (parsed.data.status === "completed") {
     await createNotification({
       userId,

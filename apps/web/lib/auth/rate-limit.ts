@@ -44,7 +44,13 @@ export function __clearRateLimitBuckets(): void {
   buckets.clear();
 }
 
-/** Auth attempts: 5 per 15 minutes per email + IP bucket. */
+/**
+ * Auth attempts: 5 per 15 minutes per email. (Phase 27 doc fix:
+ * the call sites in lib/auth/actions.ts key the bucket on the
+ * email address only — no IP component — so per-account
+ * throttling is what is actually enforced; Supabase Auth's own
+ * platform limits sit behind it.)
+ */
 export const AUTH_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
 /** Password-reset requests: 3 per hour per email. */
 export const RESET_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };

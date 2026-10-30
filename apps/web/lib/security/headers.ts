@@ -11,6 +11,11 @@
  *
  * Connect sources are the app itself plus Supabase (REST +
  * Realtime websocket). No other third-party origin is loaded.
+ *
+ * Phase 27 hardening: `object-src 'none'` — the app renders no
+ * <object>/<embed>/<applet> content anywhere (verified by a
+ * source scan), so plugin content is refused outright instead
+ * of falling back to `default-src 'self'`.
  */
 export interface SecurityHeader {
   key: string;
@@ -25,6 +30,7 @@ export function securityHeaders(): SecurityHeader[] {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",

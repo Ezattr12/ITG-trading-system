@@ -47,6 +47,12 @@ describe("securityHeaders", () => {
     expect(connectSrc).toContain("wss://*.supabase.co");
   });
 
+  it("refuses plugin content outright (Phase 27)", () => {
+    const csp = byKey.get("Content-Security-Policy") ?? "";
+    const objectSrc = (csp.split(";").find((d) => d.trim().startsWith("object-src")) ?? "").trim();
+    expect(objectSrc).toBe("object-src 'none'");
+  });
+
   it("disables camera, microphone and geolocation", () => {
     expect(byKey.get("Permissions-Policy")).toBe("camera=(), microphone=(), geolocation=()");
   });

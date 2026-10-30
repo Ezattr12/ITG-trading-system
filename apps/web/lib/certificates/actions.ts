@@ -5,6 +5,7 @@ import type { ActionResult } from "@/lib/auth/actions";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/auth/session";
+import { writeAuditLog } from "@/lib/auth/audit";
 import { createNotification } from "@/lib/discipline/actions";
 import {
   eligibilityToCriteriaMet,
@@ -86,6 +87,16 @@ export async function issueCertificateAction(
       issued_at: new Date().toISOString(),
     });
     if (!error) {
+      // Phase 27: issuance is a credential event — the admin
+      // revoke path already writes an audit row
+      // (admin.certificate_revoke); issuance now does too.
+      await writeAuditLog({
+        userId: user.id,
+        action: "certificate.issued",
+        entityType: "certificates",
+        entityId: certificateId,
+        details: { month: start },
+      });
       await createNotification({
         userId: user.id,
         type: "achievement",

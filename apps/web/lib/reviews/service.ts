@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { writeAuditLog } from "@/lib/auth/audit";
 import { awardXp, refreshGamification } from "@/lib/gamification/actions";
 import { createNotification } from "@/lib/discipline/service";
 import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
@@ -142,6 +143,18 @@ export async function saveWeeklyReviewCore(
       : `Weekly review for the week of ${bounds.start} saved.`,
     relatedEntityType: "weekly_review",
     relatedEntityId: reviewId,
+  });
+
+  // Phase 27: the save awards XP — it belongs in the audit log
+  // (the mobile API layer's api.mobile.* row is a transport
+  // record, not a substitute for the domain row the web path
+  // previously lacked entirely).
+  await writeAuditLog({
+    userId,
+    action: "review.weekly_saved",
+    entityType: "weekly_reviews",
+    entityId: reviewId,
+    details: { weekStart: bounds.start, xpAwarded: awarded ? WEEKLY_REVIEW_XP : 0 },
   });
 
   return {

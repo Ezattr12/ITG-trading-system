@@ -137,6 +137,11 @@ describe("recordGoalProgressCore", () => {
     const notes = admin.fake.insertsFor("notifications");
     expect(notes.some((r) => String(r.title).startsWith("Goal reached:"))).toBe(true);
     expect(tables.goal_progress ?? tables["goal_progress"]).toBeDefined();
+    // Phase 27: progress writes are audited like goal.created.
+    const audit = admin.fake.insertsFor("audit_logs");
+    expect(
+      audit.some((r) => r.action === "goal.progress_recorded" && r.entity_id === GOAL_ID),
+    ).toBe(true);
   });
 
   it("another trader's goal is not_found and receives no progress", async () => {
@@ -167,6 +172,16 @@ describe("updateGoalStatusCore", () => {
     expect(xp.some((r) => r.reason === "daily_goal" && r.user_id === USER)).toBe(true);
     const notes = admin.fake.insertsFor("notifications");
     expect(notes.some((r) => String(r.title).startsWith("Goal completed:"))).toBe(true);
+    // Phase 27: the XP-awarding status change is audited.
+    const audit = admin.fake.insertsFor("audit_logs");
+    expect(
+      audit.some(
+        (r) =>
+          r.action === "goal.status_changed" &&
+          r.entity_id === GOAL_ID &&
+          (r.details as { status?: string })?.status === "completed",
+      ),
+    ).toBe(true);
   });
 
   it("a non-completion status change has no XP side effect; cross-user is not_found", async () => {

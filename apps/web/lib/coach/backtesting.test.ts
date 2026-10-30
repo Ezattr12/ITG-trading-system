@@ -82,6 +82,15 @@ describe("logBacktestingCore", () => {
       ].sort(),
     );
     expect(xp.every((r) => r.amount === 15 && r.reason === "backtest_session")).toBe(true);
+    // Phase 27: the XP-bearing log writes a domain audit row.
+    const audit = admin.fake.insertsFor("audit_logs");
+    expect(
+      audit.some(
+        (r) =>
+          r.action === "backtesting.logged" &&
+          (r.details as { xpAwarded?: number })?.xpAwarded === 30,
+      ),
+    ).toBe(true);
   });
 
   it("repeat of the same total → sessionsAwarded 0, no new XP rows", async () => {

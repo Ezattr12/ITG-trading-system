@@ -52,6 +52,7 @@ test("login page is served with the security headers", async ({ page }) => {
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(headers["content-security-policy"]).toContain("object-src 'none'");
 });
 
 test("unknown routes send signed-out users to login, not a crash", async ({ page }) => {

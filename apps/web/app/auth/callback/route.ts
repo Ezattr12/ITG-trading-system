@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { safeNextPath } from "@/lib/auth/redirect";
 
 /**
  * Supabase Auth callback (Phase 2, spec §6).
@@ -7,11 +8,17 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
  * link for a session, then redirects to `next` (default /onboarding).
  * OAuth providers can be added here later — the route already
  * accepts any provider's code exchange.
+ *
+ * Phase 27: `next` is validated by safeNextPath — an
+ * unvalidated value concatenated onto the origin would allow
+ * open redirects (e.g. `next=@evil.com` parses with evil.com
+ * as the host). Anything that is not a plain in-app path
+ * falls back to /onboarding.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/onboarding";
+  const next = safeNextPath(requestUrl.searchParams.get("next"));
   const origin = requestUrl.origin;
 
   if (code) {

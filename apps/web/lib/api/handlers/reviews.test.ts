@@ -179,6 +179,13 @@ describe("handleSaveWeeklyReview", () => {
     expect(admin.fake.insertsFor("notifications").map((n) => n.type)).toContain("weekly_report");
     expect(a.fake.upsertsFor("weekly_reviews")).toHaveLength(1);
     expect(audits.filter((e) => e.operation === "weekly_review_saved")).toHaveLength(1);
+    // Phase 27: alongside the API-layer row, the core now writes
+    // the domain audit row (review.weekly_saved) — the web
+    // action path previously had no domain row at all.
+    const domainAudit = admin.fake.insertsFor("audit_logs");
+    expect(
+      domainAudit.some((r) => r.action === "review.weekly_saved" && r.entity_id === reviewId),
+    ).toBe(true);
   });
 
   it("re-saving the same week → xp_awarded 0 and still exactly one XP row (idempotent)", async () => {

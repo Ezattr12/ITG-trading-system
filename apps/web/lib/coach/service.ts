@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { writeAuditLog } from "@/lib/auth/audit";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
 import { awardXp, refreshGamification } from "@/lib/gamification/actions";
 import { deterministicUuid, XP_TABLE } from "@/lib/gamification/xp";
@@ -225,6 +226,20 @@ export async function logBacktestingCore(
     if (ok) awarded += 1;
   }
   await refreshGamification(supabase, userId);
+  // Phase 27: XP-bearing write — audit it like the other
+  // XP-bearing cores (trade.created, goal completion). The
+  // xp_transactions rows are the amount ledger; this row is
+  // the who/when record in the shared audit trail.
+  await writeAuditLog({
+    userId,
+    action: "backtesting.logged",
+    entityType: "daily_activity",
+    details: {
+      activityDate,
+      sessions,
+      xpAwarded: awarded * XP_TABLE.backtest_session,
+    },
+  });
   return {
     ok: true,
     activityDate,

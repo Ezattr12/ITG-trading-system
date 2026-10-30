@@ -728,5 +728,13 @@ export async function deleteScreenshotCore(
     .eq("id", screenshotId)
     .eq("user_id", userId);
   if (error) return fail("save_failed", "Could not delete the screenshot. Please try again.");
+  // Phase 27: a deletion is destructive — it gets the same
+  // audit row the upload already had (trade.screenshot_uploaded).
+  await writeAuditLog({
+    userId,
+    action: "trade.screenshot_deleted",
+    entityType: "trade_screenshots",
+    entityId: screenshotId,
+  });
   return { ok: true, screenshotId };
 }
