@@ -199,9 +199,19 @@ changed, and no secret is involved.
   affected account's row was re-read and is unchanged (still
   5/8 = 63% until the trader saves the three fields — now
   editable on both surfaces).
-- GitHub commit SHA: `<!-- TODO -->`
-- Android APK build status / run / download link: `<!-- TODO -->`
+- GitHub commit SHA: `cc05e90000669d99db1b1511f4eb8d8efce35b6b`
+  (this §6 completion is a follow-up docs commit on top of it;
+  the APK below was built from exactly that commit).
+- Android APK build status / run / download link: GitHub
+  Actions run `41220699746` — **success**. Artifact
+  `itg-traderos-android-test-apk` (APK 91,793,335 bytes),
+  verified in-sandbox: signature valid, production endpoints +
+  reassembled anon key embedded, the new badge/completion/
+  screenshot code present in the bundle, service-role key
+  absent everywhere. Delivered to Ezat as a chat attachment +
+  an expiring download link on 2026-10-31.
 - Physical-device verification (profile completion persistence,
   badge at exactly 100%, badge removal, screenshot
   upload/preview/view/replace, visual checklist):
-  `<!-- TODO — pending Ezat's device test; M2 stays OPEN until it passes -->`
+  **PENDING — Ezat's device test of the new APK; M2 stays OPEN
+  until it passes.**
