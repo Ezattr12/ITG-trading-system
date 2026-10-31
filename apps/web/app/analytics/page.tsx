@@ -1,7 +1,17 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { BarChart3 } from "lucide-react";
+import {
+  BarChart3,
+  CircleDollarSign,
+  Crosshair,
+  Hash,
+  Scale,
+  Sigma,
+  Target,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -27,7 +37,21 @@ import {
 } from "@/components/analytics/charts";
 import { IntelligenceSection } from "@/components/analytics/intelligence";
 import { getIntelligenceOverview } from "@/lib/intelligence/queries";
-import { Money, Pct, StatCard, type StatCardGlow } from "@/components/analytics/stat-card";
+import { Money, Pct } from "@/components/analytics/stat-card";
+
+/** KPI tone -> icon tile / status chip modifier (v2, the
+ * same maps as the Dashboard). The tone is always derived
+ * from the real value in the page body. */
+const KPI_ICON_TONE = {
+  profit: " itg2-kpi-icon-profit",
+  loss: " itg2-kpi-icon-loss",
+  neutral: "",
+} as const;
+const KPI_CHIP_TONE = {
+  profit: " itg2-chip-profit",
+  loss: " itg2-chip-loss",
+  neutral: "",
+} as const;
 
 export const metadata = { title: "Analytics — ITG TraderOS" };
 
@@ -52,8 +76,9 @@ const EMPTY_BUNDLE: AnalyticsBundle = {
 function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }) {
   if (rows.length === 0) {
     return (
-      <section className="itg-analytics-secondary-card">
-        <h2 className="section-title">{title}</h2>
+      <section className="itg2-card p-5 sm:p-6">
+        <p className="itg2-eyebrow">Breakdown</p>
+        <h2 className="itg2-section-title mt-1">{title}</h2>
         <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
       </section>
     );
@@ -64,36 +89,37 @@ function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }
   // the "best" group can still be a losing one.
   const best = rows.length > 1 ? rows.reduce((m, r) => (r.pnl > m.pnl ? r : m), rows[0]) : null;
   return (
-    <section className="itg-analytics-secondary-card">
-      <h2 className="section-title">{title}</h2>
+    <section className="itg2-card p-5 sm:p-6">
+      <p className="itg2-eyebrow">Breakdown</p>
+      <h2 className="itg2-section-title mt-1">{title}</h2>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="itg2-table itg2-table-fit">
           <thead>
-            <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="py-2 pr-4 font-medium">Group</th>
-              <th className="py-2 pr-4 font-medium">Trades</th>
-              <th className="py-2 pr-4 font-medium">P&amp;L</th>
-              <th className="py-2 pr-4 font-medium">Win rate</th>
-              <th className="py-2 pr-4 font-medium">Avg R</th>
-              <th className="py-2 font-medium">Avg win / loss</th>
+            <tr>
+              <th>Group</th>
+              <th>Trades</th>
+              <th>P&amp;L</th>
+              <th>Win rate</th>
+              <th>Avg R</th>
+              <th>Avg win / loss</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.key} className="border-t border-border transition-colors hover:bg-accent/40">
-                <td className="py-2.5 pr-4 font-medium">
+              <tr key={r.key}>
+                <td className="font-medium">
                   {r.label}
                   {best !== null && r.key === best.key ? (
-                    <span className="ml-2 whitespace-nowrap rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                    <span className="itg2-chip itg2-chip-profit ml-2 whitespace-nowrap">
                       Best P&amp;L
                     </span>
                   ) : null}
                 </td>
-                <td className="py-2.5 pr-4 tabular-nums">{r.trades}</td>
-                <td className="py-2.5 pr-4"><Money value={r.pnl} /></td>
-                <td className="py-2.5 pr-4"><Pct value={r.winRate} /></td>
-                <td className="py-2.5 pr-4">{r.avgR === null ? "—" : `${r.avgR.toFixed(2)}R`}</td>
-                <td className="py-2.5 tabular-nums">
+                <td className="tabular-nums">{r.trades}</td>
+                <td><Money value={r.pnl} /></td>
+                <td><Pct value={r.winRate} /></td>
+                <td>{r.avgR === null ? "—" : `${r.avgR.toFixed(2)}R`}</td>
+                <td className="tabular-nums">
                   {formatMoney(r.avgWin)} / {formatMoney(r.avgLoss)}
                 </td>
               </tr>
@@ -134,23 +160,22 @@ export default async function AnalyticsPage({
   const rDist = rDistribution(bundle.trades);
   const psych = psychologySummary(bundle.trades);
   const hasTrades = bundle.trades.length > 0;
-  // Value-driven glows (Phase 18): the P&L and profit-factor
-  // cards follow their real sign; max drawdown is a risk
-  // figure, so it carries the red risk glow when it exists.
-  const totalPnlGlow: StatCardGlow | undefined =
+  // Value-driven KPI tones (v2): the same conditions that
+  // drove the Phase 18 card glows — the P&L and profit-
+  // factor cards follow their real sign; max drawdown is a
+  // risk figure, so it carries the loss tone when it exists.
+  const totalPnlTone: keyof typeof KPI_ICON_TONE =
     !hasTrades || summary.totalPnl === 0
-      ? undefined
+      ? "neutral"
       : summary.totalPnl > 0
-        ? "emerald"
-        : "danger";
-  const profitFactorGlow: StatCardGlow | undefined =
-    summary.profitFactor === null
-      ? undefined
+        ? "profit"
+        : "loss";
+  const profitFactorTone: keyof typeof KPI_ICON_TONE =
+    summary.profitFactor === null || summary.profitFactor === 1
+      ? "neutral"
       : summary.profitFactor > 1
-        ? "emerald"
-        : summary.profitFactor < 1
-          ? "danger"
-          : undefined;
+        ? "profit"
+        : "loss";
 
   // Best / worst trade (Phase 19): a tiny UI adapter over the
   // trades already loaded for this page — the highest and
@@ -176,27 +201,87 @@ export default async function AnalyticsPage({
 
   return (
     <AppShell email={user.email}>
-      <div className="relative">
-        <div className="itg-analytics-grid" aria-hidden="true">
-          <div className="itg-analytics-grid-inner" />
+      <div className="itg2-card itg2-card-flat motion-reveal flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6">
+        <div>
+          <p className="itg2-eyebrow">Performance</p>
+          <h1 className="itg2-page-title mt-1">Analytics</h1>
+          <p className="mt-2 max-w-[720px] text-sm leading-relaxed text-muted-foreground">
+            {hasTrades
+              ? `${summary.tradeCount} closed trades. All figures are calculated from your real trades.`
+              : "No closed trades yet — your analytics will appear here once you close trades."}
+          </p>
         </div>
-        <div className="relative z-[1]">
-        <h1 className="itg-analytics-title">Analytics</h1>
-        <p className="itg-analytics-description">
-          {hasTrades
-            ? `${summary.tradeCount} closed trades. All figures are calculated from your real trades.`
-            : "No closed trades yet — your analytics will appear here once you close trades."}
-        </p>
+      </div>
 
-        <section className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" aria-label="Performance summary">
-          <StatCard label="Total P&L" glow={totalPnlGlow} value={<Money value={hasTrades ? summary.totalPnl : null} />} />
-          <StatCard label="Win rate / loss rate" value={<><Pct value={summary.winRate} /> / <Pct value={summary.lossRate} /></>} />
-          <StatCard label="Average win / loss" value={<>{formatMoney(summary.avgWin)} / {formatMoney(summary.avgLoss)}</>} />
-          <StatCard label="Profit factor" glow={profitFactorGlow} value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} hint={summary.profitFactor === null && hasTrades ? "No losing trades yet — the factor is unbounded." : undefined} />
-          <StatCard label="Expectancy (per trade)" value={<Money value={summary.expectancy} />} />
-          <StatCard label="Max drawdown" glow={hasTrades ? "danger" : undefined} value={<Money value={hasTrades ? summary.maxDrawdown : null} />} />
-          <StatCard label="Trade count" value={hasTrades ? summary.tradeCount : "—"} />
-          <StatCard label="Average R" value={summary.avgR === null ? "—" : `${summary.avgR.toFixed(2)}R`} />
+        <section className="motion-reveal motion-reveal-1 mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-4" aria-label="Performance summary">
+          <article className="itg2-card itg2-kpi">
+            <span className={`itg2-kpi-icon${KPI_ICON_TONE[totalPnlTone]}`}>
+              <CircleDollarSign className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Total P&amp;L</h2>
+            <p className="itg2-kpi-value"><Money value={hasTrades ? summary.totalPnl : null} /></p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className="itg2-kpi-icon">
+              <Target className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Win rate / loss rate</h2>
+            <p className="itg2-kpi-value"><Pct value={summary.winRate} /> / <Pct value={summary.lossRate} /></p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className="itg2-kpi-icon">
+              <Scale className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Average win / loss</h2>
+            <p className="itg2-kpi-value">{formatMoney(summary.avgWin)} / {formatMoney(summary.avgLoss)}</p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className={`itg2-kpi-icon${KPI_ICON_TONE[profitFactorTone]}`}>
+              <TrendingUp className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Profit factor</h2>
+            <p className="itg2-kpi-value">{summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)}</p>
+            {summary.profitFactor === null ? (
+              hasTrades ? (
+                <p className="itg2-kpi-hint">No losing trades yet — the factor is unbounded.</p>
+              ) : null
+            ) : (
+              <p className="itg2-kpi-hint">Gross profit ÷ gross loss.</p>
+            )}
+            {summary.profitFactor !== null && summary.profitFactor !== 1 ? (
+              <div className="mt-3">
+                <span className={`itg2-chip ${KPI_CHIP_TONE[profitFactorTone]}`}>{summary.profitFactor > 1 ? "Above break-even" : "Below break-even"}</span>
+              </div>
+            ) : null}
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className="itg2-kpi-icon">
+              <Crosshair className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Expectancy (per trade)</h2>
+            <p className="itg2-kpi-value"><Money value={summary.expectancy} /></p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className={`itg2-kpi-icon${KPI_ICON_TONE[hasTrades ? "loss" : "neutral"]}`}>
+              <TrendingDown className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Max drawdown</h2>
+            <p className="itg2-kpi-value"><Money value={hasTrades ? summary.maxDrawdown : null} /></p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className="itg2-kpi-icon">
+              <Hash className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Trade count</h2>
+            <p className="itg2-kpi-value">{hasTrades ? summary.tradeCount : "—"}</p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <span className="itg2-kpi-icon">
+              <Sigma className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 className="itg2-kpi-label mt-3">Average R</h2>
+            <p className="itg2-kpi-value">{summary.avgR === null ? "—" : `${summary.avgR.toFixed(2)}R`}</p>
+          </article>
         </section>
 
         {/* Performance hero (Phase 18 hero, Phase 19 glass):
@@ -209,34 +294,34 @@ export default async function AnalyticsPage({
             has no time-range control: the existing day/week/
             month control belongs to P&L by period below, and
             the equity curve is the full history. */}
-        <section className="itg-analytics-performance" aria-label="Equity curve">
-          <div className="itg-analytics-performance-header">
+        <section className="itg2-card-elevated motion-reveal motion-reveal-2 mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Equity curve">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div>
-              <p className="eyebrow text-xs font-semibold uppercase tracking-widest">Performance</p>
-              <h2 className="section-title mt-1">Equity curve</h2>
-              <p className={`itg-analytics-performance-value${heroPnlClass}`}>
+              <p className="itg2-eyebrow">Performance</p>
+              <h2 className="itg2-section-title mt-1">Equity curve</h2>
+              <p className={`itg2-hero-value${heroPnlClass} mt-2`}>
                 <Money value={hasTrades ? summary.totalPnl : null} />
               </p>
             </div>
           </div>
           {hasTrades ? (
             <>
-              <div className="itg-analytics-chart"><EquityChart data={equity} /></div>
+              <div className="itg2-chart-scope mt-4"><EquityChart data={equity} /></div>
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="itg2-table itg2-table-fit">
                   <thead>
-                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="py-2 pr-4 font-medium">Date closed</th>
-                      <th className="py-2 pr-4 font-medium">Cumulative P&amp;L</th>
-                      <th className="py-2 font-medium">Drawdown</th>
+                    <tr>
+                      <th>Date closed</th>
+                      <th>Cumulative P&amp;L</th>
+                      <th>Drawdown</th>
                     </tr>
                   </thead>
                   <tbody>
                     {equity.map((p) => (
-                      <tr key={`${p.date}-${p.trades}`} className="border-t border-border transition-colors hover:bg-accent/40">
-                        <td className="py-2.5 pr-4">{p.date}</td>
-                        <td className="py-2.5 pr-4"><Money value={p.equity} /></td>
-                        <td className="py-2.5"><Money value={p.drawdown} /></td>
+                      <tr key={`${p.date}-${p.trades}`}>
+                        <td>{p.date}</td>
+                        <td><Money value={p.equity} /></td>
+                        <td><Money value={p.drawdown} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -244,26 +329,27 @@ export default async function AnalyticsPage({
               </div>
             </>
           ) : (
-            <div className="itg-analytics-empty">
-              <span className="itg-analytics-empty-icon" aria-hidden="true">
-                <BarChart3 className="h-7 w-7" />
+            <div className="mt-6 px-2 py-8 text-center sm:py-10">
+              <span className="itg2-kpi-icon mx-auto" aria-hidden="true">
+                <BarChart3 className="h-5 w-5" />
               </span>
-              <h3 className="itg-analytics-empty-title">No closed trades yet</h3>
-              <p className="itg-analytics-empty-text">
+              <h3 className="itg2-section-title mt-4">No closed trades yet</h3>
+              <p className="mx-auto mt-2 max-w-[460px] text-sm leading-relaxed text-muted-foreground">
                 Your equity curve and analytics will appear here once you close your first trade.
               </p>
             </div>
           )}
         </section>
 
-        <div className="itg-analytics-secondary">
+        <div className="motion-reveal motion-reveal-3 mt-5 grid gap-[18px] min-[801px]:grid-cols-2">
           {/* Win / loss ring (Phase 19): the ring fill comes
               from the real computed win rate via --win-rate
               (never hardcoded); the stat rows beside it are
               the real wins, losses, rates and best/worst
               trades. */}
-          <section className="itg-analytics-secondary-card" aria-label="Win and loss">
-            <h2 className="section-title">Win / loss</h2>
+          <section className="itg2-card p-5 sm:p-6" aria-label="Win and loss">
+            <p className="itg2-eyebrow">Performance</p>
+            <h2 className="itg2-section-title mt-1">Win / loss</h2>
             {hasTrades ? (
               <div className="itg-win-loss">
                 <div
@@ -288,10 +374,11 @@ export default async function AnalyticsPage({
             )}
           </section>
 
-          <section className="itg-analytics-secondary-card" aria-label="Drawdown">
-            <h2 className="section-title">Drawdown</h2>
+          <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown">
+            <p className="itg2-eyebrow">Risk</p>
+            <h2 className="itg2-section-title mt-1">Drawdown</h2>
             {hasTrades ? (
-              <div className="mt-4">
+              <div className="itg2-chart-pool mt-4">
                 <DrawdownChart data={equity.map((p) => ({ date: p.date, drawdown: p.drawdown }))} />
                 <p className="mt-2 text-xs text-muted-foreground">
                   Fall from the running peak in cumulative P&amp;L. Maximum drawdown: {formatMoney(summary.maxDrawdown)}.
@@ -302,9 +389,10 @@ export default async function AnalyticsPage({
             )}
           </section>
 
-          <section className="itg-analytics-secondary-card" aria-label="Profit and loss by period">
-            <h2 className="section-title">P&amp;L by period</h2>
-            <div className="itg-range mt-3" role="tablist" aria-label="Period">
+          <section className="itg2-card p-5 sm:p-6" aria-label="Profit and loss by period">
+            <p className="itg2-eyebrow">Performance</p>
+            <h2 className="itg2-section-title mt-1">P&amp;L by period</h2>
+            <div className="itg2-range mt-3" role="tablist" aria-label="Period">
               {(["day", "week", "month"] as const).map((p) => (
                 <Link
                   key={p}
@@ -317,24 +405,24 @@ export default async function AnalyticsPage({
             </div>
             {hasTrades ? (
               <>
-                <div className="mt-4"><PeriodPnlChart data={periods} /></div>
+                <div className="itg2-chart-pool mt-4"><PeriodPnlChart data={periods} /></div>
                 <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="itg2-table itg2-table-fit">
                     <thead>
-                      <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="py-2 pr-4 font-medium">Period</th>
-                        <th className="py-2 pr-4 font-medium">P&amp;L</th>
-                        <th className="py-2 pr-4 font-medium">Trades</th>
-                        <th className="py-2 font-medium">Wins</th>
+                      <tr>
+                        <th>Period</th>
+                        <th>P&amp;L</th>
+                        <th>Trades</th>
+                        <th>Wins</th>
                       </tr>
                     </thead>
                     <tbody>
                       {periods.map((p) => (
-                        <tr key={p.label} className="border-t border-border transition-colors hover:bg-accent/40">
-                          <td className="py-2.5 pr-4">{p.label}</td>
-                          <td className="py-2.5 pr-4"><Money value={p.pnl} /></td>
-                          <td className="py-2.5 pr-4 tabular-nums">{p.trades}</td>
-                          <td className="py-2.5 tabular-nums">{p.wins}</td>
+                        <tr key={p.label}>
+                          <td>{p.label}</td>
+                          <td><Money value={p.pnl} /></td>
+                          <td className="tabular-nums">{p.trades}</td>
+                          <td className="tabular-nums">{p.wins}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -346,11 +434,12 @@ export default async function AnalyticsPage({
             )}
           </section>
 
-          <section className="itg-analytics-secondary-card" aria-label="R distribution">
-            <h2 className="section-title">R distribution</h2>
+          <section className="itg2-card p-5 sm:p-6" aria-label="R distribution">
+            <p className="itg2-eyebrow">Risk</p>
+            <h2 className="itg2-section-title mt-1">R distribution</h2>
             {hasTrades ? (
               <>
-                <div className="mt-4">
+                <div className="itg2-chart-pool mt-4">
                   <RDistributionChart data={rDist.buckets} />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -359,18 +448,18 @@ export default async function AnalyticsPage({
                     : "Every closed trade has an R multiple."}
                 </p>
                 <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="itg2-table itg2-table-fit">
                     <thead>
-                      <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="py-2 pr-4 font-medium">R bucket</th>
-                        <th className="py-2 font-medium">Trades</th>
+                      <tr>
+                        <th>R bucket</th>
+                        <th>Trades</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rDist.buckets.map((b) => (
-                        <tr key={b.label} className="border-t border-border transition-colors hover:bg-accent/40">
-                          <td className="py-2.5 pr-4">{b.label}</td>
-                          <td className="py-2.5 tabular-nums">{b.count}</td>
+                        <tr key={b.label}>
+                          <td>{b.label}</td>
+                          <td className="tabular-nums">{b.count}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -386,30 +475,31 @@ export default async function AnalyticsPage({
           <BreakdownTable title="By session" rows={breakdownBySession(bundle.trades)} />
           <BreakdownTable title="By direction" rows={breakdownByDirection(bundle.trades)} />
 
-          <section className="itg-analytics-secondary-card" aria-label="Psychology">
-            <h2 className="section-title">Psychology vs performance</h2>
+          <section className="itg2-card p-5 sm:p-6" aria-label="Psychology">
+            <p className="itg2-eyebrow">Psychology</p>
+            <h2 className="itg2-section-title mt-1">Psychology vs performance</h2>
             {psych.byEmotion.length === 0 ? (
               <p className="mt-2 text-muted-foreground">
                 No psychology records yet — add confidence, emotion and discipline in a trade&apos;s advanced review.
               </p>
             ) : (
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="itg2-table itg2-table-fit">
                   <thead>
-                    <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="py-2 pr-4 font-medium">Emotion</th>
-                      <th className="py-2 pr-4 font-medium">Trades</th>
-                      <th className="py-2 pr-4 font-medium">P&amp;L</th>
-                      <th className="py-2 font-medium">Win rate</th>
+                    <tr>
+                      <th>Emotion</th>
+                      <th>Trades</th>
+                      <th>P&amp;L</th>
+                      <th>Win rate</th>
                     </tr>
                   </thead>
                   <tbody>
                     {psych.byEmotion.map((row) => (
-                      <tr key={row.emotion} className="border-t border-border transition-colors hover:bg-accent/40">
-                        <td className="py-2.5 pr-4 font-medium capitalize">{row.emotion}</td>
-                        <td className="py-2.5 pr-4 tabular-nums">{row.trades}</td>
-                        <td className="py-2.5 pr-4"><Money value={row.pnl} /></td>
-                        <td className="py-2.5"><Pct value={row.winRate} /></td>
+                      <tr key={row.emotion}>
+                        <td className="font-medium capitalize">{row.emotion}</td>
+                        <td className="tabular-nums">{row.trades}</td>
+                        <td><Money value={row.pnl} /></td>
+                        <td><Pct value={row.winRate} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -424,8 +514,6 @@ export default async function AnalyticsPage({
         </div>
 
         {intelligence ? <IntelligenceSection data={intelligence} /> : null}
-        </div>
-      </div>
     </AppShell>
   );
 }

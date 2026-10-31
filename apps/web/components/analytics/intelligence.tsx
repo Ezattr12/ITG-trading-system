@@ -31,22 +31,22 @@ function GroupTable({ rows }: { rows: GroupStat[] }) {
   }
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full text-left text-sm">
+      <table className="itg2-table itg2-table-fit">
         <thead>
-          <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="py-2 pr-4 font-medium">Group</th>
-            <th className="py-2 pr-4 font-medium">Trades</th>
-            <th className="py-2 pr-4 font-medium">P&amp;L</th>
-            <th className="py-2 font-medium">Win rate</th>
+          <tr>
+            <th>Group</th>
+            <th>Trades</th>
+            <th>P&amp;L</th>
+            <th>Win rate</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-t border-border transition-colors hover:bg-accent/40">
-              <td className="py-2.5 pr-4 font-medium capitalize">{r.label}</td>
-              <td className="py-2.5 pr-4 tabular-nums">{r.trades}</td>
-              <td className="py-2.5 pr-4"><Money value={r.totalPnl} /></td>
-              <td className="py-2.5"><Pct value={r.winRate} /></td>
+            <tr key={r.key}>
+              <td className="font-medium capitalize">{r.label}</td>
+              <td className="tabular-nums">{r.trades}</td>
+              <td><Money value={r.totalPnl} /></td>
+              <td><Pct value={r.winRate} /></td>
             </tr>
           ))}
         </tbody>
@@ -70,8 +70,9 @@ function SplitBlock({ title, split }: { title: string; split: DisciplineSplit })
 function DigestCard({ digest }: { digest: PeriodDigest }) {
   const label = digest.kind === "weekly" ? "This week" : "This month";
   return (
-    <section className="itg-analytics-secondary-card" aria-label={`${label} review digest`}>
-      <h2 className="section-title">{label} — review digest</h2>
+    <section className="itg2-card p-5 sm:p-6" aria-label={`${label} review digest`}>
+      <p className="itg2-eyebrow">Performance</p>
+      <h2 className="itg2-section-title mt-1">{label} — review digest</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         {digest.periodStart} to {digest.periodEnd}
       </p>
@@ -117,16 +118,18 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
   const { drawdown, risk, psychology, discipline, recurring, conditions, plan } = data;
   return (
     <div className="mt-10">
-      <h2 className="itg-analytics-title text-2xl">Advanced intelligence</h2>
-      <p className="itg-analytics-description">
+      <p className="itg2-eyebrow">Intelligence</p>
+      <h2 className="itg2-section-title mt-1">Advanced intelligence</h2>
+      <p className="mt-2 max-w-[720px] text-sm leading-relaxed text-muted-foreground">
         Deeper reads over the same real trades — drawdown, risk behaviour, psychology,
         discipline, conditions and a personalized improvement plan. Where a sample is
         too small to conclude, the panel says so instead of guessing.
       </p>
 
-      <div className="itg-analytics-secondary">
-        <section className="itg-analytics-secondary-card" aria-label="Drawdown analysis">
-          <h2 className="section-title">Drawdown analysis</h2>
+      <div className="mt-5 grid gap-[18px] min-[801px]:grid-cols-2">
+        <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown analysis">
+          <p className="itg2-eyebrow">Risk</p>
+          <h2 className="itg2-section-title mt-1">Drawdown analysis</h2>
           {drawdown.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">
               {data.tradesCount} closed trades recorded — a drawdown analysis needs at least 5.
@@ -159,15 +162,16 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
               <StatRow label="Current drawdown">
                 {drawdown.atPeak ? "At peak" : formatMoney(drawdown.currentDrawdown)}
               </StatRow>
-              <div className="mt-4">
+              <div className="itg2-chart-pool mt-4">
                 <DrawdownChart data={drawdown.series.map((p) => ({ date: p.date, drawdown: p.drawdown }))} />
               </div>
             </div>
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Risk behaviour">
-          <h2 className="section-title">Risk behaviour</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Risk behaviour">
+          <p className="itg2-eyebrow">Risk</p>
+          <h2 className="itg2-section-title mt-1">Risk behaviour</h2>
           {risk.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet — nothing to measure.</p>
           ) : (
@@ -219,8 +223,9 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Psychology and performance">
-          <h2 className="section-title">Psychology ↔ performance</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Psychology and performance">
+          <p className="itg2-eyebrow">Psychology</p>
+          <h2 className="itg2-section-title mt-1">Psychology ↔ performance</h2>
           {psychology.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">
               No psychology records yet — add emotion and confidence in a trade&apos;s advanced review.
@@ -244,8 +249,9 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Discipline and performance">
-          <h2 className="section-title">Discipline ↔ performance</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Discipline and performance">
+          <p className="itg2-eyebrow">Discipline</p>
+          <h2 className="itg2-section-title mt-1">Discipline ↔ performance</h2>
           {discipline.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet — nothing to measure.</p>
           ) : (
@@ -261,38 +267,39 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Best and worst conditions">
-          <h2 className="section-title">Best / worst conditions</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Best and worst conditions">
+          <p className="itg2-eyebrow">Strategy</p>
+          <h2 className="itg2-section-title mt-1">Best / worst conditions</h2>
           {conditions.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">
               No session/direction, strategy/session or market-condition group has 3 or more trades yet.
             </p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="itg2-table itg2-table-fit">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Condition</th>
-                    <th className="py-2 pr-4 font-medium">Trades</th>
-                    <th className="py-2 pr-4 font-medium">P&amp;L</th>
-                    <th className="py-2 font-medium">Expectancy</th>
+                  <tr>
+                    <th>Condition</th>
+                    <th>Trades</th>
+                    <th>P&amp;L</th>
+                    <th>Expectancy</th>
                   </tr>
                 </thead>
                 <tbody>
                   {conditions.rows.map((r) => (
-                    <tr key={`${r.dimension}-${r.key}`} className="border-t border-border transition-colors hover:bg-accent/40">
-                      <td className="py-2.5 pr-4 font-medium">
+                    <tr key={`${r.dimension}-${r.key}`}>
+                      <td className="font-medium">
                         {r.label}
                         {conditions.best && r.key === conditions.best.key && r.dimension === conditions.best.dimension ? (
-                          <span className="ml-2 whitespace-nowrap rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Best</span>
+                          <span className="itg2-chip itg2-chip-profit ml-2 whitespace-nowrap">Best</span>
                         ) : null}
                         {conditions.worst && r.key === conditions.worst.key && r.dimension === conditions.worst.dimension ? (
-                          <span className="ml-2 whitespace-nowrap rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">Worst</span>
+                          <span className="itg2-chip itg2-chip-loss ml-2 whitespace-nowrap">Worst</span>
                         ) : null}
                       </td>
-                      <td className="py-2.5 pr-4 tabular-nums">{r.trades}</td>
-                      <td className="py-2.5 pr-4"><Money value={r.totalPnl} /></td>
-                      <td className="py-2.5">{r.expectancy === null ? "—" : formatMoney(r.expectancy)}</td>
+                      <td className="tabular-nums">{r.trades}</td>
+                      <td><Money value={r.totalPnl} /></td>
+                      <td>{r.expectancy === null ? "—" : formatMoney(r.expectancy)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -304,8 +311,9 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Recurring mistakes and setups">
-          <h2 className="section-title">Recurring mistakes &amp; setups</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Recurring mistakes and setups">
+          <p className="itg2-eyebrow">Discipline</p>
+          <h2 className="itg2-section-title mt-1">Recurring mistakes &amp; setups</h2>
           {recurring.mistakes.length === 0 && recurring.losingSetups.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               Nothing repeats yet — no lesson text appears twice and no setup has lost twice.
@@ -332,8 +340,9 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
           )}
         </section>
 
-        <section className="itg-analytics-secondary-card" aria-label="Improvement plan">
-          <h2 className="section-title">Your improvement plan</h2>
+        <section className="itg2-card p-5 sm:p-6" aria-label="Improvement plan">
+          <p className="itg2-eyebrow">Intelligence</p>
+          <h2 className="itg2-section-title mt-1">Your improvement plan</h2>
           {plan.status !== "ok" ? (
             <p className="mt-2 text-muted-foreground">
               {data.tradesCount} closed trades recorded — a personalized plan needs at least 5.

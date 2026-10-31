@@ -1060,6 +1060,105 @@
       0 14px 34px rgba(2, 10, 30, 0.35),
       0 0 24px rgba(18, 104, 216, 0.12);
   }
+  /*
+   * ============================================================
+   * ANALYTICS (Master Web UI Redesign — Page 5). Three
+   * additions, all new class names:
+   *
+   * .itg2-chart-pool — the chart scope for the NON-equity
+   * charts (drawdown / P&L by period / R distribution).
+   * Same deep-blue pool + blue-white grid/ticks as
+   * .itg2-chart-scope, but it deliberately does NOT touch
+   * the series stroke/fill or the active dot: drawdown
+   * stays red, period bars stay green/red, R bars stay
+   * blue — the shared chart components keep their default
+   * appearance and their other consumers (Dashboard,
+   * Reports) are unaffected.
+   *
+   * .itg2-table-fit — the institutional table without the
+   * trades list's 800px minimum, which would force
+   * horizontal scroll inside half-width analytics panels.
+   *
+   * .itg2-range — the P&L-by-period control. The legacy
+   * .itg-range active state was a violet gradient; the v2
+   * control keys off the same aria-current attribute the
+   * page already sets, with a blue gradient active pill
+   * and full 44px touch targets.
+   * ============================================================
+   */
+  .itg2-chart-pool .chart-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(6, 21, 47, 0.66),
+      rgba(4, 10, 24, 0.62)
+    );
+    border-color: rgba(120, 175, 255, 0.16);
+  }
+  .itg2-chart-pool .recharts-cartesian-grid line {
+    stroke: rgba(120, 175, 255, 0.13);
+  }
+  .itg2-chart-pool .recharts-cartesian-axis-tick text {
+    fill: #a9bedf;
+  }
+  .itg2-chart-pool .recharts-tooltip-cursor {
+    stroke: rgba(120, 175, 255, 0.35);
+  }
+  .itg2-table-fit {
+    min-width: 0;
+  }
+  .itg2-range {
+    display: inline-flex;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 16px;
+    border: 1px solid rgba(120, 175, 255, 0.18);
+    background: linear-gradient(
+      180deg,
+      rgba(6, 18, 40, 0.72),
+      rgba(4, 10, 24, 0.78)
+    );
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(190, 220, 255, 0.06);
+  }
+  .itg2-range a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 64px;
+    padding: 8px 14px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    color: var(--itg-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    transition:
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      background var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-range a:hover {
+    color: var(--itg-text-primary);
+    background: rgba(120, 175, 255, 0.07);
+  }
+  .itg2-range a:focus-visible {
+    outline: 2px solid var(--itg-cyan-400);
+    outline-offset: 2px;
+  }
+  .itg2-range a[aria-current="true"] {
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      var(--itg-blue-600),
+      var(--itg-blue-500)
+    );
+    border-color: rgba(140, 195, 255, 0.45);
+    box-shadow:
+      0 0 22px rgba(18, 104, 216, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
 
 }
 
