@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   DISCIPLINE_LABELS,
   EMOTION_LABELS,
@@ -18,7 +17,7 @@ import type { TradeFilters } from "@/lib/trades/validation";
  * optional.
  */
 
-const selectClass = "input-select";
+const selectClass = "itg2-select";
 
 export function TradeFiltersForm({
   filters,
@@ -28,18 +27,18 @@ export function TradeFiltersForm({
   strategies: StrategyRow[];
 }) {
   return (
-    <form method="get" action="/trades" className="card-surface p-4 sm:p-5">
+    <form method="get" action="/trades" className="itg2-card itg2-card-flat motion-reveal motion-reveal-1 p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
-          <Label htmlFor="q">Search</Label>
-          <Input id="q" name="q" placeholder="Pair, strategy, setup, notes…" defaultValue={filters.q ?? ""} />
+          <Label className="itg2-label" htmlFor="q">Search</Label>
+          <Input id="q" name="q" placeholder="Pair, strategy, setup, notes…" defaultValue={filters.q ?? ""} className="itg2-input" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="pair">Pair</Label>
-          <Input id="pair" name="pair" placeholder="EUR/USD" defaultValue={filters.pair ?? ""} />
+          <Label className="itg2-label" htmlFor="pair">Pair</Label>
+          <Input id="pair" name="pair" placeholder="EUR/USD" defaultValue={filters.pair ?? ""} className="itg2-input" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="direction">Long / Short</Label>
+          <Label className="itg2-label" htmlFor="direction">Long / Short</Label>
           <select id="direction" name="direction" defaultValue={filters.direction ?? ""} className={selectClass}>
             <option value="">All</option>
             <option value="long">Long</option>
@@ -47,7 +46,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="strategyId">Strategy</Label>
+          <Label className="itg2-label" htmlFor="strategyId">Strategy</Label>
           <select id="strategyId" name="strategyId" defaultValue={filters.strategyId ?? ""} className={selectClass}>
             <option value="">All</option>
             {strategies.map((s) => (
@@ -58,7 +57,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="session">Session</Label>
+          <Label className="itg2-label" htmlFor="session">Session</Label>
           <select id="session" name="session" defaultValue={filters.session ?? ""} className={selectClass}>
             <option value="">All</option>
             {Object.entries(SESSION_LABELS).map(([v, l]) => (
@@ -69,7 +68,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="outcome">Win / Loss</Label>
+          <Label className="itg2-label" htmlFor="outcome">Win / Loss</Label>
           <select id="outcome" name="outcome" defaultValue={filters.outcome ?? ""} className={selectClass}>
             <option value="">All</option>
             <option value="win">Win</option>
@@ -77,7 +76,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="marketCondition">Market condition</Label>
+          <Label className="itg2-label" htmlFor="marketCondition">Market condition</Label>
           <select id="marketCondition" name="marketCondition" defaultValue={filters.marketCondition ?? ""} className={selectClass}>
             <option value="">All</option>
             {Object.entries(MARKET_CONDITION_LABELS).map(([v, l]) => (
@@ -88,7 +87,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="emotion">Emotion</Label>
+          <Label className="itg2-label" htmlFor="emotion">Emotion</Label>
           <select id="emotion" name="emotion" defaultValue={filters.emotion ?? ""} className={selectClass}>
             <option value="">All</option>
             {Object.entries(EMOTION_LABELS).map(([v, l]) => (
@@ -99,7 +98,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="discipline">Discipline</Label>
+          <Label className="itg2-label" htmlFor="discipline">Discipline</Label>
           <select id="discipline" name="discipline" defaultValue={filters.discipline ?? ""} className={selectClass}>
             <option value="">All</option>
             {Object.entries(DISCIPLINE_LABELS).map(([v, l]) => (
@@ -110,7 +109,7 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="confidence">Confidence</Label>
+          <Label className="itg2-label" htmlFor="confidence">Confidence</Label>
           <select id="confidence" name="confidence" defaultValue={filters.confidence ?? ""} className={selectClass}>
             <option value="">All</option>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -121,19 +120,21 @@ export function TradeFiltersForm({
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="from">From</Label>
-          <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
+          <Label className="itg2-label" htmlFor="from">From</Label>
+          <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} className="itg2-input" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="to">To</Label>
-          <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
+          <Label className="itg2-label" htmlFor="to">To</Label>
+          <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} className="itg2-input" />
         </div>
       </div>
-      <div className="mt-4 flex gap-3">
-        <Button type="submit">Filter</Button>
-        <Button type="button" variant="outline" asChild>
-          <Link href="/trades">Clear</Link>
-        </Button>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button type="submit" className="itg2-btn-primary">
+          Filter
+        </button>
+        <Link href="/trades" className="itg2-btn-ghost">
+          Clear
+        </Link>
       </div>
     </form>
   );

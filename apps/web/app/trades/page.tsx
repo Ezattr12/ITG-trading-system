@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { TradeFiltersForm } from "@/components/trades/trade-filters";
 import { getSystemStrategies, getTradeListItems } from "@/lib/trades/queries";
 import { applyTradeFilters, paginate } from "@/lib/trades/filters";
-import { tradeFiltersSchema } from "@/lib/trades/validation";
+import { SESSION_LABELS, tradeFiltersSchema } from "@/lib/trades/validation";
 import { formatMoney } from "@/lib/trades/calculations";
 
 export const metadata = { title: "Trades — ITG TraderOS" };
@@ -20,6 +20,12 @@ export const metadata = { title: "Trades — ITG TraderOS" };
  * The list fetches at most the 500 most recent trades for
  * in-memory psychology/outcome filtering (see queries.ts);
  * that cap is shown below, not hidden.
+ *
+ * Page 3 presentation (Master Web UI Redesign): an `.itg2`
+ * header band and filter panel, glass trade cards on
+ * mobile, and the institutional `.itg2-table` in an L2
+ * panel on desktop. Markup/classes only — the data flow,
+ * URL filters and pagination above are unchanged.
  */
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -77,20 +83,18 @@ export default async function TradesPage({
 
   return (
     <AppShell email={user.email}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="itg2-card itg2-card-flat motion-reveal flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6">
           <div>
-            <h1 className="page-title">Trades</h1>
-            <p className="page-lede">
+            <p className="itg2-eyebrow">Journal</p>
+            <h1 className="itg2-page-title mt-1">Trades</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
               {page.total === 0
                 ? "No trades yet."
                 : `${page.total} trade${page.total === 1 ? "" : "s"} found.`}{" "}
               Your journal — every trade you add is calculated from your real entries.
             </p>
           </div>
-          <Link
-            href="/trades/new"
-            className="inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-elevation-1 transition-all duration-fast ease-standard hover:shadow-elevation-2"
-          >
+          <Link href="/trades/new" className="itg2-btn-primary shrink-0">
             + Add trade
           </Link>
         </div>
@@ -100,14 +104,15 @@ export default async function TradesPage({
         </div>
 
         {page.total === 0 ? (
-          <section className="mt-6 sm:mt-8 hero-card card-surface-raised p-4 sm:p-6" aria-label="No trades">
-            <h2 className="section-title">No trades match</h2>
+          <section className="itg2-card-elevated motion-reveal motion-reveal-2 mt-6 p-5 sm:mt-8 sm:p-6" aria-label="No trades">
+            <p className="itg2-eyebrow">Journal</p>
+            <h2 className="itg2-section-title mt-1">No trades match</h2>
             <p className="mt-2 text-muted-foreground">
               {items.length === 0
                 ? "You have not added any trades yet. A trade takes 30–60 seconds to add."
                 : "Try clearing a filter — or add a trade."}
             </p>
-            <Link href="/trades/new" className="mt-4 inline-block text-sm font-medium underline">
+            <Link href="/trades/new" className="itg2-btn-primary mt-5">
               Add your first trade
             </Link>
           </section>
@@ -118,101 +123,105 @@ export default async function TradesPage({
                 table, which fits there and stays sortable by eye.
                 The card leads with what matters when scanning:
                 pair, direction, P&L, R, date. */}
-            <ul className="mt-6 space-y-3 md:hidden" aria-label="Trades">
+            <ul className="motion-reveal motion-reveal-2 mt-6 space-y-3 md:hidden" aria-label="Trades">
               {page.items.map(({ trade, strategyName }) => (
-                <li key={trade.id} className="trade-card card-surface p-4">
+                <li
+                  key={trade.id}
+                  className={`itg2-card p-4 ${trade.direction === "long" ? "itg2-accent-long" : "itg2-accent-short"}`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link href={`/trades/${trade.id}`} className="min-h-11 text-base font-semibold underline underline-offset-4">
+                      <Link href={`/trades/${trade.id}`} className="min-h-11 text-base font-semibold hover:underline underline-offset-4">
                         {trade.pair}
                       </Link>
                       <span className="mt-1 flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.direction === "long" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : "border-orange-500/40 bg-orange-500/10 text-orange-300"}`}
+                          className={`itg2-chip itg2-chip-dir ${trade.direction === "long" ? "itg2-chip-profit" : "itg2-chip-loss"}`}
                         >
                           {trade.direction}
                         </span>
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.status === "open" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : trade.status === "reversed" ? "border-amber-500/40 bg-amber-500/10 text-amber-200" : "border-border bg-muted/60 text-muted-foreground"}`}
+                          className={`itg2-chip capitalize ${trade.status === "open" ? "" : "itg2-chip-muted"}`}
                         >
                           {trade.status}
                         </span>
                         {strategyName ? (
-                          <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          <span className="itg2-chip itg2-chip-muted">
                             {strategyName}
                           </span>
                         ) : null}
                       </span>
                     </div>
                     <span
-                      className={`tnum shrink-0 text-base font-semibold ${trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""}`}
+                      className={`tnum shrink-0 text-lg font-bold ${trade.pnl === null ? "" : trade.pnl > 0 ? "itg2-text-profit" : trade.pnl < 0 ? "itg2-text-loss" : ""}`}
                     >
                       {trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
                     </span>
                   </div>
                   <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
                     <span className="tnum">{new Date(trade.opened_at).toLocaleDateString()}</span>
+                    {trade.session ? <span>{SESSION_LABELS[trade.session]}</span> : null}
                     <span className="tnum">{trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}</span>
                     <span>Entry {trade.entry_price} · Exit {trade.exit_price ?? "—"}</span>
                   </p>
                 </li>
               ))}
             </ul>
-            <div className="mt-6 sm:mt-8 hidden overflow-x-auto card-surface md:block">
-              <table className="w-full min-w-[800px] text-sm">
+            <div className="itg2-card-elevated motion-reveal motion-reveal-2 mt-6 hidden overflow-x-auto sm:mt-8 md:block">
+              <table className="itg2-table">
                 <thead>
-                  <tr className="border-b bg-muted/40 text-left text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">Pair</th>
-                    <th className="px-3 py-2 font-medium">Direction</th>
-                    <th className="px-3 py-2 font-medium">Strategy</th>
-                    <th className="px-3 py-2 font-medium">Opened</th>
-                    <th className="px-3 py-2 text-right font-medium">Entry</th>
-                    <th className="px-3 py-2 text-right font-medium">Exit</th>
-                    <th className="px-3 py-2 text-right font-medium">P&amp;L</th>
-                    <th className="px-3 py-2 text-right font-medium">R</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
+                  <tr>
+                    <th>Pair</th>
+                    <th>Direction</th>
+                    <th>Strategy</th>
+                    <th>Opened</th>
+                    <th className="text-right">Entry</th>
+                    <th className="text-right">Exit</th>
+                    <th className="text-right">P&amp;L</th>
+                    <th className="text-right">R</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
-                <tbody className="list-divider">
+                <tbody>
                   {page.items.map(({ trade, strategyName }) => (
-                    <tr key={trade.id} className="list-row-premium hover:bg-accent/50">
-                      <td className="px-3 py-2">
-                        <Link href={`/trades/${trade.id}`} className="font-medium underline">
+                    <tr key={trade.id} className={trade.direction === "long" ? "itg2-row-long" : "itg2-row-short"}>
+                      <td>
+                        <Link href={`/trades/${trade.id}`} className="font-semibold hover:underline underline-offset-4">
                           {trade.pair}
                         </Link>
                       </td>
-                      <td className="px-3 py-2">
+                      <td>
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.direction === "long" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : "border-orange-500/40 bg-orange-500/10 text-orange-300"}`}
+                          className={`itg2-chip itg2-chip-dir ${trade.direction === "long" ? "itg2-chip-profit" : "itg2-chip-loss"}`}
                         >
                           {trade.direction}
                         </span>
                       </td>
-                      <td className="px-3 py-2">
+                      <td>
                         {strategyName ? (
-                          <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          <span className="itg2-chip itg2-chip-muted">
                             {strategyName}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 tnum">{new Date(trade.opened_at).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-right tnum">{trade.entry_price}</td>
-                      <td className="px-3 py-2 text-right tnum">{trade.exit_price ?? "—"}</td>
+                      <td className="tnum">{new Date(trade.opened_at).toLocaleDateString()}</td>
+                      <td className="text-right tnum">{trade.entry_price}</td>
+                      <td className="text-right tnum">{trade.exit_price ?? "—"}</td>
                       <td
-                        className={`px-3 py-2 text-right font-medium tnum ${
-                          trade.pnl === null ? "" : trade.pnl > 0 ? "text-emerald-400" : trade.pnl < 0 ? "text-red-400" : ""
+                        className={`text-right font-semibold tnum ${
+                          trade.pnl === null ? "" : trade.pnl > 0 ? "itg2-text-profit" : trade.pnl < 0 ? "itg2-text-loss" : ""
                         }`}
                       >
                         {formatMoney(trade.pnl)}
                       </td>
-                      <td className="px-3 py-2 text-right tnum">
+                      <td className="text-right tnum">
                         {trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}
                       </td>
-                      <td className="px-3 py-2">
+                      <td>
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${trade.status === "open" ? "border-sky-500/40 bg-sky-500/10 text-sky-300" : trade.status === "reversed" ? "border-amber-500/40 bg-amber-500/10 text-amber-200" : "border-border bg-muted/60 text-muted-foreground"}`}
+                          className={`itg2-chip capitalize ${trade.status === "open" ? "" : "itg2-chip-muted"}`}
                         >
                           {trade.status}
                         </span>
@@ -224,17 +233,19 @@ export default async function TradesPage({
             </div>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Page {page.page} of {page.totalPages} · showing the {Math.min(500, page.total)} most recent trades
-                for filtering.
+                Showing the {Math.min(500, page.total)} most recent trades for filtering.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {page.page > 1 && (
-                  <Link href={pageHref(page.page - 1)} className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-2 shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
+                  <Link href={pageHref(page.page - 1)} className="itg2-btn-ghost">
                     Previous
                   </Link>
                 )}
+                <span className="itg2-chip px-3 py-1.5 text-xs" aria-current="page">
+                  Page {page.page} of {page.totalPages}
+                </span>
                 {page.page < page.totalPages && (
-                  <Link href={pageHref(page.page + 1)} className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-2 shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
+                  <Link href={pageHref(page.page + 1)} className="itg2-btn-ghost">
                     Next
                   </Link>
                 )}
