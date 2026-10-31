@@ -1,9 +1,14 @@
 name: Mobile APK (device test build)
 
-# Builds an installable Android debug APK of the Expo app so it can be
+# Builds an installable Android APK of the Expo app so it can be
 # sideloaded onto a physical phone for device verification.
 # The Expo sandbox cannot run Gradle (Java egress is blocked there),
 # so the build runs here on a standard GitHub runner.
+#
+# A RELEASE build is used because debug builds do not embed the
+# JavaScript bundle (they expect a Metro dev server). The release
+# APK is signed with a throwaway CI keystore purely so Android will
+# install it for sideload testing — it is NOT a store signing key.
 #
 # EXPO_PUBLIC_* values are PUBLIC client configuration: the Supabase
 # anon key ships inside every distributed app binary and is extractable
@@ -48,13 +53,26 @@ jobs:
       - name: Generate the native Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build the debug APK
+      - name: Build the release APK (embeds the JS bundle)
         working-directory: apps/mobile/android
-        run: ./gradlew assembleDebug --console=plain
+        run: ./gradlew assembleRelease --console=plain
+
+      - name: Sign the APK with a throwaway CI key (sideload testing only)
+        working-directory: apps/mobile/android
+        run: |
+          keytool -genkeypair -keystore /tmp/test.keystore -storepass android \
+            -alias testkey -keypass android -keyalg RSA -keysize 2048 \
+            -validity 10000 -dname "CN=ITG Device Test, O=ITG, C=US"
+          BT=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -p 4 "$UNSIGNED" /tmp/aligned.apk
+          "$BT/apksigner" sign --ks /tmp/test.keystore --ks-pass pass:android \
+            --key-pass pass:android --out "$GITHUB_WORKSPACE/itg-traderos-test.apk" /tmp/aligned.apk
+          "$BT/apksigner" verify "$GITHUB_WORKSPACE/itg-traderos-test.apk"
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
           name: itg-traderos-android-test-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: itg-traderos-test.apk
           if-no-files-found: error
