@@ -21,12 +21,22 @@ import type { StrategyRow, TradeDetail } from "@/lib/trades/types";
  * strategies; a typed setup name creates the trader's own
  * setup row. Honest options (FOMO, Revenge) exist for honest
  * journaling — they are never encouraged.
+ *
+ * Master Web UI Redesign Page 4 — PRESENTATION ONLY: labels,
+ * selects, inputs and textareas moved onto the Page 2 v2
+ * form system (.itg2-label / .itg2-select / .itg2-input /
+ * .itg2-textarea), the lesson/notes well became .itg2-inset,
+ * and the submit uses .itg2-btn-primary via ActionForm's
+ * submitClassName. The field set is exactly as before —
+ * every name, defaultValue (strategy and setup round-trip
+ * from the trade, per the full-form save rule), option and
+ * the action are untouched. Used only by the trade detail
+ * page.
  */
 
-const selectClass =
-  "input-select";
+const selectClass = "itg2-select";
 const textareaClass =
-  "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "itg2-textarea";
 
 function Options({ labels, includeBlank = true }: { labels: Record<string, string>; includeBlank?: boolean }) {
   return (
@@ -54,11 +64,11 @@ export function AdvancedReviewForm({
     formData: FormData,
   ) => Promise<TradeActionResult>;
   return (
-    <ActionForm action={action} submitLabel="Save review">
+    <ActionForm action={action} submitLabel="Save review" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="tradeId" value={trade.id} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="strategyId">Strategy</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="strategyId">Strategy</Label>
           <select id="strategyId" name="strategyId" defaultValue={trade.strategy_id ?? ""} className={selectClass}>
             <option value="">— Not provided —</option>
             {strategies.map((s) => (
@@ -68,30 +78,30 @@ export function AdvancedReviewForm({
             ))}
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="setupName">Setup</Label>
-          <Input id="setupName" name="setupName" placeholder="e.g. London open" defaultValue={detail.setupName ?? ""} className="min-h-[44px]" />
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="setupName">Setup</Label>
+          <Input id="setupName" name="setupName" placeholder="e.g. London open" defaultValue={detail.setupName ?? ""} className="itg2-input" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="marketCondition">Market condition</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="marketCondition">Market condition</Label>
           <select id="marketCondition" name="marketCondition" defaultValue={trade.market_condition ?? ""} className={selectClass}>
             <Options labels={MARKET_CONDITION_LABELS} />
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="tradeReason">Trade reason</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="tradeReason">Trade reason</Label>
           <select id="tradeReason" name="tradeReason" defaultValue={trade.trade_reason ?? ""} className={selectClass}>
             <Options labels={TRADE_REASON_LABELS} />
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="session">Session</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="session">Session</Label>
           <select id="session" name="session" defaultValue={trade.session ?? ""} className={selectClass}>
             <Options labels={SESSION_LABELS} />
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="confidence">Confidence (1–5)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="confidence">Confidence (1–5)</Label>
           <select id="confidence" name="confidence" defaultValue={psychology?.confidence ?? ""} className={selectClass}>
             <option value="">— Not provided —</option>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -101,14 +111,14 @@ export function AdvancedReviewForm({
             ))}
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="emotion">Emotion</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="emotion">Emotion</Label>
           <select id="emotion" name="emotion" defaultValue={psychology?.emotion ?? ""} className={selectClass}>
             <Options labels={EMOTION_LABELS} />
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="discipline">Discipline</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="discipline">Discipline</Label>
           <select id="discipline" name="discipline" defaultValue={psychology?.discipline ?? ""} className={selectClass}>
             <Options labels={DISCIPLINE_LABELS} />
           </select>
@@ -116,9 +126,9 @@ export function AdvancedReviewForm({
       {/* Lesson and notes sit in an inset panel — the reflective
           part of the review, set into the form rather than
           floating on it. */}
-      <div className="card-surface-inset space-y-4 p-4 sm:col-span-2">
-        <div className="space-y-2">
-          <Label htmlFor="lesson">What did I learn?</Label>
+      <div className="itg2-inset space-y-4 p-4 sm:col-span-2">
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="lesson">What did I learn?</Label>
           <textarea
             id="lesson"
             name="lesson"
@@ -127,8 +137,8 @@ export function AdvancedReviewForm({
             className={textareaClass}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="notes">Notes</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="notes">Notes</Label>
           <textarea id="notes" name="notes" placeholder="Anything else about this trade." defaultValue={trade.notes ?? ""} className={textareaClass} />
         </div>
       </div>

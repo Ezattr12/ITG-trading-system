@@ -11,6 +11,11 @@ import { X } from "lucide-react";
  * the trader: it sits above the trade, it is dismissible, and
  * the trade itself is already saved underneath. The text, not
  * the animation, carries the confirmation.
+ *
+ * Master Web UI Redesign Page 4: the bar renders as
+ * `.itg2-notice .itg2-notice-success` (profit-tinted glass);
+ * the checkmark, text and dismiss behaviour are unchanged.
+ * Used only by the trade detail page.
  */
 export function TradeSavedBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -18,7 +23,7 @@ export function TradeSavedBanner() {
   return (
     <div
       role="status"
-      className="motion-fade-in mt-4 flex items-start gap-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 shadow-elevation-2"
+      className="itg2-notice itg2-notice-success motion-fade-in mt-4 shadow-elevation-2"
     >
       <svg
         aria-hidden="true"
@@ -41,7 +46,7 @@ export function TradeSavedBanner() {
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="Dismiss confirmation"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-emerald-200 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>
