@@ -92,6 +92,32 @@ describe("updateProfileCore", () => {
     ).toBe(true);
   });
 
+  it("persists employment_status, trading_experience and trading_education to the profiles row", async () => {
+    // Regression (M2 correction pass): these three columns drive
+    // the profile-completion calculation, so the write core must
+    // carry them through to the stored row verbatim — including a
+    // real work status replacing the onboarding "not_provided"
+    // sentinel. "employed_other_job" also exercises the schema
+    // refine that requires a monthly income.
+    const { user, tables } = setup();
+    const result = await updateProfileCore(user.client, USER, {
+      ...validProfile,
+      tradingExperience: "5 years",
+      tradingEducation: "Mentored programme",
+      employmentStatus: "employed_other_job",
+      monthlyIncome: 3200,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const row = tables.profiles.find((r) => r.id === USER);
+    expect(row?.employment_status).toBe("employed_other_job");
+    expect(row?.trading_experience).toBe("5 years");
+    expect(row?.trading_education).toBe("Mentored programme");
+    expect(result.profile.employment_status).toBe("employed_other_job");
+    expect(result.profile.trading_experience).toBe("5 years");
+    expect(result.profile.trading_education).toBe("Mentored programme");
+  });
+
   it("rejects an empty full name with the schema message and writes nothing", async () => {
     const { user, tables } = setup();
     const result = await updateProfileCore(user.client, USER, {

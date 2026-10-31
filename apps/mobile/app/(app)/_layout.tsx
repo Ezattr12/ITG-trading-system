@@ -28,7 +28,7 @@ export default function AppLayout() {
           backgroundColor: tokens.bgDeep,
           borderTopColor: tokens.glassBorder,
         },
-        tabBarActiveTintColor: tokens.auroraViolet,
+        tabBarActiveTintColor: tokens.cyanBright,
         tabBarInactiveTintColor: tokens.textMuted,
       }}
     >
@@ -49,6 +49,8 @@ export default function AppLayout() {
       <Tabs.Screen name="goal/[id]" options={{ href: null, title: "Goal" }} />
       <Tabs.Screen name="risk" options={{ href: null, title: "Risk & plan" }} />
       <Tabs.Screen name="notifications" options={{ href: null, title: "Notifications" }} />
+      {/* M2 correction pass — full-form profile editor, reached from Profile. */}
+      <Tabs.Screen name="profile-edit" options={{ href: null, title: "Edit profile" }} />
     </Tabs>
   );
 }

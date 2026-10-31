@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.glass,
   },
   toggleActive: {
-    backgroundColor: tokens.violet,
+    backgroundColor: tokens.blueBright,
     borderColor: tokens.glassBorderBright,
   },
 });

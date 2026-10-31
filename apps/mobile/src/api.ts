@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import type {
   AdvancedReviewPayload,
+  AvatarUploadResponse,
   BacktestingResponse,
   CancelTradeResponse,
   CoachChatAnswer,
@@ -11,6 +12,8 @@ import type {
   GoalCreatePayload,
   GoalProgressPayload,
   MarkReadResponse,
+  ProfileUpdatePayload,
+  ProfileUpdateResponse,
   QuickTradePayload,
   RiskRulesPayload,
   SessionBootstrapResponse,
@@ -275,6 +278,69 @@ export async function markNotificationsRead(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/* ---------------- Profile (M2 correction pass) ----------------
+ *
+ * The profile write endpoints (Phase 21 M1 cores — the same
+ * updateProfileCore / uploadAvatarCore the web profile actions
+ * call). Bodies are exactly the schema fields; never an
+ * identity field.
+ */
+
+/**
+ * PATCH /api/mobile/profile — FULL-FORM profile save
+ * (profileEditSchema). Every field is sent on every save so a
+ * partial-looking edit can never silently clear a stored
+ * value, and the employed_other_job → monthlyIncome rule
+ * stays satisfiable.
+ */
+export async function updateProfile(
+  payload: ProfileUpdatePayload,
+): Promise<ProfileUpdateResponse> {
+  return apiFetch<ProfileUpdateResponse>("/api/mobile/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * POST /api/mobile/profile/avatar — multipart upload, field
+ * name `file` (the route reads exactly that field). Server
+ * rules: an image file, at most 2 MB. No JSON Content-Type:
+ * fetch sets the multipart boundary itself.
+ */
+export async function uploadAvatar(asset: {
+  uri: string;
+  name: string;
+  type: string;
+}): Promise<AvatarUploadResponse> {
+  const token = await accessToken();
+  if (!token) throw new Error("Not signed in.");
+  const form = new FormData();
+  form.append("file", {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.type,
+    // React Native's FormData accepts this object shape for files.
+  } as unknown as Blob);
+  const res = await fetch(`${API_BASE_URL}/api/mobile/profile/avatar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { error?: string; message?: string };
+      if (body.message) message = body.message;
+      else if (body.error) message = body.error;
+    } catch {
+      // Non-JSON error body — keep the status-based message.
+    }
+    throw new Error(message);
+  }
+  return (await res.json()) as AvatarUploadResponse;
 }
 
 /* ---------------- Phase 26 interactive coach ---------------- */

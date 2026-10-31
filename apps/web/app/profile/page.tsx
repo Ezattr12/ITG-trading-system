@@ -438,6 +438,35 @@ export default async function ProfilePage() {
                   </Field>
                 </div>
               </details>
+              <details open className="group mt-6">
+                <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex items-center gap-2">
+                    Work & Trading
+                    <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
+                  </span>
+                </summary>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label="Work status">
+                    <select
+                      name="employmentStatus"
+                      defaultValue={p?.employment_status ?? "not_provided"}
+                      className="input-select"
+                    >
+                      <option value="full_time">Full-time</option>
+                      <option value="part_time">Part-time</option>
+                      <option value="employed_other_job">Employed (other job)</option>
+                      <option value="unemployed">Unemployed</option>
+                      <option value="studying">Studying</option>
+                      <option value="not_provided">Prefer not to say</option>
+                    </select>
+                  </Field>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  A real work status is required for a complete profile — “Prefer not to say”
+                  leaves the profile incomplete. If you have another job, add your monthly
+                  income under Private Financial below.
+                </p>
+              </details>
               <details className="group mt-6">
                 <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
                   <span className="inline-flex items-center gap-2">
@@ -461,9 +490,8 @@ export default async function ProfilePage() {
               <input type="hidden" name="realTradingExperience" value={p?.real_trading_experience ? "true" : "false"} />
               <input type="hidden" name="demoTrading" value={p?.demo_trading ? "true" : "false"} />
               <input type="hidden" name="tradesRealMoney" value={p?.trades_real_money ? "true" : "false"} />
-              <input type="hidden" name="employmentStatus" value={p?.employment_status ?? "not_provided"} />
               <p className="text-xs text-muted-foreground">
-                Experience checkboxes and work status are edited in onboarding; the values above are carried over unchanged here.
+                Experience checkboxes are edited in onboarding; the values above are carried over unchanged here.
               </p>
             </ActionForm>
           </section>

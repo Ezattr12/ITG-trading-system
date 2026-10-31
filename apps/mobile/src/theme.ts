@@ -1,32 +1,39 @@
 import { StyleSheet } from "react-native";
 
 /**
- * ITG design tokens for mobile — mirrored from the web app's
- * Phase 18/19 token system (apps/web/app/globals.css, `--itg-*`).
- * One token system across web and mobile: deep purple-black
- * background, frosted glass surfaces, violet primary, cyan/blue
- * secondaries, green profit, red loss, gold reserved for
- * premium/level status only.
+ * ITG design tokens for mobile — one token system across web
+ * and mobile (values adapted from the web app's `--itg-*`
+ * tokens, apps/web/app/globals.css).
+ *
+ * Color hierarchy (M2 correction pass): strong black /
+ * near-black is the dominant structural base, deep navy
+ * carries depth layers and surfaces, blue → cyan is the
+ * primary interactive / information color, green is profit /
+ * success, red is loss / risk, gold is reserved for level,
+ * achievements and premium status, and violet survives only
+ * as the AI Coach identity and a restrained atmospheric
+ * accent — it no longer paints generic surfaces or controls.
+ * Colors are semantic, never decorative noise.
  */
 export const tokens = {
-  bg: "#06030d", // --itg-bg
-  bgDeep: "#100020", // --itg-bg-deep
-  bgPurple: "#18002f", // --itg-bg-purple
-  deep: "#0b0620", // --itg-deep
-  violetDeep: "#340266", // --itg-violet-deep
-  violet: "#492282", // --itg-violet
-  violetLight: "#8b60c7", // --itg-violet-light
-  auroraPurple: "#7b2cff", // --itg-aurora-purple
-  auroraViolet: "#a855f7", // --itg-aurora-violet
-  auroraBlue: "#1677ff", // --itg-aurora-blue
-  auroraCyan: "#00cfff", // --itg-aurora-cyan
-  blueBright: "#346ce6", // --itg-blue-bright
-  cyanBright: "#00d9ff", // --itg-cyan-bright
+  bg: "#04060B", // near-black base (blue-tinted)
+  bgDeep: "#060B16", // deep navy — tab bar / deepest layer
+  bgPurple: "#0A1322", // legacy name; now a deep-navy depth layer
+  deep: "#0C1A30", // deep navy surface (avatar fallback, depth)
+  violetDeep: "#2A0A4A", // atmosphere only (single subtle glow)
+  violet: "#492282", // AI Coach identity / avatar ring accent only
+  violetLight: "#8b60c7", // accent line on the violet identity
+  auroraPurple: "#7b2cff", // atmosphere only
+  auroraViolet: "#a855f7", // AI Coach identity accents
+  auroraBlue: "#1677ff", // aurora depth glow (blue)
+  auroraCyan: "#00cfff", // aurora depth glow (cyan)
+  blueBright: "#2E7CF6", // primary interactive blue
+  cyanBright: "#00CFFF", // primary information cyan (active states)
   glass: "rgba(255, 255, 255, 0.075)", // --itg-glass-standard
   glassElevated: "rgba(255, 255, 255, 0.12)", // --itg-glass-elevated
   glassHero: "rgba(255, 255, 255, 0.16)", // --itg-glass-hero
-  glassBorder: "rgba(255, 255, 255, 0.18)", // --itg-glass-border
-  glassBorderBright: "rgba(255, 255, 255, 0.28)", // --itg-glass-border-bright
+  glassBorder: "rgba(130, 175, 255, 0.16)", // blue-tinted glass border
+  glassBorderBright: "rgba(130, 175, 255, 0.32)", // blue-tinted hero border
   textPrimary: "#f8f7ff", // --itg-text-primary
   textSecondary: "#d4d5e8", // --itg-text-secondary
   textMuted: "#8589a6", // --itg-text-muted

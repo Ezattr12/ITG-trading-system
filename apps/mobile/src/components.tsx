@@ -11,7 +11,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { shared, tokens } from "./theme";
 
-/** Full-screen shell: deep background + decorative aurora washes (capped, atmospheric only). */
+/**
+ * Full-screen shell: near-black background + restrained aurora
+ * depth washes — deep blue and cyan carry the depth, with ONE
+ * subtle violet glow as atmosphere only (violet is the AI /
+ * premium accent, not the UI's base color).
+ */
 export function Screen({
   children,
   scroll = true,
@@ -27,6 +32,7 @@ export function Screen({
     <SafeAreaView style={shared.screen} edges={["top", "left", "right"]}>
       <View pointerEvents="none" style={styles.auroraTop} />
       <View pointerEvents="none" style={styles.auroraBottom} />
+      <View pointerEvents="none" style={styles.auroraVioletGlow} />
       {scroll ? (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>{inner}</ScrollView>
       ) : (
@@ -74,7 +80,7 @@ export function Stat({
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={tokens.auroraViolet} size="large" />
+      <ActivityIndicator color={tokens.cyanBright} size="large" />
       <Text style={shared.muted}>{label}</Text>
     </View>
   );
@@ -163,8 +169,8 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: tokens.violetDeep,
-    opacity: 0.35,
+    backgroundColor: tokens.auroraBlue,
+    opacity: 0.16,
   },
   auroraBottom: {
     position: "absolute",
@@ -173,8 +179,18 @@ const styles = StyleSheet.create({
     width: 340,
     height: 340,
     borderRadius: 170,
-    backgroundColor: tokens.auroraBlue,
-    opacity: 0.12,
+    backgroundColor: tokens.auroraCyan,
+    opacity: 0.07,
+  },
+  auroraVioletGlow: {
+    position: "absolute",
+    top: "38%",
+    left: -160,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: tokens.auroraPurple,
+    opacity: 0.05,
   },
   center: {
     flex: 1,
@@ -189,7 +205,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   primaryButton: {
-    backgroundColor: tokens.violet,
+    // Primary actions are blue (institutional primary), with a
+    // bright blue-tinted border as the highlight — no gradient.
+    backgroundColor: tokens.blueBright,
     borderColor: tokens.glassBorderBright,
     borderWidth: 1,
     borderRadius: tokens.radiusPill,

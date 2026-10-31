@@ -77,3 +77,89 @@ describe("calcProfileCompletion", () => {
     expect(PROFILE_VERIFIED_THRESHOLD).toBe(100);
   });
 });
+
+describe("regression: profile stuck at 63% — work status unreachable from the profile page (M2 correction pass)", () => {
+  // The affected account's exact stored shape: identity fields and
+  // the avatar are present, the trading-background fields were never
+  // filled in, and work status is still the onboarding
+  // "not_provided" sentinel. Onboarding step 4 counts that sentinel
+  // as an answered step, so onboarding finished — but it is not a
+  // real work status, and the web profile page offered no way to
+  // change it (it was a hidden carry-over input). The calculator
+  // was correct; the requirement was unreachable.
+  const productionShaped: ProfileCompletionInput = {
+    fullName: "A Trader",
+    fatherName: "B Trader",
+    dateOfBirth: "1995-01-01",
+    country: "United Kingdom",
+    avatarUrl: "https://example.com/avatar.jpg",
+    tradingExperience: null,
+    tradingEducation: null,
+    employmentStatus: "not_provided",
+  };
+
+  it("the production-shaped profile is 63%, not verified, missing exactly the three background items", () => {
+    const result = calcProfileCompletion(productionShaped);
+    expect(result.percent).toBe(63);
+    expect(result.completed).toBe(5);
+    expect(result.total).toBe(8);
+    expect(result.verified).toBe(false);
+    expect(result.missing.map((m) => m.key)).toEqual([
+      "trading_experience",
+      "trading_education",
+      "employment_status",
+    ]);
+  });
+
+  it("'not_provided' work status blocks verification even when the other 7 items are present", () => {
+    const result = calcProfileCompletion({
+      ...complete,
+      employmentStatus: "not_provided",
+    });
+    expect(result.completed).toBe(7);
+    expect(result.percent).toBe(88);
+    expect(result.verified).toBe(false);
+    expect(result.missing.map((m) => m.key)).toEqual(["employment_status"]);
+  });
+
+  it("badge derivation: 7 of 8 complete is not verified; 8 of 8 is verified at 100%", () => {
+    const seven = calcProfileCompletion({ ...complete, country: null });
+    expect(seven.completed).toBe(7);
+    expect(seven.verified).toBe(false);
+    const eight = calcProfileCompletion(complete);
+    expect(eight.completed).toBe(8);
+    expect(eight.percent).toBe(100);
+    expect(eight.verified).toBe(true);
+  });
+
+  it("badge removal: clearing any single item from a complete profile removes verification", () => {
+    const clearers: [string, Partial<ProfileCompletionInput>][] = [
+      ["full_name", { fullName: null }],
+      ["avatar_url", { avatarUrl: null }],
+      ["father_name", { fatherName: null }],
+      ["date_of_birth", { dateOfBirth: null }],
+      ["country", { country: null }],
+      ["trading_experience", { tradingExperience: null }],
+      ["trading_education", { tradingEducation: null }],
+      ["employment_status", { employmentStatus: "not_provided" }],
+    ];
+    for (const [key, patch] of clearers) {
+      const result = calcProfileCompletion({ ...complete, ...patch });
+      expect(result.verified, key).toBe(false);
+      expect(result.percent, key).toBeLessThan(100);
+      expect(result.missing.map((m) => m.key), key).toEqual([key]);
+    }
+  });
+
+  it("the stuck profile reaches 100% and verifies once the three items are actually provided", () => {
+    const result = calcProfileCompletion({
+      ...productionShaped,
+      tradingExperience: "3 years",
+      tradingEducation: "Self-taught",
+      employmentStatus: "full_time",
+    });
+    expect(result.percent).toBe(100);
+    expect(result.verified).toBe(true);
+    expect(result.missing).toHaveLength(0);
+  });
+});

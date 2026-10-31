@@ -1,6 +1,7 @@
 import type {
   DisciplineName,
   EmotionName,
+  EmploymentStatus,
   MarketCondition,
   TradeReason,
   TradingSessionName,
@@ -76,6 +77,16 @@ export const GOAL_TYPE_OPTIONS: Option<string>[] = [
   { value: "risk_discipline", label: "Risk discipline" },
   { value: "performance_target", label: "Performance target" },
   { value: "other", label: "Other" },
+];
+
+/** employmentStatusSchema labels — identical to the web profile form's select. */
+export const EMPLOYMENT_STATUS_OPTIONS: Option<EmploymentStatus>[] = [
+  { value: "full_time", label: "Full-time" },
+  { value: "part_time", label: "Part-time" },
+  { value: "employed_other_job", label: "Employed (other job)" },
+  { value: "unemployed", label: "Unemployed" },
+  { value: "studying", label: "Studying" },
+  { value: "not_provided", label: "Prefer not to say" },
 ];
 
 export const GOAL_STATUS_OPTIONS: Option<"active" | "completed" | "paused" | "failed">[] = [

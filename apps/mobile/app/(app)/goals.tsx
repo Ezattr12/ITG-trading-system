@@ -128,7 +128,7 @@ export default function GoalsScreen() {
                     style={{
                       height: 8,
                       width: `${pct ?? 0}%`,
-                      backgroundColor: tokens.auroraViolet,
+                      backgroundColor: tokens.blueBright,
                     }}
                   />
                 </View>

@@ -122,6 +122,80 @@ export interface UserLevelRow {
   levels: { name: string } | { name: string }[] | null;
 }
 
+/** One row of the `levels` table (thresholds for level bands). */
+export interface LevelRowLite {
+  name: string;
+  min_score: number;
+  max_score: number | null;
+}
+
+/** employmentStatusSchema (lib/auth/validation.ts). */
+export type EmploymentStatus =
+  | "full_time"
+  | "part_time"
+  | "employed_other_job"
+  | "unemployed"
+  | "studying"
+  | "not_provided";
+
+/**
+ * profileEditSchema (lib/auth/validation.ts) — PATCH
+ * /api/mobile/profile. FULL-FORM save: every key is sent on
+ * every save (the booleans and fullName are required by the
+ * schema; the rest are nullable). employed_other_job requires
+ * monthlyIncome — the full form keeps that satisfiable.
+ */
+export interface ProfileUpdatePayload {
+  fullName: string;
+  fatherName: string | null;
+  dateOfBirth: string | null;
+  country: string | null;
+  tradingExperience: string | null;
+  tradingEducation: string | null;
+  backtestingExperience: boolean;
+  backtestedTrades: number | null;
+  realTradingExperience: boolean;
+  realTradesCount: number | null;
+  demoTrading: boolean;
+  employmentStatus: EmploymentStatus;
+  monthlyIncome: number | null;
+  tradingCapital: number | null;
+  tradesRealMoney: boolean;
+}
+
+/** PATCH /api/mobile/profile → 200 `{ profile }` (the updated row, snake_case). */
+export interface ProfileUpdateResponse {
+  profile: {
+    id: string;
+    full_name: string;
+    father_name: string | null;
+    date_of_birth: string | null;
+    country: string | null;
+    trading_experience: string | null;
+    trading_education: string | null;
+    backtesting_experience: boolean;
+    backtested_trades: number | null;
+    real_trading_experience: boolean;
+    real_trades_count: number | null;
+    demo_trading: boolean;
+    employment_status: string;
+    monthly_income: number | null;
+    trading_capital: number | null;
+    trades_real_money: boolean;
+  };
+}
+
+/** POST /api/mobile/profile/avatar → 200 `{ avatar_url }`. */
+export interface AvatarUploadResponse {
+  avatar_url: string;
+}
+
+/** One earned achievement: `user_achievements` joined with its catalogue name. */
+export interface EarnedAchievementRow {
+  unlocked_at: string;
+  achievements: { name: string } | { name: string }[] | null;
+}
+
 export interface AiInsightRow {
   id: string;
   user_id: string;

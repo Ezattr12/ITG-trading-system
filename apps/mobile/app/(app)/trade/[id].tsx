@@ -40,7 +40,9 @@ import type {
  * URLs from the user's own client — the same way web does.
  */
 export default function TradeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `shot=failed` arrives from Add Trade when the trade saved
+  // but its screenshot upload did not — surfaced honestly below.
+  const { id, shot } = useLocalSearchParams<{ id: string; shot?: string }>();
   const router = useRouter();
   const { session } = useAuth();
   const [trade, setTrade] = useState<TradeRow | null>(null);
@@ -256,6 +258,9 @@ export default function TradeDetailScreen() {
   return (
     <Screen>
       <Text style={shared.title}>{trade.pair}</Text>
+      {shot === "failed" ? (
+        <FormError message="Trade saved — the screenshot upload failed. You can add it from the Screenshots section below." />
+      ) : null}
       <GlassCard hero>
         <Text style={shared.label}>Result</Text>
         {metrics.map((m) => (
@@ -360,6 +365,10 @@ export default function TradeDetailScreen() {
 
       <GlassCard>
         <Text style={shared.heading}>Screenshots</Text>
+        <Text style={shared.muted}>
+          Stored privately — only you can view these. Removing a screenshot
+          deletes the stored file as well as its record.
+        </Text>
         {screenshots.length === 0 ? (
           <Text style={shared.muted}>
             No screenshots yet. Attach a chart screenshot to this trade's journal.

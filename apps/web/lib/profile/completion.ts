@@ -20,6 +20,20 @@
  * would make the badge unreachable. They are shown on the
  * profile from the trader's active trading plan / trade history
  * instead (see `identity.ts`).
+ *
+ * RULE (product definition): the ITG Verified Profile badge is shown
+ * if and only if calcProfileCompletion(...).percent === 100, derived
+ * from the stored profile row at read time. It is never stored, never
+ * settable by the trader or an admin, and appears/disappears
+ * automatically as completion crosses 100%. It is a completeness
+ * badge only — NOT identity, KYC, or government verification. Every
+ * surface (web profile, dashboard, mobile profile) must derive it
+ * from this same 8-item calculation over the same columns. Note the
+ * deliberate distinction from onboarding: onboarding step 4 counts an
+ * explicit 'not_provided' as an answered step so onboarding can
+ * finish; PROFILE completion requires a real work status — and the
+ * field is editable on the profile surfaces so the requirement is
+ * always reachable.
  */
 
 export interface ProfileCompletionInput {

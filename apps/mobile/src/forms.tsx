@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   chipSelected: {
-    backgroundColor: tokens.violet,
+    backgroundColor: tokens.blueBright,
     borderColor: tokens.glassBorderBright,
   },
   chipText: {
