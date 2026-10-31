@@ -64,10 +64,17 @@ jobs:
             -alias testkey -keypass android -keyalg RSA -keysize 2048 \
             -validity 10000 -dname "CN=ITG Device Test, O=ITG, C=US"
           BT=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
-          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
-          "$BT/zipalign" -p 4 "$UNSIGNED" /tmp/aligned.apk
-          "$BT/apksigner" sign --ks /tmp/test.keystore --ks-pass pass:android \
-            --key-pass pass:android --out "$GITHUB_WORKSPACE/itg-traderos-test.apk" /tmp/aligned.apk
+          ls -la app/build/outputs/apk/release/
+          SRC=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          echo "release APK found: $SRC"
+          if "$BT/apksigner" verify "$SRC" 2>/dev/null; then
+            echo "APK is already signed (template debug signing) — using it as-is"
+            cp "$SRC" "$GITHUB_WORKSPACE/itg-traderos-test.apk"
+          else
+            "$BT/zipalign" -p 4 "$SRC" /tmp/aligned.apk
+            "$BT/apksigner" sign --ks /tmp/test.keystore --ks-pass pass:android \
+              --key-pass pass:android --out "$GITHUB_WORKSPACE/itg-traderos-test.apk" /tmp/aligned.apk
+          fi
           "$BT/apksigner" verify "$GITHUB_WORKSPACE/itg-traderos-test.apk"
 
       - name: Upload the APK
