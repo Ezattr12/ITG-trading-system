@@ -420,20 +420,13 @@
     min-height: 44px;
     padding: 10px 18px;
     border-radius: 14px;
-    border: 1px solid rgba(140, 195, 255, 0.5);
-    background: linear-gradient(
-      135deg,
-      var(--itg-blue-700),
-      var(--itg-blue-600) 55%,
-      var(--itg-blue-500)
-    );
+    /* background / border / box-shadow live in the
+       UNLAYERED tail of this file — the pipeline emits
+       the Tailwind preflight button reset unlayered, and
+       layered paint loses to it (see the tail note). */
     color: #fff;
     font-size: 0.9375rem;
     font-weight: 700;
-    box-shadow:
-      0 10px 30px rgba(2, 10, 30, 0.5),
-      0 0 24px rgba(18, 104, 216, 0.32),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
     transition:
       transform var(--motion-duration-fast) var(--motion-ease-standard),
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
@@ -442,10 +435,7 @@
   .itg2-btn-primary:hover {
     transform: translateY(-1px);
     filter: brightness(1.08);
-    box-shadow:
-      0 14px 34px rgba(2, 10, 30, 0.55),
-      0 0 34px rgba(18, 104, 216, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    /* box-shadow: unlayered tail. */
   }
   .itg2-btn-primary:active {
     transform: translateY(0) scale(0.98);
@@ -459,15 +449,11 @@
     min-height: 44px;
     padding: 10px 18px;
     border-radius: 14px;
-    border: 1px solid rgba(196, 176, 250, 0.5);
-    background: linear-gradient(135deg, hsl(264 59% 32%), hsl(262 83% 58%));
+    /* background / border / box-shadow: unlayered tail
+       (same preflight reason as .itg2-btn-primary). */
     color: #fff;
     font-size: 0.9375rem;
     font-weight: 700;
-    box-shadow:
-      0 10px 30px rgba(10, 2, 30, 0.5),
-      0 0 24px rgba(124, 45, 255, 0.32),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
     transition:
       transform var(--motion-duration-fast) var(--motion-ease-standard),
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
@@ -476,10 +462,7 @@
   .itg2-btn-ai:hover {
     transform: translateY(-1px);
     filter: brightness(1.08);
-    box-shadow:
-      0 14px 34px rgba(10, 2, 30, 0.55),
-      0 0 34px rgba(124, 45, 255, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    /* box-shadow: unlayered tail. */
   }
   .itg2-btn-ai:active {
     transform: translateY(0) scale(0.98);
@@ -591,6 +574,266 @@
   .itg2-chart-scope #itg-equity-fill stop:last-child {
     stop-color: var(--itg-cyan-400);
   }
+  /*
+   * ============================================================
+   * FORM SYSTEM (Master Web UI Redesign — Page 2, Add Trade;
+   * every later form reuses these instead of inventing its
+   * own controls). Fields are icon-led: a small blue glass
+   * tile beside the label, the control below. Panels that
+   * hold forms opt out of the card hover lift with
+   * .itg2-card-flat (a form must never move while it is
+   * being filled in). The controls themselves
+   * (.itg2-input / .itg2-select / .itg2-textarea) are
+   * defined UNLAYERED at the end of this file — see the
+   * note there.
+   * ============================================================
+   */
+  .itg2-page-title {
+    font-size: clamp(1.875rem, 6vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: var(--itg-text-primary);
+  }
+  /* Opt-out of the .itg2-card hover lift for form panels
+     (declared after .itg2-card:hover so it wins at equal
+     specificity within the layer). */
+  .itg2-card-flat:hover {
+    transform: none;
+  }
+  .itg2-field {
+    min-width: 0;
+  }
+  .itg2-field-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: #dceaff;
+    background: linear-gradient(
+      135deg,
+      rgba(46, 124, 246, 0.34),
+      rgba(0, 207, 255, 0.13)
+    );
+    border: 1px solid rgba(120, 175, 255, 0.34);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .itg2-field-icon-tp {
+    color: #8ff5cd;
+    background: linear-gradient(
+      135deg,
+      rgba(33, 243, 165, 0.26),
+      rgba(33, 243, 165, 0.07)
+    );
+    border-color: rgba(33, 243, 165, 0.38);
+  }
+  .itg2-field-icon-sl {
+    color: #ffa4b8;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 77, 114, 0.26),
+      rgba(255, 77, 114, 0.07)
+    );
+    border-color: rgba(255, 77, 114, 0.4);
+  }
+  .itg2-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--itg-text-primary);
+  }
+  /* Direction segmented control (Add Trade): a recessed
+     glass track with two 48px segments. The value still
+     submits through a hidden `direction` input; the buttons
+     carry aria-pressed. Long = profit green -> cyan, Short
+     = loss red -> pink (Ezat's direction semantics); the
+     unselected state is neutral glass. */
+  .itg2-segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 16px;
+    border: 1px solid rgba(120, 175, 255, 0.18);
+    background: linear-gradient(
+      180deg,
+      rgba(6, 18, 40, 0.72),
+      rgba(4, 10, 24, 0.78)
+    );
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(190, 220, 255, 0.06);
+  }
+  .itg2-segment {
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: hsl(var(--muted-foreground));
+    background: transparent;
+    cursor: pointer;
+    transition:
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      background var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-segment:hover {
+    color: var(--itg-text-primary);
+    background: rgba(120, 175, 255, 0.07);
+  }
+  .itg2-segment:focus-visible {
+    outline: 2px solid var(--itg-cyan-400);
+    outline-offset: 2px;
+  }
+  .itg2-segment:active {
+    transform: scale(0.98);
+  }
+  .itg2-segment.itg2-segment-long {
+    color: #032117;
+    background: linear-gradient(135deg, var(--itg-profit), var(--itg-cyan-400));
+    border-color: rgba(33, 243, 165, 0.55);
+    box-shadow:
+      0 0 22px rgba(33, 243, 165, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .itg2-segment.itg2-segment-long:hover {
+    color: #032117;
+    background: linear-gradient(135deg, var(--itg-profit), var(--itg-cyan-400));
+    filter: brightness(1.06);
+  }
+  .itg2-segment.itg2-segment-short {
+    color: #2a0510;
+    background: linear-gradient(135deg, var(--itg-loss), #f472b6);
+    border-color: rgba(255, 77, 114, 0.55);
+    box-shadow:
+      0 0 22px rgba(255, 77, 114, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .itg2-segment.itg2-segment-short:hover {
+    color: #2a0510;
+    background: linear-gradient(135deg, var(--itg-loss), #f472b6);
+    filter: brightness(1.06);
+  }
+  /* Secondary in-form action (Replace / Remove and the
+     like): quiet glass, blue hover. */
+  .itg2-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    /* border / background: unlayered tail (same
+       preflight reason as .itg2-btn-primary). */
+    color: #bcd6ff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      background var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  /* .itg2-btn-ghost:hover paint (border-color /
+     background): unlayered tail. */
+  .itg2-btn-ghost:active {
+    transform: scale(0.98);
+  }
+  .itg2-btn-ghost:focus-visible {
+    outline: 2px solid var(--itg-cyan-400);
+    outline-offset: 2px;
+  }
+  /* The form's primary submit: full-width, taller than the
+     standard primary button (rides on .itg2-btn-primary). */
+  .itg2-btn-save {
+    width: 100%;
+    min-height: 52px;
+    border-radius: 16px;
+    font-size: 1rem;
+  }
+  /* Optional-details disclosure (Add Trade "More details"):
+     the native <details> keeps its behaviour; only the
+     summary is dressed. */
+  .itg2-details-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--itg-text-primary);
+    border-radius: 10px;
+  }
+  .itg2-details-summary::-webkit-details-marker {
+    display: none;
+  }
+  .itg2-details-summary:focus-visible {
+    outline: 2px solid var(--itg-cyan-400);
+    outline-offset: 2px;
+  }
+  .itg2-details-chevron {
+    margin-left: auto;
+    color: #9cc2ff;
+    transition: transform var(--motion-duration-base) var(--motion-ease-standard);
+  }
+  details[open] > .itg2-details-summary .itg2-details-chevron {
+    transform: rotate(180deg);
+  }
+  /* Screenshot attach dropzone (Add Trade): a dashed
+     blue-glass target; the real file input is sr-only
+     inside/associated, and :focus-within shows the
+     keyboard focus on the zone. */
+  .itg2-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 118px;
+    padding: 20px;
+    border-radius: 18px;
+    border: 1.5px dashed rgba(120, 175, 255, 0.35);
+    background: linear-gradient(
+      180deg,
+      rgba(17, 44, 92, 0.35),
+      rgba(8, 20, 44, 0.42)
+    );
+    color: #bcd6ff;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      background var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-upload:hover {
+    border-color: rgba(0, 207, 255, 0.6);
+    background: linear-gradient(
+      180deg,
+      rgba(21, 56, 116, 0.45),
+      rgba(9, 24, 52, 0.5)
+    );
+  }
+  .itg2-upload:focus-within {
+    border-color: rgba(0, 207, 255, 0.75);
+    box-shadow: 0 0 0 3px rgba(0, 207, 255, 0.2);
+  }
+  .itg2-upload-preview {
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(120, 175, 255, 0.22);
+    background: rgba(4, 10, 24, 0.55);
+    box-shadow: inset 0 1px 0 rgba(190, 220, 255, 0.07);
+  }
 
 }
 
@@ -675,6 +918,17 @@
   .itg2-card-elevated {
     background: linear-gradient(160deg, rgba(10, 32, 68, 0.96), rgba(5, 13, 30, 0.97));
   }
+  /* v2 form controls (Page 2): the same near-opaque navy
+     fill, so inputs stay readable without blur. */
+  .itg2-input,
+  .itg2-textarea {
+    background: linear-gradient(180deg, rgba(10, 32, 68, 0.97), rgba(5, 13, 30, 0.98));
+  }
+  .itg2-select {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239cc2ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, rgba(10, 32, 68, 0.97), rgba(5, 13, 30, 0.98));
+  }
   .itg2-hero {
     background: linear-gradient(155deg, rgba(11, 47, 105, 0.97), rgba(4, 8, 18, 0.98));
   }
@@ -729,4 +983,150 @@
 }
 .itg2-level-scope .itg-completion-ring::after {
   background: #050a18;
+}
+
+/*
+ * UNLAYERED ON PURPOSE (same reasoning as the level-scope
+ * overrides above): the form controls must override the
+ * shared shadcn Input's utility classes (utilities layer)
+ * and the legacy .input-surface / .input-select rules
+ * (components layer) regardless of layer order, so
+ * .itg2-input / .itg2-select / .itg2-textarea live outside
+ * every layer. The selectors are element+class
+ * (input.itg2-input, ...) because .input-surface is ALSO
+ * emitted unlayered and sits later in source order — at
+ * equal specificity (0,1,0) it won and painted the legacy
+ * plum gradient; (0,1,1) wins regardless of order.
+ * Deep-blue glass: translucent navy fill,
+ * blue-tinted border, white text, cyan focus glow. 48px
+ * minimum height and 16px text keep the Phase 15 touch /
+ * iOS-zoom rules; color-scheme: dark makes the native
+ * date/select widgets render dark.
+ */
+input.itg2-input,
+select.itg2-select,
+textarea.itg2-textarea {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 175, 255, 0.28);
+  background: linear-gradient(
+    180deg,
+    rgba(21, 56, 116, 0.42),
+    rgba(8, 20, 44, 0.55)
+  );
+  color: var(--itg-text-primary);
+  font-size: 1rem;
+  line-height: 1.4;
+  padding: 10px 14px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(190, 220, 255, 0.07);
+  color-scheme: dark;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+}
+textarea.itg2-textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
+}
+input.itg2-input::placeholder,
+textarea.itg2-textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+input.itg2-input:hover,
+select.itg2-select:hover,
+textarea.itg2-textarea:hover {
+  border-color: rgba(140, 195, 255, 0.42);
+}
+input.itg2-input:focus-visible,
+select.itg2-select:focus-visible,
+textarea.itg2-textarea:focus-visible {
+  outline: none;
+  border-color: rgba(0, 207, 255, 0.75);
+  box-shadow:
+    0 0 0 3px rgba(0, 207, 255, 0.22),
+    0 0 26px rgba(18, 104, 216, 0.35),
+    inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+input.itg2-input:disabled,
+select.itg2-select:disabled,
+textarea.itg2-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+select.itg2-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239cc2ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, rgba(21, 56, 116, 0.42), rgba(8, 20, 44, 0.55));
+  background-repeat: no-repeat;
+  background-position:
+    right 14px center,
+    0 0;
+  background-size:
+    14px 14px,
+    100% 100%;
+}
+
+/*
+ * UNLAYERED ON PURPOSE (same reasoning as the level-scope
+ * and form-control blocks above): the v2 button paint
+ * (background / border / box-shadow) must beat the
+ * Tailwind preflight button reset, which the pipeline
+ * emits UNLAYERED —
+ * button { background-color: transparent;
+ * background-image: none } — and ANY layered declaration
+ * loses to an unlayered one regardless of specificity.
+ * That is what left the primary Save Trade button
+ * transparent / near-black. Only the paint lives here;
+ * layout, typography, transitions and the transform /
+ * filter press feedback stay in the itg2 layer with the
+ * base rules. (.itg2-btn-save declares no paint of its
+ * own — it only widens / heightens .itg2-btn-primary.)
+ */
+.itg2-btn-primary {
+  border: 1px solid rgba(140, 195, 255, 0.5);
+  background: linear-gradient(
+    135deg,
+    var(--itg-blue-700),
+    var(--itg-blue-600) 55%,
+    var(--itg-blue-500)
+  );
+  box-shadow:
+    0 10px 30px rgba(2, 10, 30, 0.5),
+    0 0 24px rgba(18, 104, 216, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.itg2-btn-primary:hover {
+  box-shadow:
+    0 14px 34px rgba(2, 10, 30, 0.55),
+    0 0 34px rgba(18, 104, 216, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.itg2-btn-ai {
+  border: 1px solid rgba(196, 176, 250, 0.5);
+  background: linear-gradient(135deg, hsl(264 59% 32%), hsl(262 83% 58%));
+  box-shadow:
+    0 10px 30px rgba(10, 2, 30, 0.5),
+    0 0 24px rgba(124, 45, 255, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.itg2-btn-ai:hover {
+  box-shadow:
+    0 14px 34px rgba(10, 2, 30, 0.55),
+    0 0 34px rgba(124, 45, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.itg2-btn-ghost {
+  border: 1px solid rgba(120, 175, 255, 0.3);
+  background: rgba(46, 124, 246, 0.08);
+}
+.itg2-btn-ghost:hover {
+  border-color: rgba(0, 207, 255, 0.55);
+  background: rgba(46, 124, 246, 0.16);
 }

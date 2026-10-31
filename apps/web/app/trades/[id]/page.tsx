@@ -55,10 +55,10 @@ export default async function TradeDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; shot?: string }>;
 }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, shot } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!user.onboarding?.is_complete) redirect("/onboarding");
@@ -117,6 +117,18 @@ export default async function TradeDetailPage({
         {/* Shown after a save or correction (?saved=1, Phase 16):
             an animated checkmark confirmation, dismissible. */}
         {saved === "1" ? <TradeSavedBanner /> : null}
+
+        {/* Shown when a trade saved from Add Trade but its
+            attach-at-create screenshot upload failed
+            (?shot=failed, Master Redesign Page 2 — the same
+            pattern as mobile). The trade itself is saved; the
+            Screenshots section below is the retry path. */}
+        {shot === "failed" ? (
+          <p role="status" className="motion-fade-in mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <strong>Screenshot not attached.</strong> Your trade was saved, but the screenshot upload
+            failed — you can add it below in the Screenshots section.
+          </p>
+        ) : null}
 
         {trade.status === "reversed" && detail.correctingTrade && (
           <p role="status" className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
