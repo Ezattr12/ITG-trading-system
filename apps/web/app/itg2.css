@@ -1,0 +1,732 @@
+/*
+ * ITG TraderOS — v2 component system (Master Web UI Redesign).
+ * Split out of globals.css so each stylesheet stays within the
+ * deployment upload limits; imported by app/layout.tsx right
+ * after globals.css. Tokens live in globals.css (:root --itg-*);
+ * this file holds only the .itg2-* component classes that
+ * consume them, in the dedicated `itg2` cascade layer, which globals.css orders between `components` and `utilities` — the same tier the classes occupied when they lived inside globals.css.
+ */
+/* Layer order is declared here too: this file may load as its own
+ * chunk, and the first chunk to name the layers fixes their order. */
+@layer base, components, itg2, utilities;
+
+@layer itg2 {
+  /*
+   * ============================================================
+   * v2 COMPONENT SYSTEM (Master Web UI Redesign — foundation,
+   * first used by the Dashboard; every later page reuses
+   * these classes instead of inventing its own surfaces).
+   *
+   * Three glass levels, all blue-tinted translucent surfaces
+   * over the deep black-blue base — physical glass, not flat
+   * panels: a top-edge light (::before, pointer-events none,
+   * exactly like the legacy .itg-glass reflection), layered
+   * inset highlight + deep drop shadow, and a blue-tinted
+   * border that brightens on hover with a small lift.
+   *   L1 .itg2-card           — standard content cards
+   *   L2 .itg2-card-elevated  — focal cards (chart panels)
+   *   L3 .itg2-hero           — the one hero per page:
+   *      layered navy->black gradients, an animated light
+   *      sweep (::after, transform only), atmospheric glow.
+   * Semantic colours come only from the --itg-profit /
+   * --itg-loss / --itg-warning / --itg-gold tokens; violet
+   * appears ONLY in the .itg2-card-ai / .itg2-btn-ai /
+   * .itg2-eyebrow-ai AI-identity variants.
+   * ============================================================
+   */
+  .itg2-card {
+    position: relative;
+    border: 1px solid rgba(120, 175, 255, 0.16);
+    border-radius: 24px;
+    background: linear-gradient(
+      160deg,
+      rgba(17, 44, 92, 0.52),
+      rgba(8, 20, 44, 0.58)
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(190, 220, 255, 0.1),
+      var(--itg-shadow-card);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    transition:
+      transform var(--motion-duration-base) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+  }
+  .itg2-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(210, 232, 255, 0.09),
+      transparent 34%
+    );
+  }
+  .itg2-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(140, 195, 255, 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(190, 220, 255, 0.14),
+      var(--itg-shadow-elevated);
+  }
+  .itg2-card-elevated {
+    position: relative;
+    border: 1px solid rgba(130, 185, 255, 0.3);
+    border-radius: 26px;
+    background: linear-gradient(
+      160deg,
+      rgba(21, 56, 116, 0.58),
+      rgba(9, 24, 52, 0.66)
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(200, 228, 255, 0.14),
+      var(--itg-shadow-elevated),
+      0 0 44px rgba(18, 104, 216, 0.13);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    transition:
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+  }
+  .itg2-card-elevated::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(115deg, rgba(0, 207, 255, 0.06), transparent 45%),
+      linear-gradient(180deg, rgba(215, 236, 255, 0.12), transparent 38%);
+  }
+  .itg2-card-elevated:hover {
+    border-color: rgba(150, 200, 255, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(200, 228, 255, 0.17),
+      var(--itg-shadow-elevated),
+      0 0 56px rgba(18, 104, 216, 0.18);
+  }
+  /* L3 hero — layered deep-blue -> black gradients, a cyan
+     kiss top-right, a blue pool bottom-left, the animated
+     light sweep (::after) and the hero shadow + glow. */
+  .itg2-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(150, 200, 255, 0.36);
+    border-radius: 28px;
+    background:
+      radial-gradient(640px 300px at 88% -10%, rgba(0, 207, 255, 0.14), transparent 60%),
+      radial-gradient(700px 380px at -10% 110%, rgba(18, 104, 216, 0.2), transparent 62%),
+      linear-gradient(155deg, rgba(11, 63, 145, 0.5), rgba(6, 21, 47, 0.72) 48%, rgba(3, 5, 10, 0.9));
+    box-shadow:
+      inset 0 1px 0 rgba(210, 234, 255, 0.18),
+      var(--itg-shadow-hero),
+      0 0 64px rgba(18, 104, 216, 0.16);
+    backdrop-filter: blur(24px) saturate(155%);
+    -webkit-backdrop-filter: blur(24px) saturate(155%);
+  }
+  .itg2-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(220, 240, 255, 0.13),
+      transparent 30%
+    );
+  }
+  .itg2-hero::after {
+    content: "";
+    position: absolute;
+    inset: -25% -55%;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 44%,
+      rgba(150, 205, 255, 0.07) 50%,
+      transparent 56%
+    );
+    animation: itg2-hero-sweep 11s ease-in-out infinite alternate;
+  }
+  .itg2-hero-inner {
+    position: relative;
+    z-index: 1;
+  }
+  /* CSS-3D hero accent: concentric glass rings around a
+     glowing core, built from gradients + ring shadows
+     only. Purely decorative depth — abstract light, never
+     data, never a chart shape. */
+  .itg2-hero-rings {
+    position: absolute;
+    top: -70px;
+    right: -50px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at 36% 30%,
+      rgba(0, 207, 255, 0.32),
+      rgba(18, 104, 216, 0.16) 42%,
+      transparent 68%
+    );
+    border: 1px solid rgba(0, 207, 255, 0.22);
+    box-shadow:
+      0 0 0 22px rgba(46, 124, 246, 0.05),
+      0 0 0 48px rgba(46, 124, 246, 0.03),
+      inset 0 0 42px rgba(0, 207, 255, 0.12);
+  }
+  @media (max-width: 640px) {
+    .itg2-hero-rings {
+      width: 160px;
+      height: 160px;
+      top: -52px;
+      right: -44px;
+      opacity: 0.7;
+    }
+  }
+  /* Identity avatar disc — gradient navy fill, cyan ring,
+     the trader's real photo when one exists (the img fills
+     the disc), otherwise their initial. */
+  .itg2-avatar {
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 800;
+    background: linear-gradient(150deg, var(--itg-blue-700), var(--itg-blue-900));
+    border: 2px solid rgba(0, 207, 255, 0.45);
+    box-shadow:
+      0 0 22px rgba(18, 104, 216, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .itg2-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* Section headers: a small blue eyebrow over the title. */
+  .itg2-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--itg-blue-500);
+  }
+  .itg2-eyebrow-ai {
+    color: #c4b0fa;
+  }
+  .itg2-section-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--itg-text-primary);
+  }
+  @media (min-width: 640px) {
+    .itg2-section-title {
+      font-size: 1.25rem;
+    }
+  }
+  /* The hero's headline figure (the P&L numeral) and the
+     smaller panel-header figure. Colour is layered on by
+     the semantic classes (.itg-pnl-positive / -negative)
+     or .itg2-text-* below — never by these size classes. */
+  /* NOTE: the figure classes set size/weight only — no
+     color — so the semantic colour layered on the same
+     element (.itg-pnl-positive / -negative, .itg2-text-*)
+     always wins. The neutral state simply inherits the
+     body foreground (#F4F8FF family). */
+  .itg2-hero-value {
+    font-size: clamp(42px, 9vw, 68px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    font-variant-numeric: tabular-nums;
+  }
+  .itg2-figure {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Hero identity band cells (level / XP / completion). */
+  .itg2-band-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(180, 205, 245, 0.75);
+  }
+  .itg2-band-value {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--itg-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Semantic text colours — defined AFTER the size/band
+     classes above so they win on combined elements (the
+     gold level name in the identity band). */
+  .itg2-text-profit {
+    color: var(--itg-profit);
+  }
+  .itg2-text-loss {
+    color: var(--itg-loss);
+  }
+  .itg2-text-gold {
+    color: var(--itg-gold);
+  }
+  /* KPI card (rides on .itg2-card): icon tile, label, big
+     tabular numeral, hint, optional status chip. */
+  .itg2-kpi {
+    padding: 20px;
+    min-height: 148px;
+  }
+  .itg2-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #dceaff;
+    background: linear-gradient(
+      135deg,
+      rgba(46, 124, 246, 0.38),
+      rgba(0, 207, 255, 0.16)
+    );
+    border: 1px solid rgba(120, 175, 255, 0.38);
+    box-shadow:
+      0 0 20px rgba(18, 104, 216, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .itg2-kpi-icon-profit {
+    color: #8ff5cd;
+    background: linear-gradient(
+      135deg,
+      rgba(33, 243, 165, 0.28),
+      rgba(33, 243, 165, 0.08)
+    );
+    border-color: rgba(33, 243, 165, 0.4);
+    box-shadow:
+      0 0 20px rgba(33, 243, 165, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .itg2-kpi-icon-loss {
+    color: #ffa4b8;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 77, 114, 0.28),
+      rgba(255, 77, 114, 0.08)
+    );
+    border-color: rgba(255, 77, 114, 0.42);
+    box-shadow:
+      0 0 20px rgba(255, 77, 114, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .itg2-kpi-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+  .itg2-kpi-value {
+    margin-top: 2px;
+    font-size: clamp(26px, 5vw, 34px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--itg-text-primary);
+  }
+  .itg2-kpi-hint {
+    margin-top: 4px;
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+  }
+  /* Status / trend chip. The neutral chip is blue; the
+     profit/loss/gold variants are semantic and are chosen
+     from the REAL value, like the legacy glow props. */
+  .itg2-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    border: 1px solid rgba(140, 185, 255, 0.35);
+    background: rgba(46, 124, 246, 0.12);
+    color: #bcd6ff;
+  }
+  .itg2-chip-profit {
+    border-color: rgba(33, 243, 165, 0.42);
+    background: rgba(33, 243, 165, 0.1);
+    color: var(--itg-profit);
+  }
+  .itg2-chip-loss {
+    border-color: rgba(255, 77, 114, 0.45);
+    background: rgba(255, 77, 114, 0.1);
+    color: #ff8fab;
+  }
+  .itg2-chip-gold {
+    border-color: rgba(189, 147, 95, 0.5);
+    background: rgba(189, 147, 95, 0.12);
+    color: #dcbd8a;
+  }
+  .itg2-chip-dir {
+    text-transform: uppercase;
+  }
+  /* Progress: blue -> bright blue -> cyan fill with a cyan
+     glow; the fill grows from 0 to its inline width on
+     mount (server-rendered width is the end state; the
+     aria contract stays on the track element). */
+  .itg2-progress {
+    height: 9px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(120, 175, 255, 0.14);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+  .itg2-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      var(--itg-blue-600),
+      var(--itg-blue-500),
+      var(--itg-cyan-400)
+    );
+    box-shadow: 0 0 16px rgba(0, 207, 255, 0.45);
+    animation: itg2-progress-in 700ms var(--itg-ease-premium) both;
+  }
+  .itg2-progress-sm {
+    height: 6px;
+  }
+  /* Primary action — deep blue with a cyan-ward highlight,
+     white text, glow, and press feedback. */
+  .itg2-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(140, 195, 255, 0.5);
+    background: linear-gradient(
+      135deg,
+      var(--itg-blue-700),
+      var(--itg-blue-600) 55%,
+      var(--itg-blue-500)
+    );
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    box-shadow:
+      0 10px 30px rgba(2, 10, 30, 0.5),
+      0 0 24px rgba(18, 104, 216, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition:
+      transform var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      filter var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow:
+      0 14px 34px rgba(2, 10, 30, 0.55),
+      0 0 34px rgba(18, 104, 216, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+  .itg2-btn-primary:active {
+    transform: translateY(0) scale(0.98);
+  }
+  /* AI variant — the one violet primary action (AI Coach). */
+  .itg2-btn-ai {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(196, 176, 250, 0.5);
+    background: linear-gradient(135deg, hsl(264 59% 32%), hsl(262 83% 58%));
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    box-shadow:
+      0 10px 30px rgba(10, 2, 30, 0.5),
+      0 0 24px rgba(124, 45, 255, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition:
+      transform var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      filter var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-btn-ai:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow:
+      0 14px 34px rgba(10, 2, 30, 0.55),
+      0 0 34px rgba(124, 45, 255, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+  .itg2-btn-ai:active {
+    transform: translateY(0) scale(0.98);
+  }
+  /* In-card action link (blue; the AI surface uses
+     .itg2-btn-ai instead, so no violet link is needed). */
+  .itg2-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9cc2ff;
+    text-underline-offset: 4px;
+  }
+  .itg2-link:hover {
+    text-decoration: underline;
+  }
+  /* AI Coach card — the ONE violet-accent surface: deep
+     black-blue glass, a violet glow edge, and the CSS orb. */
+  .itg2-card-ai {
+    border-color: rgba(168, 85, 247, 0.34);
+    background: linear-gradient(
+      160deg,
+      rgba(52, 18, 102, 0.42),
+      rgba(10, 12, 34, 0.62)
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(216, 196, 255, 0.12),
+      var(--itg-shadow-card),
+      0 0 40px rgba(124, 45, 255, 0.13);
+  }
+  .itg2-card-ai::before {
+    background: linear-gradient(
+      180deg,
+      rgba(216, 196, 255, 0.1),
+      transparent 34%
+    );
+  }
+  .itg2-card-ai:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(216, 196, 255, 0.15),
+      var(--itg-shadow-elevated),
+      0 0 52px rgba(124, 45, 255, 0.2);
+  }
+  .itg2-ai-orb {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(
+      circle at 34% 28%,
+      rgba(196, 176, 250, 0.85),
+      rgba(124, 45, 255, 0.55) 52%,
+      rgba(52, 2, 102, 0.65)
+    );
+    border: 1px solid rgba(196, 176, 250, 0.5);
+    box-shadow:
+      0 0 26px rgba(139, 92, 246, 0.45),
+      inset 0 0 14px rgba(255, 255, 255, 0.18);
+  }
+  .itg2-ai-orb-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ede9ff;
+    box-shadow: 0 0 10px rgba(237, 233, 255, 0.9);
+  }
+  /*
+   * Dashboard-scoped chart restyle. The EquityChart is
+   * SHARED with Analytics — these rules apply only inside
+   * the dashboard's .itg2-chart-scope wrapper, so the
+   * component and its Analytics appearance are untouched:
+   * the panel becomes a deep-blue pool, the grid/ticks go
+   * blue-white, and the equity area's line + fill stops go
+   * blue -> cyan with a soft glow. The hero sparkline is
+   * NOT in this scope — it keeps its semantic P&L colour.
+   */
+  .itg2-chart-scope .chart-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(6, 21, 47, 0.66),
+      rgba(4, 10, 24, 0.62)
+    );
+    border-color: rgba(120, 175, 255, 0.16);
+  }
+  .itg2-chart-scope .recharts-cartesian-grid line {
+    stroke: rgba(120, 175, 255, 0.13);
+  }
+  .itg2-chart-scope .recharts-cartesian-axis-tick text {
+    fill: #a9bedf;
+  }
+  .itg2-chart-scope .recharts-tooltip-cursor {
+    stroke: rgba(120, 175, 255, 0.35);
+  }
+  .itg2-chart-scope .recharts-area-curve {
+    stroke: var(--itg-cyan-400);
+    filter: drop-shadow(0 0 6px rgba(0, 207, 255, 0.4));
+  }
+  .itg2-chart-scope .recharts-active-dot circle {
+    fill: var(--itg-cyan-400);
+  }
+  .itg2-chart-scope #itg-equity-fill stop:first-child {
+    stop-color: var(--itg-blue-500);
+  }
+  .itg2-chart-scope #itg-equity-fill stop:last-child {
+    stop-color: var(--itg-cyan-400);
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Entrance animations start hidden (fill mode both), so
+     reduced motion must remove them entirely — otherwise
+     content could sit invisible. The final state is always
+     the real content; animation never carries information. */
+  .motion-reveal,
+  .motion-fade-in,
+  .motion-scale-in,
+  .motion-page,
+  .motion-ai-dot,
+  .motion-login-glow,
+  .motion-login-grid,
+  .motion-orb-drift,
+  .skeleton {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* v2: the hero sweep and the progress grow are removed
+     outright (the universal rule above already collapses
+     their durations; this keeps the final state exact). */
+  .itg2-hero::after,
+  .itg2-progress-fill {
+    animation: none !important;
+  }
+}
+
+/*
+ * Phase 18 Aurora — backdrop-filter fallback. Browsers
+ * without backdrop-filter (old Safari, some embedded
+ * webviews) would render the blurred glass surfaces as
+ * near-transparent washes, which hurts readability. The
+ * fallback gives every blurred surface a much more opaque
+ * purple fill instead, so the glass stays readable — the
+ * aurora behind it is sacrificed, the content is not.
+ * Ordinary cards (.card-surface / .card-surface-raised)
+ * need no fallback: they carry no backdrop-filter, and
+ * their translucent gradient composites over the body
+ * background in every browser.
+ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-surface,
+  .glass-surface-elevated {
+    background: linear-gradient(180deg, hsl(272 45% 19% / 0.96), hsl(272 45% 15% / 0.96));
+  }
+  .card-surface-glass {
+    background: linear-gradient(180deg, hsl(272 45% 20% / 0.97), hsl(272 45% 16% / 0.97));
+  }
+  .hero-card {
+    background: linear-gradient(160deg, hsl(270 60% 22% / 0.97), hsl(270 100% 8% / 0.97) 55%, hsl(205 50% 25% / 0.97));
+  }
+  /* Phase 19 — supplied fallback for the .itg-* glass
+     surfaces: the same near-opaque purple fill, so the
+     Profile hero and the floating dock stay readable
+     without backdrop-filter. Add Trade form card and the
+     Analytics hero / secondary cards / empty state use
+     the same fill. */
+  .itg-glass,
+  .itg-bottom-nav,
+  .itg-trade-form,
+  .itg-analytics-performance,
+  .itg-analytics-secondary-card,
+  .itg-analytics-empty {
+    background: rgba(18, 10, 35, 0.94);
+  }
+  /* v2 surfaces: the same treatment in deep navy, so the
+     redesigned glass stays readable without blur. */
+  .itg2-card,
+  .itg2-card-elevated {
+    background: linear-gradient(160deg, rgba(10, 32, 68, 0.96), rgba(5, 13, 30, 0.97));
+  }
+  .itg2-hero {
+    background: linear-gradient(155deg, rgba(11, 47, 105, 0.97), rgba(4, 8, 18, 0.98));
+  }
+}
+
+
+/*
+ * UNLAYERED ON PURPOSE: the legacy .itg-level-ring /
+ * .itg-xp-* / .itg-completion-ring rules are emitted
+ * unlayered by the Tailwind pipeline, and unlayered styles
+ * beat every layered style regardless of specificity — so
+ * these dashboard-scoped overrides must be unlayered too
+ * (their two-class selectors then win on specificity).
+ */
+/*
+ * Dashboard-scoped level restyle. LevelRing, the XP
+ * track and the completion ring are shared/legacy
+ * components whose markup the dashboard reuses; inside
+ * .itg2-level-scope their fills turn blue -> cyan (the
+ * Profile page, a later redesign step, keeps the legacy
+ * violet until its own pass). Gold stays on the level
+ * NAME via .itg2-text-gold in the markup.
+ */
+.itg2-level-scope .itg-level-ring {
+  background: conic-gradient(
+    var(--itg-cyan-400) 0 calc(var(--itg-ring-pct, 0) * 1%),
+    rgba(120, 175, 255, 0.14) calc(var(--itg-ring-pct, 0) * 1%) 100%
+  );
+  box-shadow: 0 0 35px rgba(0, 150, 255, 0.28);
+}
+.itg2-level-scope .itg-level-ring::after {
+  background: rgba(5, 10, 24, 0.92);
+}
+.itg2-level-scope .itg-xp-track {
+  background: rgba(120, 175, 255, 0.14);
+}
+.itg2-level-scope .itg-xp-fill {
+  background: linear-gradient(
+    90deg,
+    var(--itg-blue-600),
+    var(--itg-blue-500),
+    var(--itg-cyan-400)
+  );
+  box-shadow: 0 0 22px rgba(0, 180, 255, 0.5);
+}
+.itg2-level-scope .itg-completion-ring {
+  background: conic-gradient(
+    var(--itg-blue-500) var(--completion, 0%),
+    rgba(120, 175, 255, 0.14) 0
+  );
+  box-shadow: 0 0 35px rgba(46, 124, 246, 0.3);
+}
+.itg2-level-scope .itg-completion-ring::after {
+  background: #050a18;
+}

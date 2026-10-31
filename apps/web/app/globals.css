@@ -1,3 +1,6 @@
+/* Cascade-layer order: the v2 system (itg2.css) sits at the components tier, below utilities. */
+@layer base, components, itg2, utilities;
+@import "./itg2.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,13 +25,22 @@
  */
 @layer base {
   :root {
-    /* Surfaces — purple-black glass, not navy */
-    --background: 270 100% 6%;
-    --foreground: 272 25% 94%;
-    --card: 272 40% 14%;
-    --card-foreground: 272 25% 94%;
-    --popover: 272 40% 14%;
-    --popover-foreground: 272 25% 94%;
+    /*
+     * v2 REWORK (Master Web UI Redesign, foundation): the
+     * surface family moves from purple-black to deep
+     * black-blue. --background is the near-black #04060C
+     * family; cards/popovers are deep-navy tints of it.
+     * Foreground is the #F4F8FF white family. Token NAMES
+     * are unchanged — every page inherits the new palette
+     * through the values. See the --itg-* block below.
+     */
+    /* Surfaces — deep black-blue glass */
+    --background: 224 50% 3%;
+    --foreground: 217 100% 98%;
+    --card: 222 44% 9%;
+    --card-foreground: 217 100% 98%;
+    --popover: 222 44% 9%;
+    --popover-foreground: 217 100% 98%;
     /*
      * Brand / action — violet. TWO violets, on purpose: no
      * single violet can be both white-text-readable (solid
@@ -43,15 +55,22 @@
      * the shell's active nav states and .action-link do
      * exactly that. See docs/phase-18-aurora.md.
      */
-    --primary: 262 83% 58%;
+    /*
+     * v2: the primary action colour is now royal blue
+     * #1268D8 (214 84% 46%) — white text on it is ~5.6:1,
+     * so solid bg-primary buttons stay AA-readable, the
+     * role the darker violet played in Phase 18. Violet
+     * survives only as --ai / --violet (AI Coach identity).
+     */
+    --primary: 214 84% 46%;
     --primary-foreground: 0 0% 100%;
-    /* Secondary surfaces and text — purple-tinted darks */
-    --secondary: 272 30% 17%;
-    --secondary-foreground: 272 20% 90%;
-    --muted: 272 28% 16%;
-    --muted-foreground: 270 15% 70%;
-    --accent: 272 30% 17%;
-    --accent-foreground: 272 20% 90%;
+    /* Secondary surfaces and text — navy-tinted darks */
+    --secondary: 222 38% 13%;
+    --secondary-foreground: 218 32% 90%;
+    --muted: 222 36% 11%;
+    --muted-foreground: 222 18% 70%;
+    --accent: 222 38% 13%;
+    --accent-foreground: 218 32% 90%;
     /* Risk */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -62,9 +81,9 @@
      * alpha lives inside the token, so hsl(var(--border))
      * still works everywhere it is used.
      */
-    --border: 0 0% 100% / 0.16;
-    --input: 0 0% 100% / 0.22;
-    --ring: 262 83% 68%;
+    --border: 216 90% 88% / 0.14;
+    --input: 216 90% 88% / 0.2;
+    --ring: 199 100% 50%;
     --radius: 0.75rem;
     /* Semantic colours — unchanged from Phase 18 */
     --success: 152 69% 42%;
@@ -93,11 +112,15 @@
      * Hierarchy: purple-black background / violet primary /
      * blue-cyan secondary / magenta whisper / gold premium.
      */
-    --background-2: 270 96% 20%;
-    --background-3: 272 30% 13%;
-    --cyan: 205 60% 55%;
+    /* v2: background-2/-3 are deep navy now (#08245A family
+       / deep black-blue); --cyan is the bright cyan-blue;
+       --violet is retained for AI surfaces only; --indigo
+       is now a bright royal blue. */
+    --background-2: 219 84% 19%;
+    --background-3: 223 42% 8%;
+    --cyan: 199 95% 55%;
     --violet: 262 83% 68%;
-    --indigo: 232 80% 60%;
+    --indigo: 217 90% 60%;
     --gold: 33 42% 56%;
     --magenta: 293 58% 35%;
     /*
@@ -106,9 +129,11 @@
      * the #2971A4 aurora blue. Soft, low-opacity, two-layer
      * as before — a glow marks one focal surface per view.
      */
-    --glow-primary: 0 0 24px rgb(167 139 250 / 0.32), 0 0 64px rgb(167 139 250 / 0.1);
-    --glow-blue: 0 0 24px rgb(52 108 230 / 0.3), 0 0 64px rgb(52 108 230 / 0.1);
-    --glow-cyan: 0 0 24px rgb(41 113 164 / 0.32), 0 0 64px rgb(41 113 164 / 0.1);
+    /* v2: the primary glow is blue now (violet glow stays
+       below as --glow-violet for AI surfaces). */
+    --glow-primary: 0 0 24px rgb(46 124 246 / 0.32), 0 0 64px rgb(18 104 216 / 0.12);
+    --glow-blue: 0 0 24px rgb(46 124 246 / 0.32), 0 0 64px rgb(46 124 246 / 0.1);
+    --glow-cyan: 0 0 24px rgb(0 207 255 / 0.3), 0 0 64px rgb(0 207 255 / 0.12);
     --glow-violet: 0 0 24px rgb(167 139 250 / 0.3), 0 0 64px rgb(167 139 250 / 0.1);
     --glow-success: 0 0 24px rgb(52 211 153 / 0.28), 0 0 64px rgb(52 211 153 / 0.1);
     --glow-danger: 0 0 24px rgb(239 68 68 / 0.28), 0 0 64px rgb(239 68 68 / 0.1);
@@ -121,11 +146,16 @@
      * gradient is an aurora sweep — midnight purple to
      * purple-black to aurora blue — not a flat colour.
      */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(232 80% 55%));
-    --gradient-cyan: linear-gradient(135deg, hsl(221 78% 55%), hsl(205 60% 45%));
+    /* v2: primary gradient is deep royal blue -> royal
+       blue (white text >= 5.6:1 on both stops); cyan runs
+       royal -> bright cyan; AI keeps its violet family;
+       gold unchanged; the hero gradient is a deep-navy ->
+       black-blue sweep with a blue tail. */
+    --gradient-primary: linear-gradient(135deg, hsl(217 86% 34%), hsl(214 84% 46%));
+    --gradient-cyan: linear-gradient(135deg, hsl(214 84% 46%), hsl(199 100% 50%));
     --gradient-ai: linear-gradient(135deg, hsl(265 48% 58%), hsl(232 80% 55%));
     --gradient-gold: linear-gradient(135deg, hsl(33 42% 56%), hsl(33 40% 45%));
-    --gradient-hero: linear-gradient(160deg, hsl(270 96% 20% / 0.9), hsl(270 100% 6% / 0.9) 55%, hsl(205 60% 40% / 0.7));
+    --gradient-hero: linear-gradient(160deg, hsl(219 84% 19% / 0.92), hsl(224 50% 3% / 0.94) 55%, hsl(214 84% 46% / 0.5));
     /* Elevation scale (Phase 17). Depth comes from layered
        borders + soft shadows, never from colour or neon.
        Level 1 is the resting card, level 2 is a lifted/hero
@@ -192,17 +222,24 @@
      *   `--analytics-*` namespaced tokens are mapped to
      *   `--itg-*`; no `--analytics-*` tokens exist.
      */
-    --itg-bg: #06030d;
-    --itg-bg-deep: #100020;
-    --itg-bg-purple: #18002f;
-    --itg-black: #03040a;
-    --itg-navy: #070b20;
-    --itg-deep: #0b0620;
+    /*
+     * v2 REWORK (Master Web UI Redesign, foundation): the
+     * base family is deep black / deep navy now. Names are
+     * kept — --itg-bg-purple's VALUE is a deep navy layer
+     * (the purple base is gone); violet tokens below stay
+     * for the AI Coach identity only.
+     */
+    --itg-bg: #04060c;
+    --itg-bg-deep: #03050a;
+    --itg-bg-purple: #06152f;
+    --itg-black: #03050a;
+    --itg-navy: #06152f;
+    --itg-deep: #070a10;
     --itg-violet-deep: #340266;
     --itg-violet: #492282;
     --itg-violet-light: #8b60c7;
-    --itg-blue: #2971a4;
-    --itg-blue-bright: #346ce6;
+    --itg-blue: #1268d8;
+    --itg-blue-bright: #2e7cf6;
     --itg-magenta: #81268e;
     --itg-aurora-purple: #7b2cff;
     --itg-aurora-violet: #a855f7;
@@ -222,15 +259,20 @@
     --itg-blue-neon: #237cff;
     --itg-cyan-bright: #00d9ff;
     --itg-pink-bright: #f12cff;
-    --itg-glass-standard: rgba(255, 255, 255, 0.075);
-    --itg-glass-elevated: rgba(255, 255, 255, 0.12);
-    --itg-glass-hero: rgba(255, 255, 255, 0.16);
-    --itg-glass-border: rgba(255, 255, 255, 0.18);
-    --itg-glass-border-bright: rgba(255, 255, 255, 0.28);
-    --itg-glass-highlight: rgba(255, 255, 255, 0.1);
-    --itg-text-primary: #f8f7ff;
-    --itg-text-secondary: #d4d5e8;
-    --itg-text-muted: #8589a6;
+    /* v2: glass is blue-tinted now — surfaces, borders and
+       highlights carry the deep-blue family instead of
+       neutral white on purple. Text moves to the #F4F8FF
+       family (primary / secondary #C9D6F2 / muted #7E8DB0,
+       ~6.1:1 on the new base — AA kept). */
+    --itg-glass-standard: rgba(148, 184, 255, 0.07);
+    --itg-glass-elevated: rgba(148, 184, 255, 0.11);
+    --itg-glass-hero: rgba(148, 184, 255, 0.15);
+    --itg-glass-border: rgba(140, 185, 255, 0.2);
+    --itg-glass-border-bright: rgba(165, 205, 255, 0.34);
+    --itg-glass-highlight: rgba(190, 220, 255, 0.12);
+    --itg-text-primary: #f4f8ff;
+    --itg-text-secondary: #c9d6f2;
+    --itg-text-muted: #7e8db0;
     --itg-profit: #21f3a5;
     --itg-loss: #ff4d72;
     --itg-warning: #f5c451;
@@ -267,6 +309,29 @@
     --motion-duration-count: 700ms;
     --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --motion-ease-emphasized: cubic-bezier(0.2, 0, 0.2, 1);
+    /*
+     * v2 design foundation (Master Web UI Redesign) — the
+     * centralized scale every redesigned page consumes via
+     * the .itg2-* component classes below. Deep-blue scale
+     * (near-black blue -> royal -> bright -> cyan), blue /
+     * cyan glows, and the card/elevated shadow pair for the
+     * three-level glass system. Semantic colours are NOT
+     * repeated here: profit/loss/warning/gold stay the
+     * --itg-profit / --itg-loss / --itg-warning / --itg-gold
+     * tokens above, unchanged.
+     */
+    --itg-blue-950: #030714;
+    --itg-blue-900: #06152f;
+    --itg-blue-850: #08245a;
+    --itg-blue-800: #0a2f70;
+    --itg-blue-700: #0b3f91;
+    --itg-blue-600: #1268d8;
+    --itg-blue-500: #2e7cf6;
+    --itg-cyan-400: #00cfff;
+    --itg-glow-blue: 0 0 28px rgba(46, 124, 246, 0.35), 0 0 72px rgba(18, 104, 216, 0.14);
+    --itg-glow-cyan: 0 0 28px rgba(0, 207, 255, 0.3), 0 0 72px rgba(0, 207, 255, 0.12);
+    --itg-shadow-card: 0 18px 44px rgba(1, 4, 12, 0.55);
+    --itg-shadow-elevated: 0 26px 64px rgba(1, 4, 12, 0.62);
   }
 }
 
@@ -378,6 +443,29 @@
     transform: translate3d(32px, -24px, 0);
   }
 }
+/*
+ * v2 keyframes (Master Web UI Redesign). itg2-hero-sweep
+ * is the hero's animated lighting: a wide, faint light
+ * band travelling a few percent across the L3 surface —
+ * transform only, very slow, alternate. itg2-progress-in
+ * grows a progress fill from 0 to its inline width (the
+ * keyframe defines only the start, so the element's real
+ * inline width is always the end state). Both are killed
+ * by the global reduced-motion block below.
+ */
+@keyframes itg2-hero-sweep {
+  from {
+    transform: translate3d(-7%, 0, 0) skewX(-12deg);
+  }
+  to {
+    transform: translate3d(7%, 0, 0) skewX(-12deg);
+  }
+}
+@keyframes itg2-progress-in {
+  from {
+    width: 0;
+  }
+}
 
 @layer base {
   * {
@@ -402,19 +490,21 @@
     line-height: 1.55;
     overflow-x: clip;
     /*
-     * Phase 18 Aurora — the page background is never a flat
-     * solid. Four faint radial aurora tints (deep purple
-     * top-left, violet right, aurora blue bottom, a magenta
-     * whisper bottom-right) sit over the purple-black base.
-     * At 10-22% opacity they add depth without touching
-     * readability; text contrast is unchanged from Phase 15
-     * (foreground 17.27:1, muted 8.81:1 on #100020).
+     * v2 atmosphere — the page background is never a flat
+     * solid. Four faint radial tints sit over the deep
+     * black-blue base: deep navy top-left, royal blue
+     * top-right, a blue wash along the bottom, and ONE
+     * faint violet remnant bottom-right (the last whisper
+     * of the Phase 18 aurora — atmosphere only, never a
+     * surface). Static gradients, painted once; the
+     * foreground/muted contrast pairs were re-checked on
+     * the new base (see the --itg-text-* note above).
      */
     background-image:
-      radial-gradient(900px 480px at 12% -8%, hsl(274 92% 24% / 0.22), transparent 60%),
-      radial-gradient(800px 500px at 95% 0%, hsl(272 61% 30% / 0.18), transparent 60%),
-      radial-gradient(900px 600px at 50% 115%, hsl(205 60% 40% / 0.14), transparent 60%),
-      radial-gradient(600px 400px at 82% 108%, hsl(293 58% 35% / 0.1), transparent 60%);
+      radial-gradient(900px 480px at 12% -8%, hsl(219 84% 19% / 0.32), transparent 60%),
+      radial-gradient(800px 500px at 95% 0%, hsl(217 86% 28% / 0.2), transparent 60%),
+      radial-gradient(900px 600px at 50% 115%, hsl(214 84% 46% / 0.12), transparent 60%),
+      radial-gradient(600px 400px at 82% 108%, hsl(262 83% 68% / 0.05), transparent 60%);
   }
   /*
    * Form controls stay at 16px everywhere. Below 16px iOS zooms
@@ -605,43 +695,45 @@
     border-radius: 9999px;
     will-change: transform;
   }
-  /* Deep purple aurora, top-left — the largest light. */
+  /* v2: class names are the AmbientBackground component's
+     contract and are unchanged; the LIGHT they carry is
+     deep blue now. Deep navy, top-left — the largest light. */
   .app-ambient-orb-purple {
     top: -14rem;
     left: -10rem;
-    background: radial-gradient(circle, hsl(274 92% 24% / 0.3) 0%, transparent 62%);
+    background: radial-gradient(circle, hsl(219 84% 22% / 0.34) 0%, transparent 62%);
   }
-  /* Violet aurora, top-right. */
+  /* Royal blue, top-right. */
   .app-ambient-orb-violet {
     top: -16rem;
     right: -12rem;
-    background: radial-gradient(circle, hsl(272 61% 30% / 0.22) 0%, transparent 62%);
+    background: radial-gradient(circle, hsl(217 86% 30% / 0.22) 0%, transparent 62%);
   }
   /*
-   * Magenta wisp — small and atmospheric only, never a
-   * primary surface. Half the size of the main orbs and
-   * the faintest of the four, so it reads as a colour in
-   * the light, not a pink panel.
+   * The one violet remnant — small and atmospheric only,
+   * never a surface. Half the size of the main orbs and
+   * the faintest of the four: a trace of the old aurora
+   * in the light, nothing more.
    */
   .app-ambient-orb-magenta {
     bottom: -8rem;
     right: 18%;
     width: 26rem;
     height: 26rem;
-    background: radial-gradient(circle, hsl(293 58% 35% / 0.14) 0%, transparent 62%);
+    background: radial-gradient(circle, hsl(262 83% 68% / 0.07) 0%, transparent 62%);
   }
-  /* Aurora blue, bottom — the secondary accent in the light. */
+  /* Blue-cyan kiss of light, bottom. */
   .app-ambient-orb-blue {
     bottom: -18rem;
     left: 28%;
-    background: radial-gradient(circle, hsl(205 60% 40% / 0.18) 0%, transparent 62%);
+    background: radial-gradient(circle, hsl(206 90% 45% / 0.2) 0%, transparent 62%);
   }
   .app-ambient-grid {
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+      linear-gradient(to right, rgb(170 205 255 / 0.032) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(170 205 255 / 0.032) 1px, transparent 1px);
     background-size: 48px 48px;
     /* The grid fades out toward the bottom so it reads as
        atmosphere at the top of the page, not graph paper. */
@@ -2128,85 +2220,18 @@
     background: linear-gradient(180deg, hsl(272 32% 14%), hsl(272 32% 11.5%));
   }
   /* Links that act as actions inside cards and lists.
-     Aurora: violet text, not --primary — the light violet
-     (262 83% 68%, 5.49:1 on the purple-black base) is the
-     small-text-readable violet; the darker --primary is
-     reserved for white text on solid fills. */
+     v2: bright blue text (#9CC2FF, ~8:1 on the new base) —
+     blue is the primary interaction colour now; violet
+     text survives only on AI surfaces (.itg2-link-ai).
+     The explicit color below overrides the @apply'd
+     text-violet from the Phase 18 rule. */
   .action-link {
     @apply inline-flex min-h-11 items-center text-sm font-medium text-violet underline-offset-4 hover:underline;
+    color: #9cc2ff;
   }
   /* Tabular figures for money and percentages. */
   .tnum {
     font-variant-numeric: tabular-nums;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0ms !important;
-    scroll-behavior: auto !important;
-  }
-  /* Entrance animations start hidden (fill mode both), so
-     reduced motion must remove them entirely — otherwise
-     content could sit invisible. The final state is always
-     the real content; animation never carries information. */
-  .motion-reveal,
-  .motion-fade-in,
-  .motion-scale-in,
-  .motion-page,
-  .motion-ai-dot,
-  .motion-login-glow,
-  .motion-login-grid,
-  .motion-orb-drift,
-  .skeleton {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
-/*
- * Phase 18 Aurora — backdrop-filter fallback. Browsers
- * without backdrop-filter (old Safari, some embedded
- * webviews) would render the blurred glass surfaces as
- * near-transparent washes, which hurts readability. The
- * fallback gives every blurred surface a much more opaque
- * purple fill instead, so the glass stays readable — the
- * aurora behind it is sacrificed, the content is not.
- * Ordinary cards (.card-surface / .card-surface-raised)
- * need no fallback: they carry no backdrop-filter, and
- * their translucent gradient composites over the body
- * background in every browser.
- */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-surface,
-  .glass-surface-elevated {
-    background: linear-gradient(180deg, hsl(272 45% 19% / 0.96), hsl(272 45% 15% / 0.96));
-  }
-  .card-surface-glass {
-    background: linear-gradient(180deg, hsl(272 45% 20% / 0.97), hsl(272 45% 16% / 0.97));
-  }
-  .hero-card {
-    background: linear-gradient(160deg, hsl(270 60% 22% / 0.97), hsl(270 100% 8% / 0.97) 55%, hsl(205 50% 25% / 0.97));
-  }
-  /* Phase 19 — supplied fallback for the .itg-* glass
-     surfaces: the same near-opaque purple fill, so the
-     Profile hero and the floating dock stay readable
-     without backdrop-filter. Add Trade form card and the
-     Analytics hero / secondary cards / empty state use
-     the same fill. */
-  .itg-glass,
-  .itg-bottom-nav,
-  .itg-trade-form,
-  .itg-analytics-performance,
-  .itg-analytics-secondary-card,
-  .itg-analytics-empty {
-    background: rgba(18, 10, 35, 0.94);
-  }
 }
