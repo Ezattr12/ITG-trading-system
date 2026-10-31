@@ -1,0 +1,60 @@
+name: Mobile APK (device test build)
+
+# Builds an installable Android debug APK of the Expo app so it can be
+# sideloaded onto a physical phone for device verification.
+# The Expo sandbox cannot run Gradle (Java egress is blocked there),
+# so the build runs here on a standard GitHub runner.
+#
+# EXPO_PUBLIC_* values are PUBLIC client configuration: the Supabase
+# anon key ships inside every distributed app binary and is extractable
+# from it; Row Level Security — not key secrecy — protects the data.
+# There is deliberately NO service-role key anywhere in this workflow.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [build/mobile-apk]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://pwzvthvvxyfppenmessf.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3enZ0aHZ2eHlmcHBlbm1lc3NmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMTEwMzEsImV4cCI6MjEwODY4NzAzMX0.Se1MUQN3c3JcC85ZjCxmXLb7h_1j-1QrnH2WwZePS6s
+      EXPO_PUBLIC_API_BASE_URL: https://itg-traderos.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install mobile dependencies (standalone, outside workspaces)
+        run: npm install --workspaces=false
+
+      - name: Write production .env for the bundle
+        run: |
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\nEXPO_PUBLIC_API_BASE_URL=%s\n' \
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" "$EXPO_PUBLIC_API_BASE_URL" > .env
+
+      - name: Generate the native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build the debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --console=plain
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: itg-traderos-android-test-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
