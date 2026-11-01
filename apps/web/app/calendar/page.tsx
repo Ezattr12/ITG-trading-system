@@ -12,7 +12,6 @@ import {
   parseMonthParam,
   shiftMonth,
 } from "@/lib/analytics/calendar";
-import { Money, StatCard } from "@/components/analytics/stat-card";
 
 export const metadata = { title: "Trading calendar — ITG TraderOS" };
 
@@ -21,6 +20,14 @@ export const metadata = { title: "Trading calendar — ITG TraderOS" };
  * month: trades, P&L, journal completion. Days with no trades are
  * blank — never shown as zero-P&L days. A day links to the trades
  * list filtered to that day, so patterns can be followed up.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * the page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, ghost month navigation, the
+ * month summary as .itg2-kpi cards and the day grid as
+ * .itg2-cal-day glass tiles — profit/loss tints from the
+ * semantic tokens, a cyan ring on today). All data, copy,
+ * links and empty states are exactly as before.
  */
 
 const EMPTY_BUNDLE: AnalyticsBundle = {
@@ -67,39 +74,59 @@ export default async function CalendarPage({
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Trading calendar</h1>
-        <p className="page-lede">
-          Trading days, P&amp;L and journal completion — spot your patterns over time.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Trading calendar</p>
+          <h1 className="itg2-page-title mt-1">Trading calendar</h1>
+          <p className="mt-2 text-muted-foreground">
+            Trading days, P&amp;L and journal completion — spot your patterns over time.
+          </p>
+        </header>
 
         <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
-          <Link href={`/calendar?month=${shiftMonth(year, month, -1)}`} className="inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-foreground">
+          <Link href={`/calendar?month=${shiftMonth(year, month, -1)}`} className="itg2-btn-ghost">
             ← Previous
           </Link>
-          <h2 className="section-title">
+          <h2 className="itg2-section-title">
             {MONTH_NAMES[month - 1]} {year}
           </h2>
-          <Link href={`/calendar?month=${shiftMonth(year, month, 1)}`} className="inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-foreground">
+          <Link href={`/calendar?month=${shiftMonth(year, month, 1)}`} className="itg2-btn-ghost">
             Next →
           </Link>
-          <Link href="/calendar" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+          <Link href="/calendar" className="itg2-link">
             This month
           </Link>
         </div>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Month summary">
-          <StatCard label="Trades this month" value={monthTrades.length} />
-          <StatCard label="P&L this month" glow={monthTrades.length === 0 || monthPnl === 0 ? undefined : monthPnl > 0 ? "emerald" : "danger"} value={<Money value={monthTrades.length === 0 ? null : monthPnl} />} />
-          <StatCard
-            label="Journal completion"
-            glow={monthTrades.length === 0 ? undefined : "cyan"}
-            value={monthTrades.length === 0 ? "—" : `${((monthJournaled / monthTrades.length) * 100).toFixed(0)}%`}
-            hint={`${monthJournaled} of ${monthTrades.length} trades journaled · ${monthWins} wins`}
-          />
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Trades this month</h2>
+            <p className="itg2-kpi-value">{monthTrades.length}</p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">P&amp;L this month</h2>
+            <p className="itg2-kpi-value">
+              {monthTrades.length === 0 ? (
+                "—"
+              ) : (
+                <span className={monthPnl > 0 ? "itg2-text-profit" : monthPnl < 0 ? "itg2-text-loss" : ""}>
+                  {formatMoney(monthPnl)}
+                </span>
+              )}
+            </p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Journal completion</h2>
+            <p className="itg2-kpi-value">
+              {monthTrades.length === 0 ? "—" : `${((monthJournaled / monthTrades.length) * 100).toFixed(0)}%`}
+            </p>
+            <p className="itg2-kpi-hint">
+              {`${monthJournaled} of ${monthTrades.length} trades journaled · ${monthWins} wins`}
+            </p>
+          </article>
         </section>
 
         {monthTrades.length === 0 && bundle.trades.length === 0 ? (
-          <p className="mt-6 sm:mt-8 card-surface p-4 sm:p-6 text-muted-foreground">
+          <p className="itg2-notice itg2-notice-neutral mt-6 sm:mt-8">
             No trades yet — your calendar will fill in as you journal trades.
           </p>
         ) : (
@@ -113,29 +140,29 @@ export default async function CalendarPage({
               <div key={wi} className="mt-1 grid grid-cols-7 gap-1">
                 {week.map((cell, ci) => {
                   if (cell.day === null) {
-                    return <div key={ci} className="min-h-14 rounded-md border border-transparent sm:min-h-16" />;
+                    return <div key={ci} className="min-h-14 sm:min-h-16" />;
                   }
                   const hasTrades = (cell.data?.trades ?? 0) > 0;
                   const pnl = cell.data?.pnl ?? 0;
                   const isToday = cell.date === todayKey;
                   const content = (
                     <div
-                      className={`flex min-h-14 flex-col rounded-lg border p-1.5 text-left text-xs leading-tight transition-shadow hover:shadow-elevation-1 sm:min-h-16 ${
-                        isToday ? "ring-2 ring-primary/60" : ""
-                      } ${
+                      className={`itg2-cal-day flex min-h-14 flex-col p-1.5 text-left text-xs leading-tight sm:min-h-16${
+                        isToday ? " itg2-cal-day-today" : ""
+                      }${
                         hasTrades
                           ? pnl > 0
-                            ? "border-emerald-500/40 bg-emerald-500/10"
+                            ? " itg2-cal-day-win"
                             : pnl < 0
-                              ? "border-red-500/40 bg-red-500/10"
-                              : "border-border bg-card"
-                          : "border-border bg-card"
+                              ? " itg2-cal-day-loss"
+                              : ""
+                          : ""
                       }`}
                     >
                       <span className="font-semibold">{cell.day}</span>
                       {hasTrades ? (
                         <>
-                          <span className={pnl > 0 ? "text-emerald-400" : pnl < 0 ? "text-red-400" : ""}>
+                          <span className={pnl > 0 ? "itg2-text-profit" : pnl < 0 ? "itg2-text-loss" : ""}>
                             {formatMoney(pnl)}
                           </span>
                           <span className="text-muted-foreground">
@@ -160,11 +187,11 @@ export default async function CalendarPage({
             ))}
             <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                <span className="itg2-cal-dot-win inline-block h-2 w-2 rounded-full" aria-hidden="true" />
                 Winning day
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-red-400" aria-hidden="true" />
+                <span className="itg2-cal-dot-loss inline-block h-2 w-2 rounded-full" aria-hidden="true" />
                 Losing day
               </span>
               <span>Select a trading day to see its trades. Days with no trades are blank — they are not zero-P&amp;L days.</span>
