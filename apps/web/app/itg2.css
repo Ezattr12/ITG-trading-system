@@ -1368,6 +1368,14 @@
   .itg2-card-elevated {
     background: linear-gradient(160deg, rgba(10, 32, 68, 0.96), rgba(5, 13, 30, 0.97));
   }
+  /* v2 shell + dock (Task 3, global navigation): the same
+     deep-navy fallback for the shell surfaces and the
+     floating dock. */
+  .itg2-shell,
+  .itg2-shell-elevated,
+  .itg2-dock {
+    background: linear-gradient(180deg, rgba(10, 32, 68, 0.96), rgba(4, 8, 16, 0.97));
+  }
   /* v2 form controls (Page 2): the same near-opaque navy
      fill, so inputs stay readable without blur. */
   .itg2-input,
@@ -1381,6 +1389,171 @@
   }
   .itg2-hero {
     background: linear-gradient(155deg, rgba(11, 47, 105, 0.97), rgba(4, 8, 18, 0.98));
+  }
+}
+
+@layer itg2 {
+  /*
+   * ============================================================
+   * GLOBAL NAVIGATION (Master Remaining Work — Task 3): the
+   * app shell chrome joins the v2 system. Deep-blue tinted
+   * glass replaces the neutral-white .glass-surface* on the
+   * sidebar / header / drawer; the brand tile turns
+   * blue -> cyan; the active nav item is deep-blue glass
+   * with a cyan icon, and violet survives ONLY on the AI
+   * Coach item (.itg2-nav-ai-active) — the one place violet
+   * means AI. The mobile dock is the same deep-blue glass,
+   * floating, with an integrated blue -> cyan Add action
+   * socketed into its top edge. Geometry, safe-area
+   * handling and every behaviour in app-shell-client.tsx
+   * are unchanged — this section is paint only. (Declared
+   * as a second itg2 layer block because the no-blur
+   * @supports fallback above closes the first one; layer
+   * order is unaffected.)
+   * ============================================================
+   */
+  /* Sidebar / header surface — mirrors .glass-surface's
+     structure (1.25rem radius, inset top light,
+     var(--elevation-2), 20px blur) in deep blue. */
+  .itg2-shell {
+    border: 1px solid rgba(120, 175, 255, 0.12);
+    border-radius: 1.25rem;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 32, 68, 0.72),
+      rgba(4, 8, 16, 0.78)
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(190, 220, 255, 0.1),
+      var(--elevation-2);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  /* Drawer surface — mirrors .glass-surface-elevated
+     (1.5rem radius, var(--elevation-3)) with the violet
+     outer glow recoloured to blue. */
+  .itg2-shell-elevated {
+    border: 1px solid rgba(120, 175, 255, 0.16);
+    border-radius: 1.5rem;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 32, 68, 0.78),
+      rgba(4, 8, 16, 0.84)
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(190, 220, 255, 0.12),
+      var(--elevation-3),
+      0 0 32px rgba(18, 104, 216, 0.14);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  /* Brand tile — blue -> cyan with a light inset ring and
+     a blue glow (replaces the violet .bg-gradient-ai; the
+     tile's own ring/shadow utilities come off in the
+     markup so this paint is what renders). */
+  .itg2-brand-tile {
+    background: linear-gradient(135deg, #1268d8, #00cfff);
+    box-shadow:
+      inset 0 0 0 1px rgba(190, 220, 255, 0.35),
+      0 6px 18px rgba(2, 10, 30, 0.45),
+      0 0 22px rgba(18, 104, 216, 0.35);
+  }
+  /* Active nav item (sidebar + drawer share NavLink):
+     deep-blue glass, an inset ring, near-white text and a
+     cyan icon (the only svg child is the item icon). */
+  .itg2-nav-active {
+    background: linear-gradient(
+      90deg,
+      rgba(18, 104, 216, 0.22),
+      rgba(18, 104, 216, 0.06)
+    );
+    box-shadow: inset 0 0 0 1px rgba(120, 175, 255, 0.25);
+    color: #DCEBFF;
+  }
+  .itg2-nav-active svg {
+    color: #00cfff;
+  }
+  /* AI Coach item ONLY: violet glass — the AI identity. */
+  .itg2-nav-ai-active {
+    background: linear-gradient(
+      90deg,
+      rgba(124, 58, 237, 0.2),
+      rgba(124, 58, 237, 0.04)
+    );
+    box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.3);
+    color: #c4b5fd;
+  }
+  /* Mobile floating dock — the .itg-bottom-nav geometry
+     (fixed, 12px insets, 28px radius, 76px min height)
+     kept exactly; deep-blue elevated glass, deep shadow
+     and a blue (never violet) glow. The safe-area bottom
+     padding stays inline in the component. */
+  .itg2-dock {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    min-height: 76px;
+    padding: 8px 12px;
+    border: 1px solid rgba(120, 175, 255, 0.14);
+    border-radius: var(--itg-radius-lg);
+    background: linear-gradient(
+      180deg,
+      rgba(10, 32, 68, 0.78),
+      rgba(4, 8, 16, 0.84)
+    );
+    box-shadow:
+      0 25px 70px rgba(0, 0, 0, 0.6),
+      0 0 45px rgba(18, 104, 216, 0.22);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+  /* Centre Add action — a 60px blue -> cyan circle whose
+     centre sits ~10px above the dock's top edge: the
+     layout top is the dock's 8px padding, so
+     8 (padding) - 48 (margin) + 30 (radius) = -10px. The
+     6px page-bg ring sockets it into the dock's edge, so
+     it reads as part of the dock, not a detached button;
+     the negative margin keeps its layout contribution at
+     12px, so the dock height and the content clearance do
+     not move, and the "Add" label (mt-1 in the markup)
+     clears the circle's visual bottom edge (21px) by 4px
+     at every width. Hover / press keep the old action's
+     transform feedback. */
+  .itg2-dock-add {
+    width: 60px;
+    height: 60px;
+    margin-top: -48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1268d8, #00cfff);
+    box-shadow:
+      0 0 0 6px var(--itg-bg),
+      0 15px 40px rgba(18, 104, 216, 0.45),
+      0 0 45px rgba(18, 104, 216, 0.32);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    transition: transform 200ms var(--itg-ease-premium);
+  }
+  .itg2-dock-add:hover {
+    transform: translateY(-4px) scale(1.04);
+  }
+  .itg2-dock-add:active {
+    transform: scale(0.96);
+  }
+  /* Dock item active state: cyan text (icon inherits),
+     a blue glass pill behind the icon. */
+  .itg2-dock-active {
+    color: #00cfff;
+  }
+  .itg2-dock-pill {
+    background: rgba(46, 124, 246, 0.18);
+    box-shadow:
+      inset 0 0 0 1px rgba(120, 175, 255, 0.3),
+      var(--elevation-1);
   }
 }
 
@@ -1788,4 +1961,32 @@ select.itg2-select {
   color: #fff;
   font-size: 2rem;
   font-weight: 700;
+}
+
+/* Task 3 parent-QA fix (UNLAYERED, must stay outside every
+   @layer): the Tailwind preflight emits `a { color: inherit }`
+   unlayered, which defeats the layered `color` declarations of
+   the navigation active states above — the backgrounds, rings
+   and shadows applied, but active link text fell back to the
+   inherited body colour (sidebar active text, the AI Coach
+   lavender, the dock cyan and the Add button's white icon).
+   These unlayered repeats carry only the colours; all other
+   paint stays in the layered definitions. */
+.itg2-nav-active {
+  color: #dcebff;
+}
+.itg2-nav-active svg {
+  color: #00cfff;
+}
+.itg2-nav-ai-active {
+  color: #c4b5fd;
+}
+.itg2-nav-ai-active svg {
+  color: #c4b5fd;
+}
+.itg2-dock-active {
+  color: #00cfff;
+}
+.itg2-dock-add {
+  color: #fff;
 }

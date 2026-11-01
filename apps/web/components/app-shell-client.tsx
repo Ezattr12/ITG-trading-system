@@ -50,18 +50,25 @@ import { cn } from "@/lib/utils";
  * Calendar, Progress, Goals, Levels, Achievements, Certificates,
  * Reports, Weekly Review, AI Coach, Notifications, Profile, Admin.
  *
- * Depth (Phase 18 Aurora): the shell root is transparent over
- * one fixed `.app-ambient` layer (deep purple / violet /
- * magenta wisp / aurora blue orbs), the sidebar / header are
- * Standard glass and the drawer / bottom dock are Elevated
- * glass, the ITG tile and the centre Add action are violet ->
- * indigo gradients, active nav items get a violet indicator
- * bar and light-violet text (the small-text-readable violet,
- * not the darker --primary), and the bottom bar floats as a
- * rounded glass dock inset from the screen edges. The dock
- * is translucent dark glass with blur, a subtle white border,
- * a deep shadow and a violet active glow — it floats above
- * the app, it is not a flat footer. No behaviour changed. */
+ * Depth (v2 navigation — Master Remaining Work, Task 3):
+ * the shell root is transparent over one fixed `.app-ambient`
+ * layer (deep purple / violet / magenta wisp / aurora blue
+ * orbs — the accepted faint atmosphere remnant), the sidebar
+ * / header are deep-blue glass (.itg2-shell) and the drawer /
+ * bottom dock are deep-blue elevated glass
+ * (.itg2-shell-elevated / .itg2-dock), the ITG tile is a
+ * blue -> cyan gradient (.itg2-brand-tile), active nav items
+ * get a blue -> cyan indicator bar, deep-blue glass and
+ * near-white text with a cyan icon (.itg2-nav-active) —
+ * violet survives only on the AI Coach item
+ * (.itg2-nav-ai-active), the one place violet means AI —
+ * and the bottom bar floats as a rounded deep-blue glass
+ * dock inset from the screen edges, its centre Add action a
+ * blue -> cyan circle socketed into the dock's top edge.
+ * The dock is translucent deep-blue glass with blur, a
+ * subtle blue border, a deep shadow and a blue glow — it
+ * floats above the app, it is not a flat footer. No
+ * behaviour changed. */
 
 type NavItem = { href: string; label: string; icon: LucideIcon; admin?: boolean };
 
@@ -124,7 +131,9 @@ function NavLink({
         "hover:bg-accent hover:text-accent-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active
-          ? "bg-gradient-to-r from-primary/20 to-primary/5 text-violet ring-1 ring-inset ring-primary/20"
+          ? item.href === "/coach"
+            ? "itg2-nav-ai-active"
+            : "itg2-nav-active"
           : "text-muted-foreground",
         collapsed && "justify-center px-0",
       )}
@@ -135,7 +144,8 @@ function NavLink({
       <span
         aria-hidden="true"
         className={cn(
-          "absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-gradient-to-b from-violet to-indigo transition-all duration-base ease-standard",
+          "absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-gradient-to-b transition-all duration-base ease-standard",
+          item.href === "/coach" ? "from-violet to-indigo" : "from-[#2E7CF6] to-[#00CFFF]",
           active ? "scale-y-100 opacity-100" : "scale-y-50 opacity-0",
         )}
       />
@@ -259,13 +269,13 @@ export function AppShellClient({
       <aside
         aria-label="Primary"
         className={cn(
-          "glass-surface sticky top-0 hidden h-screen shrink-0 flex-col border-r shadow-elevation-1 transition-[width] duration-base ease-standard lg:flex",
+          "itg2-shell sticky top-0 hidden h-screen shrink-0 flex-col border-r shadow-elevation-1 transition-[width] duration-base ease-standard lg:flex",
           collapsed ? "w-20" : "w-64",
         )}
       >
         <div className={cn("flex h-14 items-center gap-2 border-b px-3", collapsed && "justify-center px-0")}>
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-ai text-base font-bold text-white shadow-elevation-1 ring-1 ring-white/15" aria-hidden="true">
+            <span className="itg2-brand-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base font-bold text-white" aria-hidden="true">
               ITG
             </span>
             {!collapsed && (
@@ -328,7 +338,7 @@ export function AppShellClient({
           />
           <div
             className={cn(
-              "glass-surface-elevated absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col shadow-elevation-3 transition-transform duration-base ease-standard",
+              "itg2-shell-elevated absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col shadow-elevation-3 transition-transform duration-base ease-standard",
               drawerEntered ? "translate-x-0" : "-translate-x-full",
             )}
           >
@@ -371,7 +381,7 @@ export function AppShellClient({
 
       {/* Content column: top header + main. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass-surface sticky top-0 z-40 border-b">
+        <header className="itg2-shell sticky top-0 z-40 border-b">
           <div className="flex h-14 items-center gap-1 px-4 sm:gap-2 sm:px-6">
             <button
               type="button"
@@ -430,22 +440,23 @@ export function AppShellClient({
       </div>
 
       {/* Mobile bottom tab bar — Home, Trades, a raised Add
-          Trade action, Analytics, Goals (Phase 17). Phase 18
-          Aurora: the bar floats as a glass dock. Phase 19:
-          the dock and centre action now use Ezat's supplied
-          Aurora Glass values (.itg-bottom-nav /
-          .itg-add-trade in globals.css) — 28px radius, 24px
-          blur, 0.68 dark glass, deeper shadow + violet glow,
-          68px centre action lifted -30px. z-index stays 40
-          (not the supplied 50) so the open drawer (z-50)
-          always covers the dock. "More" (the full navigation)
-          stays one tap away in the top header menu, which
-          already opens the drawer. The existing pb-24 content
+          Trade action, Analytics, Goals (Phase 17). v2
+          navigation (Task 3): the bar floats as a deep-blue
+          glass dock (.itg2-dock / .itg2-dock-add in
+          itg2.css) — 28px radius, deep-blue glass, deep
+          shadow + a blue glow, and a 60px blue -> cyan
+          centre action whose centre sits ~10px above the
+          dock's top edge, socketed into it by a page-bg
+          ring so it reads as part of the dock. z-index
+          stays 40 so the open drawer (z-50) always covers
+          the dock. "More" (the full navigation) stays one
+          tap away in the top header menu, which already
+          opens the drawer. The existing pb-24 content
           clearance still covers the floating bar (76px bar +
           14px offset < 96px). */}
       <nav
         aria-label="Primary"
-        className="itg-bottom-nav z-40 lg:hidden"
+        className="itg2-dock z-40 lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="grid grid-cols-5">
@@ -459,13 +470,13 @@ export function AppShellClient({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
-                  active ? "text-violet" : "text-muted-foreground hover:text-foreground",
+                  active ? "itg2-dock-active" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-fast ease-standard",
-                    active && "bg-primary/15 shadow-elevation-1 ring-1 ring-primary/25",
+                    active && "itg2-dock-pill",
                   )}
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
@@ -475,7 +486,7 @@ export function AppShellClient({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "h-1 w-1 rounded-full bg-gradient-to-r from-violet to-indigo transition-all duration-base ease-standard",
+                    "h-1 w-1 rounded-full bg-gradient-to-r from-[#2E7CF6] to-[#00CFFF] transition-all duration-base ease-standard",
                     active ? "scale-100 opacity-100" : "scale-0 opacity-0",
                   )}
                 />
@@ -487,11 +498,11 @@ export function AppShellClient({
             <Link
               href="/trades/new"
               aria-label="Add trade"
-              className="itg-add-trade focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="itg2-dock-add focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Plus className="h-6 w-6" aria-hidden="true" />
             </Link>
-            <span className="-mt-3 pb-1.5 text-[11px] font-medium text-muted-foreground" aria-hidden="true">
+            <span className="mt-1 pb-1.5 text-[11px] font-medium text-muted-foreground" aria-hidden="true">
               Add
             </span>
           </div>
@@ -505,13 +516,13 @@ export function AppShellClient({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors duration-fast ease-standard",
-                  active ? "text-violet" : "text-muted-foreground hover:text-foreground",
+                  active ? "itg2-dock-active" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-fast ease-standard",
-                    active && "bg-primary/15 shadow-elevation-1 ring-1 ring-primary/25",
+                    active && "itg2-dock-pill",
                   )}
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
@@ -519,7 +530,7 @@ export function AppShellClient({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "h-1 w-1 rounded-full bg-gradient-to-r from-violet to-indigo transition-all duration-base ease-standard",
+                    "h-1 w-1 rounded-full bg-gradient-to-r from-[#2E7CF6] to-[#00CFFF] transition-all duration-base ease-standard",
                     active ? "scale-100 opacity-100" : "scale-0 opacity-0",
                   )}
                 />
