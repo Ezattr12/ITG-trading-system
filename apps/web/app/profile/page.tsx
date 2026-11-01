@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Trophy, Lock, Check } from "lucide-react";
+import { ShieldCheck, Trophy, Check, ChevronDown } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
@@ -46,10 +46,28 @@ const EMPTY_PROFILE_ROW: ProfileCompletionRow = {
   employment_status: null,
 };
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * Profile-completion ring geometry (aside card): an SVG
+ * circle of radius 52 in a 120 viewBox; the progress arc's
+ * dash offset is derived from the real completion percent.
+ */
+const COMPLETION_RING_RADIUS = 52;
+const COMPLETION_RING_CIRCUMFERENCE = 2 * Math.PI * COMPLETION_RING_RADIUS;
+
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
+    <div className="itg2-field space-y-2">
+      <Label htmlFor={htmlFor} className="itg2-label">
+        {label}
+      </Label>
       {children}
     </div>
   );
@@ -57,7 +75,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function IdentityRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="itg2-row">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="text-right text-sm font-medium">{value}</dd>
     </div>
@@ -65,9 +83,9 @@ function IdentityRow({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Premium trader profile (Phase 19, spec §29, Ezat's Aurora
- * Glass system — docs/phase-19-design-reference.css, adapted
- * into globals.css as the .itg-* classes).
+ * Premium trader profile (Master Web UI Redesign — Page 7:
+ * the v2 glass system in itg2.css, deep black / deep blue /
+ * white, violet reserved for AI surfaces only).
  *
  * Identity first, settings second: a hero glass card (photo,
  * name, completeness badge, level ring, XP + level progress),
@@ -84,9 +102,10 @@ function IdentityRow({ label, value }: { label: string; value: string }) {
  *   required items). It is NOT identity/KYC verification —
  *   the admin-reviewed verification_status is shown
  *   separately in Trading Identity.
- * - Achievements: only earned ones are marked earned;
- *   the rest are shown locked. Statistics: real trade
- *   calculations. Empty states stay honest ("Not Provided").
+ * - Achievements: only earned ones are shown on this page;
+ *   the full set, locked included, lives on /achievements.
+ *   Statistics: real trade calculations. Empty states stay
+ *   honest ("Not Provided").
  */
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -133,8 +152,6 @@ export default async function ProfilePage() {
     (bundle?.userAchievements ?? []).map((u) => [u.achievement_id, u.unlocked_at]),
   );
   const earned = (bundle?.achievements ?? []).filter((a) => unlockedIds.has(a.id));
-  const locked = (bundle?.achievements ?? []).filter((a) => !unlockedIds.has(a.id));
-  const achievementsShown = [...earned, ...locked].slice(0, 6);
 
   const verificationLabel =
     p?.verification_status === "verified"
@@ -154,15 +171,19 @@ export default async function ProfilePage() {
 
   return (
     <AppShell email={user.email}>
-      <p className="eyebrow">Trader profile</p>
+      <p className="itg2-eyebrow">Trader profile</p>
       {!configured && (
-        <p role="alert" className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <p role="alert" className="itg2-notice itg2-notice-warning mt-4">
           {supabaseNotConnectedMessage()}
         </p>
       )}
 
-      {/* Hero glass profile card — Ezat's .itg-* system. */}
-      <section className="itg-glass itg-glass-hero itg-profile-hero motion-reveal mt-4 sm:mt-6" aria-label="Trader profile">
+      {/* Hero (v2, L3 glass) — photo in its gradient ring,
+          name, completeness badge, level ring, XP + level
+          progress, in the dashboard hero's layout language. */}
+      <section className="itg2-hero motion-reveal mt-4 sm:mt-6" aria-label="Trader profile">
+        <div className="itg2-hero-rings" aria-hidden="true" />
+        <div className="itg2-hero-inner p-5 sm:p-7">
         <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:gap-8 sm:text-left">
           <AvatarUpload
             avatarUrl={p?.avatar_url ?? null}
@@ -170,22 +191,19 @@ export default async function ProfilePage() {
             configured={configured}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="page-title">{displayOrNotProvided(p?.full_name)}</h1>
+            <h1 className="itg2-page-title">{displayOrNotProvided(p?.full_name)}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {p?.role === "admin" ? "Admin" : "Professional Trader"}
               {p?.country ? ` · ${p.country}` : ""}
             </p>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {completion.verified ? (
-                <span className="itg-verified text-sm">
+                <span className="itg2-verified text-sm">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                   ITG Verified Profile
                 </span>
               ) : (
-                <Link
-                  href="#profile-completion"
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3.5 py-2 text-sm font-medium transition-colors hover:border-white/25 hover:text-foreground"
-                >
+                <Link href="#profile-completion" className="itg2-chip itg2-chip-lg">
                   Profile {completion.percent}% complete
                   <span className="text-muted-foreground">· {completion.nextStep}</span>
                 </Link>
@@ -210,13 +228,15 @@ export default async function ProfilePage() {
         </div>
 
         <div className="mt-6 border-t border-white/10 pt-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="itg-xp text-xl font-bold">
-              <CountUpXp value={xpTotal} />
-              <span className="ml-2 text-sm font-medium text-muted-foreground">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="itg2-hero-value">
+                <CountUpXp value={xpTotal} />
+              </p>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">
                 {bundle === null ? "— connect Supabase to load XP" : "total XP earned"}
-              </span>
-            </p>
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">
               {progress === null
                 ? "Journal trades to earn a level"
@@ -226,14 +246,14 @@ export default async function ProfilePage() {
             </p>
           </div>
           <div
-            className="itg-xp-bar mt-2"
+            className="itg2-progress mt-3"
             role="progressbar"
             aria-valuenow={Math.round(progress?.progressPct ?? 0)}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Progress to the next level"
           >
-            <div className="itg-xp-progress" style={{ width: `${progress?.progressPct ?? 0}%` }} />
+            <div className="itg2-progress-fill" style={{ width: `${progress?.progressPct ?? 0}%` }} />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Your level is scored on discipline, risk, journaling, goals, psychology, strategy,
@@ -243,56 +263,57 @@ export default async function ProfilePage() {
             </Link>
           </p>
         </div>
+        </div>
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* Key stats — real trade calculations only. */}
           <section className="motion-reveal" aria-label="Key statistics">
-            <h2 className="section-title">Key stats</h2>
+            <h2 className="itg2-section-title">Key stats</h2>
             {summary === null ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 Statistics will appear once Supabase is connected and you have trades. Nothing here is estimated.
               </p>
             ) : (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Total trades</p>
-                  <p className="itg-stat-value mt-1">{summary.tradeCount}</p>
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Total trades</p>
+                  <p className="itg2-kpi-value">{summary.tradeCount}</p>
                 </article>
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Win rate</p>
-                  <p className={`itg-stat-value mt-1 ${summary.winRate !== null && summary.winRate >= 50 ? "text-emerald-300" : ""}`}>
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Win rate</p>
+                  <p className={`itg2-kpi-value ${summary.winRate !== null && summary.winRate >= 50 ? "itg2-text-profit" : ""}`}>
                     {summary.winRate === null ? "—" : `${Math.round(summary.winRate)}%`}
                   </p>
                 </article>
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Profit factor</p>
-                  <p className="itg-stat-value mt-1">
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Profit factor</p>
+                  <p className="itg2-kpi-value">
                     {summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)}
                   </p>
                 </article>
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Average R</p>
-                  <p className="itg-stat-value mt-1">
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Average R</p>
+                  <p className="itg2-kpi-value">
                     {summary.avgR === null ? "—" : summary.avgR.toFixed(2)}
                   </p>
                 </article>
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Best strategy</p>
-                  <p className="mt-1 truncate text-lg font-bold leading-tight">
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Best strategy</p>
+                  <p className="itg2-kpi-value truncate">
                     {best === null ? "Not provided" : best.name}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="itg2-kpi-hint">
                     {best === null
                       ? "Needs 3+ trades on one strategy"
                       : `Win rate ${Math.round(best.winRate)}% · ${best.trades} trades`}
                   </p>
                 </article>
-                <article className="itg-stat">
-                  <p className="text-xs font-medium text-muted-foreground">Current streak</p>
-                  <p className="mt-1 text-lg font-bold leading-tight">{streakLabel}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                <article className="itg2-card itg2-kpi">
+                  <p className="itg2-kpi-label">Current streak</p>
+                  <p className="itg2-kpi-value">{streakLabel}</p>
+                  <p className="itg2-kpi-hint">
                     {summary.tradeCount === 0 ? "Journal your first trade" : `${summary.wins} wins · ${summary.losses} losses`}
                   </p>
                 </article>
@@ -301,14 +322,14 @@ export default async function ProfilePage() {
           </section>
 
           {/* Trading Identity — only fields that actually exist. */}
-          <section className="motion-reveal card-surface p-4 sm:p-6" aria-label="Trading identity">
+          <section className="motion-reveal itg2-card p-5 sm:p-6" aria-label="Trading identity">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="section-title">Trading Identity</h2>
-              <Link href="#edit-profile" className="text-sm font-medium underline">
+              <h2 className="itg2-section-title">Trading Identity</h2>
+              <Link href="#edit-profile" className="itg2-link">
                 Edit
               </Link>
             </div>
-            <dl className="mt-2 divide-y divide-border">
+            <dl className="mt-2">
               <IdentityRow label="Experience" value={displayOrNotProvided(p?.trading_experience)} />
               <IdentityRow
                 label="Markets"
@@ -325,7 +346,7 @@ export default async function ProfilePage() {
               <IdentityRow label="Backtested trades" value={String(p?.backtested_trades ?? 0)} />
               <IdentityRow label="Real trades (approx.)" value={String(p?.real_trades_count ?? 0)} />
               <IdentityRow
-                label="Risk plan"
+                label="Risk profile"
                 value={
                   rules === null
                     ? "No risk rules yet"
@@ -342,11 +363,13 @@ export default async function ProfilePage() {
             </p>
           </section>
 
-          {/* Achievements — earned only; the rest shown locked. */}
+          {/* Achievements — earned only on this page; the
+              full set, locked included, lives on
+              /achievements (see the View all link). */}
           <section className="motion-reveal" aria-label="Achievements">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="section-title">Achievements</h2>
-              <Link href="/achievements" className="text-sm font-medium underline">
+              <h2 className="itg2-section-title">Achievements</h2>
+              <Link href="/achievements" className="itg2-link">
                 View all
               </Link>
             </div>
@@ -354,37 +377,22 @@ export default async function ProfilePage() {
               <p className="mt-3 text-sm text-muted-foreground">
                 Achievements will appear once Supabase is connected. Nothing here is invented.
               </p>
-            ) : achievementsShown.length === 0 ? (
+            ) : earned.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 No achievements yet — journal trades, follow your risk rules and complete goals to earn your first one.
               </p>
             ) : (
-              <div className="itg-achievements mt-3">
-                {achievementsShown.map((a) => {
-                  const isEarned = unlockedIds.has(a.id);
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {earned.map((a) => {
                   const unlocked = unlockedAt.get(a.id);
                   return (
-                    <article
-                      key={a.id}
-                      className={`itg-achievement ${isEarned ? "" : "opacity-60"}`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full border ${
-                          isEarned
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                            : "border-border bg-muted/60 text-muted-foreground"
-                        }`}
-                      >
-                        {isEarned ? <Trophy className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+                    <article key={a.id} className="itg2-card p-4 text-center">
+                      <span aria-hidden="true" className="itg2-achievement-icon mx-auto">
+                        <Trophy className="h-5 w-5" />
                       </span>
                       <p className="mt-2 text-sm font-semibold leading-tight">{a.name}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {isEarned && unlocked
-                          ? new Date(unlocked).toLocaleDateString()
-                          : isEarned
-                            ? "Earned"
-                            : "Locked"}
+                        {unlocked ? new Date(unlocked).toLocaleDateString() : "Earned"}
                       </p>
                     </article>
                   );
@@ -399,69 +407,64 @@ export default async function ProfilePage() {
           </section>
 
           {/* Edit profile — secondary section, below the identity. */}
-          <section id="edit-profile" className="motion-reveal card-surface scroll-mt-24 p-4 sm:p-6" aria-label="Edit profile">
-            <h2 className="section-title">Edit profile</h2>
+          <section id="edit-profile" className="motion-reveal itg2-card itg2-card-flat scroll-mt-24 p-5 sm:p-6" aria-label="Edit profile">
+            <h2 className="itg2-section-title">Edit profile</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Your identity above updates automatically when you save changes here.
             </p>
-            <ActionForm action={updateProfileAction} submitLabel="Save profile">
-              <details open className="group mt-4">
-                <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex items-center gap-2">
-                    Personal Information
-                    <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
-                  </span>
+            <ActionForm action={updateProfileAction} submitLabel="Save profile" submitClassName="itg2-btn-primary itg2-btn-save">
+              <details open className="itg2-card itg2-card-flat mt-4 p-5 sm:p-6">
+                <summary className="itg2-details-summary">
+                  Personal Information
+                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Full name">
-                    <Input name="fullName" defaultValue={p?.full_name ?? ""} required />
+                  <Field label="Full name" htmlFor="fullName">
+                    <Input id="fullName" name="fullName" defaultValue={p?.full_name ?? ""} required className="itg2-input" />
                   </Field>
-                  <Field label="Father's name">
-                    <Input name="fatherName" defaultValue={p?.father_name ?? ""} placeholder="Not provided" />
+                  <Field label="Father's name" htmlFor="fatherName">
+                    <Input id="fatherName" name="fatherName" defaultValue={p?.father_name ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
-                  <Field label="Date of birth">
-                    <Input name="dateOfBirth" type="date" defaultValue={p?.date_of_birth ?? ""} />
+                  <Field label="Date of birth" htmlFor="dateOfBirth">
+                    <Input id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={p?.date_of_birth ?? ""} className="itg2-input" />
                   </Field>
-                  <Field label="Country">
-                    <Input name="country" defaultValue={p?.country ?? ""} placeholder="Not provided" />
+                  <Field label="Country" htmlFor="country">
+                    <Input id="country" name="country" defaultValue={p?.country ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
                 </div>
               </details>
-              <details className="group mt-6">
-                <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex items-center gap-2">
-                    Trading Background
-                    <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
-                  </span>
+              <details className="itg2-card itg2-card-flat p-5 sm:p-6">
+                <summary className="itg2-details-summary">
+                  Trading Background
+                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Trading experience">
-                    <Input name="tradingExperience" defaultValue={p?.trading_experience ?? ""} placeholder="Not provided" />
+                  <Field label="Trading experience" htmlFor="tradingExperience">
+                    <Input id="tradingExperience" name="tradingExperience" defaultValue={p?.trading_experience ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
-                  <Field label="Trading education">
-                    <Input name="tradingEducation" defaultValue={p?.trading_education ?? ""} placeholder="Not provided" />
+                  <Field label="Trading education" htmlFor="tradingEducation">
+                    <Input id="tradingEducation" name="tradingEducation" defaultValue={p?.trading_education ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
-                  <Field label="Backtested trades">
-                    <Input name="backtestedTrades" type="number" min={0} defaultValue={p?.backtested_trades ?? 0} />
+                  <Field label="Backtested trades" htmlFor="backtestedTrades">
+                    <Input id="backtestedTrades" name="backtestedTrades" type="number" min={0} defaultValue={p?.backtested_trades ?? 0} className="itg2-input" />
                   </Field>
-                  <Field label="Real trades (approx.)">
-                    <Input name="realTradesCount" type="number" min={0} defaultValue={p?.real_trades_count ?? 0} />
+                  <Field label="Real trades (approx.)" htmlFor="realTradesCount">
+                    <Input id="realTradesCount" name="realTradesCount" type="number" min={0} defaultValue={p?.real_trades_count ?? 0} className="itg2-input" />
                   </Field>
                 </div>
               </details>
-              <details open className="group mt-6">
-                <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex items-center gap-2">
-                    Work & Trading
-                    <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
-                  </span>
+              <details open className="itg2-card itg2-card-flat p-5 sm:p-6">
+                <summary className="itg2-details-summary">
+                  Work & Trading
+                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Work status">
+                  <Field label="Work status" htmlFor="employmentStatus">
                     <select
+                      id="employmentStatus"
                       name="employmentStatus"
                       defaultValue={p?.employment_status ?? "not_provided"}
-                      className="input-select"
+                      className="itg2-select"
                     >
                       <option value="full_time">Full-time</option>
                       <option value="part_time">Part-time</option>
@@ -478,19 +481,17 @@ export default async function ProfilePage() {
                   income under Private Financial below.
                 </p>
               </details>
-              <details className="group mt-6">
-                <summary className="cursor-pointer list-none text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex items-center gap-2">
-                    Private Financial
-                    <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
-                  </span>
+              <details className="itg2-card itg2-card-flat p-5 sm:p-6">
+                <summary className="itg2-details-summary">
+                  Private Financial
+                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Trading capital (private)">
-                    <Input name="tradingCapital" type="number" min={0} step="0.01" defaultValue={p?.trading_capital ?? ""} placeholder="Not provided" />
+                  <Field label="Trading capital (private)" htmlFor="tradingCapital">
+                    <Input id="tradingCapital" name="tradingCapital" type="number" min={0} step="0.01" defaultValue={p?.trading_capital ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
-                  <Field label="Monthly income (private, if you have another job)">
-                    <Input name="monthlyIncome" type="number" min={0} step="0.01" defaultValue={p?.monthly_income ?? ""} placeholder="Not provided" />
+                  <Field label="Monthly income (private, if you have another job)" htmlFor="monthlyIncome">
+                    <Input id="monthlyIncome" name="monthlyIncome" type="number" min={0} step="0.01" defaultValue={p?.monthly_income ?? ""} placeholder="Not provided" className="itg2-input" />
                   </Field>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
@@ -510,29 +511,58 @@ export default async function ProfilePage() {
 
         <aside className="space-y-6">
           {/* Profile completion. */}
-          <section id="profile-completion" className="motion-reveal card-surface scroll-mt-24 p-4 sm:p-5" aria-label="Profile completion">
-            <h2 className="section-title">Profile completion</h2>
-            <p className="metric-hero mt-2">
-              <span className="text-gradient-blue">{completion.percent}%</span>
-            </p>
+          <section id="profile-completion" className="motion-reveal itg2-card scroll-mt-24 p-5" aria-label="Profile completion">
+            <h2 className="itg2-section-title">Profile completion</h2>
             <div
-              className="itg-xp-bar mt-3"
+              className="relative mx-auto mt-4 h-[120px] w-[120px]"
               role="progressbar"
               aria-valuenow={completion.percent}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label="Profile completion"
             >
-              <div className="itg-xp-progress" style={{ width: `${completion.percent}%` }} />
+              <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true" focusable="false">
+                <defs>
+                  <linearGradient id="itg2-completion-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#1268D8" />
+                    <stop offset="55%" stopColor="#2E7CF6" />
+                    <stop offset="100%" stopColor="#00CFFF" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={COMPLETION_RING_RADIUS}
+                  fill="none"
+                  stroke="rgba(120, 175, 255, 0.14)"
+                  strokeWidth="10"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={COMPLETION_RING_RADIUS}
+                  fill="none"
+                  stroke="url(#itg2-completion-ring-gradient)"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={COMPLETION_RING_CIRCUMFERENCE}
+                  strokeDashoffset={
+                    COMPLETION_RING_CIRCUMFERENCE * (1 - completion.percent / 100)
+                  }
+                />
+              </svg>
+              <div className="absolute inset-0 grid place-items-center">
+                <span className="itg2-figure">{completion.percent}%</span>
+              </div>
             </div>
             {completion.missing.length === 0 ? (
-              <p className="mt-3 flex items-start gap-2 text-sm text-emerald-300">
+              <p className="mt-4 flex items-start gap-2 text-sm itg2-text-profit">
                 <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 Your profile is complete — the ITG Verified Profile badge is active.
               </p>
             ) : (
               <>
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-4 text-sm text-muted-foreground">
                   {completion.nextStep} to reach 100%.
                 </p>
                 <ul className="mt-3 space-y-2">
@@ -542,7 +572,7 @@ export default async function ProfilePage() {
                         aria-hidden="true"
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                           item.complete
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                            ? "itg2-chip-profit"
                             : "border-border bg-muted/60 text-muted-foreground"
                         }`}
                       >
@@ -557,8 +587,8 @@ export default async function ProfilePage() {
           </section>
 
           {/* Certificates. */}
-          <section className="motion-reveal card-surface p-4 sm:p-5" aria-label="Certificates">
-            <h2 className="section-title">Certificates</h2>
+          <section className="motion-reveal itg2-card p-5" aria-label="Certificates">
+            <h2 className="itg2-section-title">Certificates</h2>
             {certificates.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">
                 No certificates yet. Monthly certificates are earned by meeting the journaling, risk, routine and review criteria.
@@ -573,14 +603,14 @@ export default async function ProfilePage() {
                 ))}
               </ul>
             )}
-            <Link href="/certificates" className="mt-3 inline-block text-sm font-medium underline">
+            <Link href="/certificates" className="itg2-link mt-1">
               View certificates
             </Link>
           </section>
 
           {/* How levels work — the honest explainer. */}
-          <section className="motion-reveal card-surface card-glow-violet p-4 sm:p-5" aria-label="How your level works">
-            <h2 className="section-title">How your level works</h2>
+          <section className="motion-reveal itg2-card p-5" aria-label="How your level works">
+            <h2 className="itg2-section-title">How your level works</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Your {levelName ?? "level"} is a multi-dimensional score out of 100 — discipline,
               risk, journaling, goals, psychology, strategy, consistency and performance.
@@ -600,7 +630,7 @@ export default async function ProfilePage() {
                   ))}
               </ul>
             )}
-            <Link href="/levels" className="mt-3 inline-block text-sm font-medium underline">
+            <Link href="/levels" className="itg2-link mt-1">
               Full level breakdown
             </Link>
           </section>

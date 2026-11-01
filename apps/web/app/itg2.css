@@ -1159,6 +1159,131 @@
       0 0 22px rgba(18, 104, 216, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
+  /*
+   * ============================================================
+   * PROFILE (Master Web UI Redesign — Page 7). The level
+   * ring moves from the legacy violet .itg-level-ring to a
+   * native v2 ring (LevelRing is SHARED with the Dashboard,
+   * which inherits this rendering — intended); the verified
+   * pill and the larger chip size serve the hero; the
+   * camera badge and the earned-achievement tile carry the
+   * blue -> cyan and gold treatments. The avatar BUTTON's
+   * own box + paint live in the unlayered tail with the
+   * other bare-button rules (.itg2-profile-avatar).
+   * ============================================================
+   */
+  /* Level ring: a conic blue -> cyan arc over a deep-blue
+     track, the fill driven by the --itg-ring-pct custom
+     property LevelRing sets inline from the real level-band
+     progress; the centre sits on a deep-glass disc
+     (::after) above the arc. */
+  .itg2-ring {
+    position: relative;
+    width: 118px;
+    height: 118px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(
+      var(--itg-blue-500) 0,
+      var(--itg-cyan-400) calc(var(--itg-ring-pct, 0) * 1%),
+      rgba(120, 175, 255, 0.14) calc(var(--itg-ring-pct, 0) * 1%) 100%
+    );
+    box-shadow:
+      0 0 35px rgba(0, 150, 255, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .itg2-ring::after {
+    content: "";
+    position: absolute;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 34% 28%,
+      rgba(21, 56, 116, 0.55),
+      rgba(5, 10, 24, 0.94) 70%
+    );
+    border: 1px solid rgba(120, 175, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(190, 220, 255, 0.08);
+  }
+  .itg2-ring-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  /* Verified pill — blue glass (the completeness badge is
+     a product state, not an AI surface, so no violet):
+     deep-blue gradient, bright border, quiet blue glow. */
+  .itg2-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: linear-gradient(
+      135deg,
+      rgba(18, 104, 216, 0.3),
+      rgba(0, 207, 255, 0.14)
+    );
+    border: 1px solid rgba(120, 175, 255, 0.48);
+    box-shadow:
+      0 0 24px rgba(18, 104, 216, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    color: #e9f4ff;
+    font-weight: 600;
+  }
+  /* Larger chip — the hero's profile-completion link:
+     same blue glass as .itg2-chip at reading size, with a
+     hover brightening (it is a link, not a label). */
+  .itg2-chip-lg {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    padding: 8px 14px;
+    gap: 8px;
+    transition: border-color
+      var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .itg2-chip-lg:hover {
+    border-color: rgba(0, 207, 255, 0.6);
+  }
+  /* Camera badge on the profile avatar — a blue -> cyan
+     gradient circle (position/size stay in the markup's
+     utilities). */
+  .itg2-avatar-badge {
+    background: linear-gradient(
+      135deg,
+      var(--itg-blue-500),
+      var(--itg-cyan-400)
+    );
+    border: 1px solid rgba(190, 225, 255, 0.55);
+    box-shadow:
+      0 6px 18px rgba(2, 10, 30, 0.45),
+      0 0 18px rgba(0, 207, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  /* Earned-achievement trophy tile — gold is the premium /
+     earned semantic: a bronze-gold ring with a soft glow. */
+  .itg2-achievement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dcbd8a;
+    border: 1px solid rgba(189, 147, 95, 0.5);
+    background: rgba(189, 147, 95, 0.12);
+    box-shadow:
+      0 0 18px rgba(189, 147, 95, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
 
 }
 
@@ -1269,13 +1394,14 @@
  * (their two-class selectors then win on specificity).
  */
 /*
- * Dashboard-scoped level restyle. LevelRing, the XP
- * track and the completion ring are shared/legacy
- * components whose markup the dashboard reuses; inside
- * .itg2-level-scope their fills turn blue -> cyan (the
- * Profile page, a later redesign step, keeps the legacy
- * violet until its own pass). Gold stays on the level
- * NAME via .itg2-text-gold in the markup.
+ * Dashboard-scoped level restyle. The XP track and the
+ * completion ring are shared/legacy components whose
+ * markup the dashboard reuses; inside .itg2-level-scope
+ * their fills turn blue -> cyan. (LevelRing itself has
+ * rendered natively in v2 — .itg2-ring — since Page 7,
+ * so its override below is inert and kept only for the
+ * record.) Gold stays on the level NAME via
+ * .itg2-text-gold in the markup.
  */
 .itg2-level-scope .itg-level-ring {
   background: conic-gradient(
@@ -1606,4 +1732,60 @@ select.itg2-select {
 .itg2-link-danger:focus-visible {
   outline: 2px solid rgba(255, 77, 114, 0.8);
   outline-offset: 2px;
+}
+
+/*
+ * .itg2-profile-avatar (Page 7, Profile) — the
+ * AvatarUpload button: a blue -> cyan gradient ring
+ * (3px padding over the gradient) around the trader's
+ * photo. It renders on a bare <button>, so per the Page 3
+ * rule its box AND paint live here in the unlayered tail
+ * — the unlayered preflight reset would otherwise zero
+ * the padding and clear the gradient. The photo /
+ * initials disc inside carries a dark inner border so it
+ * reads against the ring (the legacy .itg-avatar
+ * treatment, recoloured); the scale / focus feedback
+ * stays in the component's utilities.
+ */
+.itg2-profile-avatar {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(
+    135deg,
+    var(--itg-blue-500),
+    var(--itg-cyan-400)
+  );
+  box-shadow:
+    0 0 35px rgba(18, 104, 216, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+@media (max-width: 640px) {
+  .itg2-profile-avatar {
+    width: 88px;
+    height: 88px;
+  }
+}
+.itg2-profile-avatar img,
+.itg2-profile-avatar .itg2-profile-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid rgba(4, 8, 18, 0.9);
+}
+.itg2-profile-avatar .itg2-profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    150deg,
+    var(--itg-blue-700),
+    var(--itg-blue-900)
+  );
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
 }

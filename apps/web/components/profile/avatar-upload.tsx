@@ -6,7 +6,10 @@ import { uploadAvatarAction, type ActionResult } from "@/lib/auth/actions";
 import { avatarFileError } from "@/lib/profile/avatar-validation";
 
 /**
- * Premium profile-photo interaction (Phase 19).
+ * Premium profile-photo interaction (v2 glass system —
+ * the avatar sits in a blue -> cyan gradient ring, the
+ * camera badge is the same blue -> cyan; violet is AI-only
+ * in v2 and never appears here).
  *
  * Replaces the browser "Choose File / No file chosen" form with a
  * large circular avatar that is itself the control: tap it (camera
@@ -79,19 +82,19 @@ export function AvatarUpload({
           onClick={() => inputRef.current?.click()}
           disabled={pending || !configured}
           aria-label={avatarUrl ? "Change profile photo" : "Add a profile photo"}
-          className="itg-avatar group block cursor-pointer outline-none transition-transform duration-150 ease-standard hover:scale-[1.03] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+          className="itg2-profile-avatar group block cursor-pointer outline-none transition-transform duration-150 ease-standard hover:scale-[1.03] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
         >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt="Your profile photo" />
           ) : (
-            <span aria-hidden="true" className="itg-avatar-fallback">
+            <span aria-hidden="true" className="itg2-profile-avatar-fallback">
               {initials || "?"}
             </span>
           )}
           <span
             aria-hidden="true"
-            className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-gradient-to-br from-violet-500 to-primary text-white shadow-elevation-2 transition-transform duration-150 ease-standard group-hover:scale-110"
+            className="itg2-avatar-badge absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full text-white transition-transform duration-150 ease-standard group-hover:scale-110"
           >
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -115,7 +118,7 @@ export function AvatarUpload({
                   : "Photo upload needs Supabase connected"}
       </p>
       {state.ok && state.message && (
-        <p role="status" className="flex items-center gap-1.5 text-xs font-medium text-emerald-300">
+        <p role="status" className="itg2-text-profit flex items-center gap-1.5 text-xs font-medium">
           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
           Photo updated
         </p>

@@ -1,13 +1,16 @@
 import type { CSSProperties } from "react";
 
 /**
- * Level ring (Phase 19, Ezat's Aurora Glass system).
+ * Level ring (Master Web UI Redesign — v2 ring).
  *
  * The conic-gradient fill is driven by `--itg-ring-pct`, set
  * inline from the trader's real progress through the current
  * level band (score progress from `progressToNextLevel`) —
- * never a hardcoded percentage. The inner content sits above
- * the ::after disc via `.itg-level-ring-content`.
+ * never a hardcoded percentage. The arc runs blue -> cyan
+ * over a deep-blue track and the inner content sits above
+ * the deep-glass ::after disc via `.itg2-ring-content`.
+ * Shared by the Dashboard and the Profile page — both
+ * inherit this rendering.
  */
 export function LevelRing({
   progressPct,
@@ -23,7 +26,7 @@ export function LevelRing({
   const pct = Math.max(0, Math.min(100, Math.round(progressPct)));
   return (
     <div
-      className="itg-level-ring"
+      className="itg2-ring"
       style={{ "--itg-ring-pct": pct } as CSSProperties}
       role="img"
       aria-label={
@@ -32,7 +35,7 @@ export function LevelRing({
           : `${levelName} level, score ${score ?? "—"} out of 100, ${pct}% of the way to the next level`
       }
     >
-      <div className="itg-level-ring-content">
+      <div className="itg2-ring-content">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Level
         </span>
