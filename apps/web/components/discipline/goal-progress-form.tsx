@@ -13,6 +13,14 @@ import { recordGoalProgressAction } from "@/lib/discipline/actions";
  * trades yet). Measured goals update automatically and never show
  * this form — the trader is never asked to enter a value the
  * system can calculate.
+ *
+ * Master Web UI Redesign Page 6 — PRESENTATION ONLY: fields
+ * moved onto the Page 2 v2 form system (.itg2-field /
+ * .itg2-label / .itg2-input) and the submit uses
+ * .itg2-btn-primary .itg2-btn-save via ActionForm's
+ * submitClassName — the same full-width primary emphasis the
+ * form has always had. Field names, defaults and the action
+ * are untouched. Used only by the goals page.
  */
 export function GoalProgressForm({
   goalId,
@@ -22,11 +30,11 @@ export function GoalProgressForm({
   currentValue: number | null;
 }) {
   return (
-    <ActionForm action={recordGoalProgressAction} submitLabel="Record progress">
+    <ActionForm action={recordGoalProgressAction} submitLabel="Record progress" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="goalId" value={goalId} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`current-${goalId}`}>Current value</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor={`current-${goalId}`}>Current value</Label>
           <Input
             id={`current-${goalId}`}
             name="currentValue"
@@ -35,19 +43,19 @@ export function GoalProgressForm({
             min="0"
             placeholder="e.g. 5"
             defaultValue={currentValue === null ? "" : String(currentValue)}
-            className="min-h-[44px]"
+            className="itg2-input"
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`note-${goalId}`}>Note (optional)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor={`note-${goalId}`}>Note (optional)</Label>
           <Input
             id={`note-${goalId}`}
             name="note"
             type="text"
             placeholder="How is it going?"
             maxLength={500}
-            className="min-h-[44px]"
+            className="itg2-input"
           />
         </div>
       </div>

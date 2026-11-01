@@ -1311,6 +1311,45 @@
 }
 
 /*
+ * Goals-scoped progress-bar restyle (Master Web UI
+ * Redesign — Page 6). ProgressBar is a SHARED component
+ * (goals / progress / levels) whose track and fill are
+ * Tailwind utilities (utilities layer), so — same
+ * reasoning as the level scope above — the overrides are
+ * unlayered and scoped to the goals page's wrappers: the
+ * track takes the .itg2-progress treatment and the fill
+ * the blue -> cyan gradient with its cyan glow. A
+ * completed goal (.itg2-goalbar-done) fills profit ->
+ * cyan instead, matching its profit status chip. Only
+ * the paint changes: the width animation, the aria
+ * contract and the visible caption are the component's
+ * own, and the Progress / Levels pages keep the legacy
+ * emerald bar until their own passes.
+ */
+.itg2-goalbar-scope [role="progressbar"] {
+  background: rgba(120, 175, 255, 0.14);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.itg2-goalbar-scope [role="progressbar"] > div {
+  background: linear-gradient(
+    90deg,
+    var(--itg-blue-600),
+    var(--itg-blue-500),
+    var(--itg-cyan-400)
+  );
+  box-shadow: 0 0 16px rgba(0, 207, 255, 0.45);
+}
+.itg2-goalbar-done [role="progressbar"] > div {
+  background: linear-gradient(
+    90deg,
+    rgba(33, 243, 165, 0.72),
+    var(--itg-profit),
+    var(--itg-cyan-400)
+  );
+  box-shadow: 0 0 16px rgba(33, 243, 165, 0.4);
+}
+
+/*
  * UNLAYERED ON PURPOSE (same reasoning as the level-scope
  * overrides above): the form controls must override the
  * shared shadcn Input's utility classes (utilities layer)

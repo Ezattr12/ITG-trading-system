@@ -13,13 +13,21 @@ import { createGoalAction } from "@/lib/discipline/actions";
  * is measured from real trades and activity where the goal type
  * allows it — the trader never enters progress the system can
  * calculate; manual goals are recorded separately.
+ *
+ * Master Web UI Redesign Page 6 — PRESENTATION ONLY: fields
+ * moved onto the Page 2 v2 form system (.itg2-field /
+ * .itg2-label / .itg2-input / .itg2-select) and the submit
+ * uses .itg2-btn-primary .itg2-btn-save via ActionForm's
+ * submitClassName. Every field name, option value and label,
+ * default, placeholder and the action are untouched. Used
+ * only by the goals page.
  */
 export function GoalForm() {
-  const inputClass = "min-h-[44px]";
+  const inputClass = "itg2-input";
   return (
-    <ActionForm action={createGoalAction} submitLabel="Create goal">
-      <div className="space-y-2">
-        <Label htmlFor="title">Goal title</Label>
+    <ActionForm action={createGoalAction} submitLabel="Create goal" submitClassName="itg2-btn-primary itg2-btn-save">
+      <div className="itg2-field space-y-2">
+        <Label className="itg2-label" htmlFor="title">Goal title</Label>
         <Input
           id="title"
           name="title"
@@ -30,18 +38,18 @@ export function GoalForm() {
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="period">Period</Label>
-          <select id="period" name="period" defaultValue="monthly" className="input-select">
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="period">Period</Label>
+          <select id="period" name="period" defaultValue="monthly" className="itg2-select">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="goalType">What is measured</Label>
-          <select id="goalType" name="goalType" defaultValue="max_trades" className="input-select">
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="goalType">What is measured</Label>
+          <select id="goalType" name="goalType" defaultValue="max_trades" className="itg2-select">
             <option value="max_trades">Trades opened</option>
             <option value="journal_completion">Trades journaled</option>
             <option value="study_hours">Study hours</option>
@@ -52,8 +60,8 @@ export function GoalForm() {
             <option value="other">Something else (tracked manually)</option>
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="targetValue">Target</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="targetValue">Target</Label>
           <Input
             id="targetValue"
             name="targetValue"
@@ -65,8 +73,8 @@ export function GoalForm() {
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="targetUnit">Unit (optional)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="targetUnit">Unit (optional)</Label>
           <Input
             id="targetUnit"
             name="targetUnit"
@@ -76,12 +84,12 @@ export function GoalForm() {
             className={inputClass}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="startDate">Start date</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="startDate">Start date</Label>
           <Input id="startDate" name="startDate" type="date" className={inputClass} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="endDate">End date (optional)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="endDate">End date (optional)</Label>
           <Input id="endDate" name="endDate" type="date" className={inputClass} />
         </div>
       </div>
