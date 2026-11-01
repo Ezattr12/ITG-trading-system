@@ -381,6 +381,13 @@
     background: rgba(189, 147, 95, 0.12);
     color: #dcbd8a;
   }
+  /* Warning chip (Page 8, Progress): the paused-goal
+     status — the .itg2-notice-warning amber, at chip size. */
+  .itg2-chip-warning {
+    border-color: rgba(245, 196, 81, 0.45);
+    background: rgba(245, 196, 81, 0.1);
+    color: #f7dfa0;
+  }
   .itg2-chip-dir {
     text-transform: uppercase;
   }
@@ -572,6 +579,49 @@
     stop-color: var(--itg-blue-500);
   }
   .itg2-chart-scope #itg-equity-fill stop:last-child {
+    stop-color: var(--itg-cyan-400);
+  }
+  /*
+   * Progress-scoped XP chart restyle (Master Web UI
+   * Redesign — Task 4 sweep). XpHistoryChart hardcodes a
+   * violet stroke / fill in the shared charts module (its
+   * other consumers are untouched); inside this page's
+   * .itg2-xp-scope wrapper the same treatment as the equity
+   * scope above applies — deep-blue pool panel, blue-white
+   * grid/ticks, and the XP area's line + fill stops go
+   * blue -> cyan with a soft glow. XP is not AI, so the
+   * violet does not survive on this page. CSS wins over
+   * the SVG presentation attributes recharts emits, so no
+   * component change is needed.
+   */
+  .itg2-xp-scope .chart-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(6, 21, 47, 0.66),
+      rgba(4, 10, 24, 0.62)
+    );
+    border-color: rgba(120, 175, 255, 0.16);
+  }
+  .itg2-xp-scope .recharts-cartesian-grid line {
+    stroke: rgba(120, 175, 255, 0.13);
+  }
+  .itg2-xp-scope .recharts-cartesian-axis-tick text {
+    fill: #a9bedf;
+  }
+  .itg2-xp-scope .recharts-tooltip-cursor {
+    stroke: rgba(120, 175, 255, 0.35);
+  }
+  .itg2-xp-scope .recharts-area-curve {
+    stroke: var(--itg-cyan-400);
+    filter: drop-shadow(0 0 6px rgba(0, 207, 255, 0.4));
+  }
+  .itg2-xp-scope .recharts-active-dot circle {
+    fill: var(--itg-cyan-400);
+  }
+  .itg2-xp-scope #itg-xp-fill stop:first-child {
+    stop-color: var(--itg-blue-500);
+  }
+  .itg2-xp-scope #itg-xp-fill stop:last-child {
     stop-color: var(--itg-cyan-400);
   }
   /*

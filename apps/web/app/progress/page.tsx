@@ -7,7 +7,8 @@ import { displayOrNotProvided } from "@/lib/onboarding/completion";
 import { getAnalyticsBundle, type AnalyticsBundle } from "@/lib/analytics/queries";
 import { mondayOf, periodPnl, psychologySummary } from "@/lib/analytics/analytics";
 import { XpHistoryChart } from "@/components/analytics/charts";
-import { Money, ProgressBar, StatCard } from "@/components/analytics/stat-card";
+import { ProgressBar } from "@/components/analytics/stat-card";
+import { formatMoney } from "@/lib/trades/calculations";
 
 export const metadata = { title: "Progress — ITG TraderOS" };
 
@@ -17,6 +18,16 @@ export const metadata = { title: "Progress — ITG TraderOS" };
  * journal consistency, goals, level and XP — all from the trader's
  * real rows (trades, xp_transactions, goal_progress,
  * daily_activity). With no history yet, the page says so.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * the page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, the level/XP stats as .itg2-kpi
+ * cards, goal status as .itg2-chip variants with the shared
+ * ProgressBar re-scoped by .itg2-goalbar-scope, both trend
+ * tables as .itg2-table, and the shared XP chart re-scoped
+ * blue -> cyan by .itg2-xp-scope — XP is not AI, so its old
+ * violet glow is gone). All data, copy and empty states are
+ * exactly as before.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,15 +37,16 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Failed",
 };
 
-// Goal status pills (Phase 18). The tint follows the real
-// status — completed is a win, active is in progress, paused
-// is a warning, failed is a loss. Unknown statuses fall back
-// to a neutral pill showing the raw status string.
-const STATUS_PILL_CLASS: Record<string, string> = {
-  completed: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
-  active: "border-blue-500/40 bg-blue-500/10 text-blue-400",
-  paused: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-  failed: "border-red-500/40 bg-red-500/10 text-red-400",
+// Goal status chips (v2). The variant follows the real
+// status — completed is a win (profit), active is the
+// default blue chip, paused is a warning, failed is a
+// loss. Unknown statuses fall back to the muted chip
+// showing the raw status string.
+const STATUS_CHIP_CLASS: Record<string, string> = {
+  completed: "itg2-chip-profit",
+  active: "",
+  paused: "itg2-chip-warning",
+  failed: "itg2-chip-loss",
 };
 
 const EMPTY_BUNDLE: AnalyticsBundle = {
@@ -102,27 +114,51 @@ export default async function ProgressPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Progress</h1>
-        <p className="page-lede">
-          Your development over time — trading, discipline, psychology, risk, strategy, journaling, goals, level and XP.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Progress</p>
+          <h1 className="itg2-page-title mt-1">Progress</h1>
+          <p className="mt-2 text-muted-foreground">
+            Your development over time — trading, discipline, psychology, risk, strategy, journaling, goals, level and XP.
+          </p>
+        </header>
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level and XP">
-          <StatCard label="Trader level" glow={bundle.levelName ? "amber" : undefined} value={displayOrNotProvided(bundle.levelName)} hint={bundle.levelScore === null ? "No score yet — journal a trade to start building your level." : `Multi-dimensional score: ${bundle.levelScore.toFixed(1)} / 100 — discipline, risk, journaling, goals, psychology, strategy, consistency and performance.`} />
-          <StatCard label="Total XP" glow={bundle.xpTotal > 0 ? "violet" : undefined} value={`${bundle.xpTotal} XP`} hint="Earned for journaling, goals, reviews and discipline." />
-          <StatCard label="Journal completion" glow="cyan" value={`${psych.journalCompletionPct.toFixed(0)}%`} hint="Share of closed trades with psychology or a lesson." />
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Trader level</h2>
+            <p className="itg2-kpi-value">
+              {bundle.levelName && bundle.levelName.trim() !== "" ? (
+                <span className="itg2-text-gold">{bundle.levelName}</span>
+              ) : (
+                displayOrNotProvided(bundle.levelName)
+              )}
+            </p>
+            <p className="itg2-kpi-hint">
+              {bundle.levelScore === null ? "No score yet — journal a trade to start building your level." : `Multi-dimensional score: ${bundle.levelScore.toFixed(1)} / 100 — discipline, risk, journaling, goals, psychology, strategy, consistency and performance.`}
+            </p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Total XP</h2>
+            <p className="itg2-kpi-value">{`${bundle.xpTotal} XP`}</p>
+            <p className="itg2-kpi-hint">Earned for journaling, goals, reviews and discipline.</p>
+          </article>
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Journal completion</h2>
+            <p className="itg2-kpi-value">{`${psych.journalCompletionPct.toFixed(0)}%`}</p>
+            <p className="itg2-kpi-hint">Share of closed trades with psychology or a lesson.</p>
+          </article>
         </section>
 
-        {/* XP history is the hero of this page — raised surface,
-            violet XP glow, violet gradient chart. */}
-        <section className="mt-6 sm:mt-8 card-surface-raised card-glow-violet p-4 sm:p-6" aria-label="XP history">
-          <h2 className="section-title">XP over time</h2>
+        {/* XP history is the hero of this page — elevated
+            surface; the shared chart's violet is re-scoped to
+            blue -> cyan by .itg2-xp-scope (XP is not AI). */}
+        <section className="itg2-card itg2-card-elevated mt-6 sm:mt-8 p-4 sm:p-6" aria-label="XP history">
+          <h2 className="itg2-section-title">XP over time</h2>
           {bundle.xpHistory.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No XP yet — XP is earned by journaling trades, completing goals and doing reviews.
             </p>
           ) : (
-            <div className="mt-4">
+            <div className="itg2-xp-scope mt-4">
               <XpHistoryChart data={bundle.xpHistory} />
               <p className="mt-2 text-xs text-muted-foreground">
                 Cumulative XP from your xp_transactions. Each point is one XP event.
@@ -131,8 +167,8 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Goals">
-          <h2 className="section-title">Goals</h2>
+        <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Goals">
+          <h2 className="itg2-section-title">Goals</h2>
           {bundle.goals.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No goals yet. Goal progress will be tracked here once you create one.
@@ -143,12 +179,12 @@ export default async function ProgressPage() {
                 <div key={g.id}>
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
                     {g.title}
-                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_PILL_CLASS[g.status] ?? "border-border bg-secondary text-muted-foreground"}`}>
+                    <span className={`itg2-chip ${STATUS_CHIP_CLASS[g.status] ?? "itg2-chip-muted"}`}>
                       {STATUS_LABEL[g.status] ?? g.status}
                     </span>
                     <span className="font-normal text-muted-foreground">· {g.period}</span>
                   </p>
-                  <div className="mt-2">
+                  <div className={`itg2-goalbar-scope${g.status === "completed" ? " itg2-goalbar-done" : ""} mt-2`}>
                     <ProgressBar
                       percent={g.percent}
                       label={`${g.currentValue} / ${g.targetValue} (${g.percent.toFixed(0)}%)`}
@@ -160,28 +196,32 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Journal consistency by week">
-          <h2 className="section-title">Journal consistency — last 12 weeks</h2>
+        <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Journal consistency by week">
+          <h2 className="itg2-section-title">Journal consistency — last 12 weeks</h2>
           {weeklyRows.length === 0 ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="itg2-table">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Week starting</th>
-                    <th className="py-2 pr-4 font-medium">Trades</th>
-                    <th className="py-2 pr-4 font-medium">P&amp;L</th>
-                    <th className="py-2 font-medium">Journaled</th>
+                  <tr>
+                    <th>Week starting</th>
+                    <th>Trades</th>
+                    <th>P&amp;L</th>
+                    <th>Journaled</th>
                   </tr>
                 </thead>
                 <tbody>
                   {weeklyRows.map((w) => (
-                    <tr key={w.label} className="border-t border-border transition-colors hover:bg-accent/40">
-                      <td className="py-2.5 pr-4">{w.label}</td>
-                      <td className="py-2.5 pr-4 tabular-nums">{w.trades}</td>
-                      <td className="py-2.5 pr-4"><Money value={w.pnl} /></td>
-                      <td className="py-2.5 tabular-nums">{w.journaledPct.toFixed(0)}%</td>
+                    <tr key={w.label}>
+                      <td>{w.label}</td>
+                      <td className="tnum">{w.trades}</td>
+                      <td className="tnum">
+                        <span className={w.pnl > 0 ? "itg2-text-profit" : w.pnl < 0 ? "itg2-text-loss" : ""}>
+                          {formatMoney(w.pnl)}
+                        </span>
+                      </td>
+                      <td className="tnum">{w.journaledPct.toFixed(0)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -190,30 +230,30 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Discipline and psychology by month">
-          <h2 className="section-title">Discipline &amp; psychology by month</h2>
+        <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Discipline and psychology by month">
+          <h2 className="itg2-section-title">Discipline &amp; psychology by month</h2>
           {monthlyRows.length === 0 ? (
             <p className="mt-2 text-muted-foreground">No closed trades yet.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="itg2-table">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Month</th>
-                    <th className="py-2 pr-4 font-medium">Trades</th>
-                    <th className="py-2 pr-4 font-medium">Discipline “Good”</th>
-                    <th className="py-2 font-medium">Avg confidence</th>
+                  <tr>
+                    <th>Month</th>
+                    <th>Trades</th>
+                    <th>Discipline “Good”</th>
+                    <th>Avg confidence</th>
                   </tr>
                 </thead>
                 <tbody>
                   {monthlyRows.map((row) => (
-                    <tr key={row.month} className="border-t border-border transition-colors hover:bg-accent/40">
-                      <td className="py-2.5 pr-4">{row.month}</td>
-                      <td className="py-2.5 pr-4 tabular-nums">{row.trades}</td>
-                      <td className="py-2.5 pr-4 tabular-nums">
+                    <tr key={row.month}>
+                      <td>{row.month}</td>
+                      <td className="tnum">{row.trades}</td>
+                      <td className="tnum">
                         {row.goodDisciplinePct === null ? "—" : `${row.goodDisciplinePct.toFixed(0)}%`}
                       </td>
-                      <td className="py-2.5 tabular-nums">
+                      <td className="tnum">
                         {row.avgConfidence === null ? "—" : `${row.avgConfidence.toFixed(1)} / 5`}
                       </td>
                     </tr>
