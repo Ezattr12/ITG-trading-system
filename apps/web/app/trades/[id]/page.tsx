@@ -9,6 +9,7 @@ import { AdvancedReviewForm } from "@/components/trades/advanced-review-form";
 import { ScreenshotUploadForm } from "@/components/trades/screenshot-upload-form";
 import { TradeSavedBanner } from "@/components/trades/trade-saved-banner";
 import { ConfirmButton } from "@/components/trades/confirm-button";
+import { DeleteTradeButton } from "@/components/trades/delete-trade-button";
 import {
   cancelTradeAction,
   correctTradeAction,
@@ -161,6 +162,17 @@ export default async function TradeDetailPage({
                 {detail.reversedTrade.pair} (reversed)
               </Link>
               .
+            </span>
+          </p>
+        )}
+        {/* A reversed trade with NO correcting trade was annulled
+            by Delete Trade (a voided trade): it is out of the
+            active journal, and there is nothing left to delete. */}
+        {trade.status === "reversed" && !detail.correctingTrade && (
+          <p role="status" className="itg2-notice itg2-notice-neutral mt-4">
+            <span>
+              This trade was removed from the active journal. Its record is preserved for
+              audit history.
             </span>
           </p>
         )}
@@ -437,6 +449,37 @@ export default async function TradeDetailPage({
               <input type="hidden" name="tradeId" value={trade.id} />
               <ConfirmButton label="Cancel trade" confirmLabel="Click again to cancel" />
             </form>
+          </section>
+        )}
+
+        {/* Delete Trade (Delete Trade mandate): available for
+            open and closed trades. Removing hides the trade
+            from the active journal, analytics and reports; the
+            record and its audit trail are preserved — the core
+            cancels an open trade or annuls a closed one by
+            reversal, and nothing is hard-deleted. The hero's
+            Edit Trade stays the primary action; this danger
+            button only opens the confirmation dialog. */}
+        {editable && (
+          <section className="motion-reveal motion-reveal-6 mt-6 itg2-card itg2-card-flat p-5 sm:p-6" aria-label="Delete trade">
+            <SectionHeader eyebrow="Danger zone" title="Delete this trade" />
+            <p className="mt-1 text-sm text-muted-foreground">
+              Removing this trade hides it from your active journal, analytics and reports.
+              The record itself and its audit trail are preserved for data integrity —
+              nothing is permanently erased.
+            </p>
+            <div className="mt-4">
+              <DeleteTradeButton
+                variant="button"
+                label="Delete trade"
+                tradeId={trade.id}
+                pair={trade.pair}
+                direction={trade.direction}
+                status={trade.status}
+                openedAtLabel={new Date(trade.opened_at).toLocaleString()}
+                pnlLabel={trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+              />
+            </div>
           </section>
         )}
     </AppShell>

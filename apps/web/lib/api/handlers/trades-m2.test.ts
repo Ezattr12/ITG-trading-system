@@ -29,6 +29,7 @@ vi.mock("@/lib/supabase/config", () => ({
 import {
   handleCancelTrade,
   handleDeleteScreenshot,
+  handleDeleteTrade,
   handleUploadScreenshot,
 } from "./trades";
 
@@ -60,7 +61,17 @@ function makeDeps() {
   const tables: Record<string, Row[]> = {
     trades: [
       { id: TRADE_OPEN_A, user_id: USER_A, status: "open", pair: "XAUUSD" },
-      { id: TRADE_CLOSED_A, user_id: USER_A, status: "closed", pair: "XAUUSD", pnl: 10 },
+      {
+        id: TRADE_CLOSED_A,
+        user_id: USER_A,
+        status: "closed",
+        pair: "XAUUSD",
+        direction: "long",
+        pnl: 10,
+        reversal_trade_id: null,
+        opened_at: "2026-10-12T09:00:00Z",
+        closed_at: "2026-10-12T10:00:00Z",
+      },
       { id: TRADE_OPEN_B, user_id: USER_B, status: "open", pair: "EURUSD" },
     ],
     trade_screenshots: [
@@ -191,6 +202,140 @@ describe("handleCancelTrade", () => {
     const missing = await handleCancelTrade({ token: "token-a", body: {}, tradeId: MISSING }, deps);
     expect(missing.body).toEqual(foreign.body);
     expect(tables.trades.find((t) => t.id === TRADE_OPEN_B)?.status).toBe("open");
+  });
+});
+
+describe("handleDeleteTrade", () => {
+  it("no token → 401, trade untouched", async () => {
+    const { deps, tables } = makeDeps();
+    const res = await handleDeleteTrade({ token: null, body: {}, tradeId: TRADE_OPEN_A }, deps);
+    expect(res.status).toBe(401);
+    expect(tables.trades.find((t) => t.id === TRADE_OPEN_A)?.status).toBe("open");
+  });
+
+  it("open trade, empty body → 200 { previous_status: 'open', already_removed: false }, row cancelled, core + API audit rows", async () => {
+    const { deps, audits, tables, admin } = makeDeps();
+    const res = await handleDeleteTrade(
+      { token: "token-a", body: null, tradeId: TRADE_OPEN_A },
+      deps,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      trade_id: TRADE_OPEN_A,
+      previous_status: "open",
+      already_removed: false,
+    });
+    expect(tables.trades.find((t) => t.id === TRADE_OPEN_A)?.status).toBe("cancelled");
+    const actions = admin.fake.insertsFor("audit_logs").map((r) => r.action);
+    expect(actions).toContain("trade.cancelled");
+    expect(actions.filter((a) => a === "trade.deleted")).toHaveLength(1);
+    expect(audits.filter((e) => e.operation === "trade_deleted")).toHaveLength(1);
+  });
+
+  it("closed trade with a reason → 200 previous_status 'closed', row annulled to reversed (no correcting trade), NO trade.cancelled", async () => {
+    const { deps, audits, tables, admin } = makeDeps();
+    const res = await handleDeleteTrade(
+      { token: "token-a", body: { reason: "duplicate" }, tradeId: TRADE_CLOSED_A },
+      deps,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      trade_id: TRADE_CLOSED_A,
+      previous_status: "closed",
+      already_removed: false,
+    });
+    const stored = tables.trades.find((t) => t.id === TRADE_CLOSED_A);
+    expect(stored?.status).toBe("reversed");
+    expect(stored?.reversal_trade_id ?? null).toBeNull();
+    const actions = admin.fake.insertsFor("audit_logs").map((r) => r.action);
+    expect(actions).not.toContain("trade.cancelled");
+    const deleted = admin.fake
+      .insertsFor("audit_logs")
+      .filter((r) => r.action === "trade.deleted");
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0].details).toMatchObject({ previousStatus: "closed", reason: "duplicate" });
+    expect(audits.filter((e) => e.operation === "trade_deleted")).toHaveLength(1);
+  });
+
+  it("repeat delete → 200 already_removed: true and still exactly ONE trade.deleted row", async () => {
+    const { deps, audits, admin } = makeDeps();
+    const first = await handleDeleteTrade(
+      { token: "token-a", body: {}, tradeId: TRADE_CLOSED_A },
+      deps,
+    );
+    expect(first.status).toBe(200);
+    const second = await handleDeleteTrade(
+      { token: "token-a", body: {}, tradeId: TRADE_CLOSED_A },
+      deps,
+    );
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual({
+      trade_id: TRADE_CLOSED_A,
+      previous_status: "reversed",
+      already_removed: true,
+    });
+    expect(
+      admin.fake.insertsFor("audit_logs").filter((r) => r.action === "trade.deleted"),
+    ).toHaveLength(1);
+    // One API-layer audit row per CALL (two calls, two rows).
+    expect(audits.filter((e) => e.operation === "trade_deleted")).toHaveLength(2);
+  });
+
+  it("smuggled user_id in body → 400 naming it, no delete", async () => {
+    const { deps, tables } = makeDeps();
+    const res = await handleDeleteTrade(
+      { token: "token-a", body: { user_id: USER_B }, tradeId: TRADE_OPEN_A },
+      deps,
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_argument");
+    expect(String(res.body.message)).toContain("user_id");
+    expect(tables.trades.find((t) => t.id === TRADE_OPEN_A)?.status).toBe("open");
+  });
+
+  it("unknown key → 400 naming the key", async () => {
+    const { deps } = makeDeps();
+    const res = await handleDeleteTrade(
+      { token: "token-a", body: { note: "x" }, tradeId: TRADE_OPEN_A },
+      deps,
+    );
+    expect(res.status).toBe(400);
+    expect(String(res.body.message)).toContain("unknown field: note");
+  });
+
+  it("invalid reason → 400 with the core's message, trade preserved", async () => {
+    const { deps, tables } = makeDeps();
+    const res = await handleDeleteTrade(
+      { token: "token-a", body: { reason: "bogus" }, tradeId: TRADE_OPEN_A },
+      deps,
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_argument");
+    expect(String(res.body.message)).toContain("valid reason");
+    expect(tables.trades.find((t) => t.id === TRADE_OPEN_A)?.status).toBe("open");
+  });
+
+  it("non-UUID trade id → 400", async () => {
+    const { deps } = makeDeps();
+    const res = await handleDeleteTrade({ token: "token-a", body: {}, tradeId: "nope" }, deps);
+    expect(res.status).toBe(400);
+  });
+
+  it("another trader's trade → 404 byte-identical to missing, still closed", async () => {
+    const { deps, tables } = makeDeps();
+    const foreign = await handleDeleteTrade(
+      { token: "token-b", body: {}, tradeId: TRADE_CLOSED_A },
+      deps,
+    );
+    expect(foreign.status).toBe(404);
+    expect(foreign.body).toEqual({ error: "not_found" });
+    const missing = await handleDeleteTrade(
+      { token: "token-a", body: {}, tradeId: MISSING },
+      deps,
+    );
+    expect(missing.status).toBe(404);
+    expect(missing.body).toEqual(foreign.body);
+    expect(tables.trades.find((t) => t.id === TRADE_CLOSED_A)?.status).toBe("closed");
   });
 });
 

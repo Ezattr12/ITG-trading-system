@@ -29,7 +29,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { createTradeAction, editTradeAction } from "./actions";
+import { createTradeAction, deleteTradeAction, editTradeAction } from "./actions";
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 // The new trade closes Wednesday 2026-10-14; the week's Monday
@@ -307,5 +307,56 @@ describe("editTradeAction", () => {
     expect(user.fake.inserts).toHaveLength(0);
     expect(user.fake.updates).toHaveLength(0);
     expect(tables.trades).toHaveLength(1);
+  });
+});
+
+/* --------------------------------------------------------- delete action */
+
+function deleteForm(reason?: string): FormData {
+  const fd = new FormData();
+  fd.set("tradeId", EDIT_ID);
+  if (reason !== undefined) fd.set("reason", reason);
+  return fd;
+}
+
+describe("deleteTradeAction", () => {
+  it("success: 'Trade removed successfully.' + redirect to /trades?deleted=1, trade annulled", async () => {
+    const { tables } = setupForEdit();
+    const result = await deleteTradeAction({ ok: false }, deleteForm("duplicate"));
+    expect(result.ok).toBe(true);
+    expect(result.message).toBe("Trade removed successfully.");
+    expect(result.redirectTo).toBe("/trades?deleted=1");
+    const stored = tables.trades.find((r) => r.id === EDIT_ID);
+    expect(stored?.status).toBe("reversed");
+    expect(stored?.reversal_trade_id ?? null).toBeNull();
+  });
+
+  it("a repeat delete answers 'This trade was already removed.' with the same redirect", async () => {
+    setupForEdit();
+    const first = await deleteTradeAction({ ok: false }, deleteForm());
+    expect(first.ok).toBe(true);
+    const second = await deleteTradeAction({ ok: false }, deleteForm());
+    expect(second.ok).toBe(true);
+    expect(second.message).toBe("This trade was already removed.");
+    expect(second.redirectTo).toBe("/trades?deleted=1");
+  });
+
+  it("an invalid reason surfaces the core's error and the trade is preserved", async () => {
+    const { tables } = setupForEdit();
+    const result = await deleteTradeAction({ ok: false }, deleteForm("bogus"));
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("valid reason");
+    expect(tables.trades.find((r) => r.id === EDIT_ID)?.status).toBe("closed");
+  });
+
+  it("not logged in → the login error, nothing written", async () => {
+    const { user, tables } = setupForEdit();
+    (user.fake as unknown as { auth: unknown }).auth = {
+      getUser: async () => ({ data: { user: null } }),
+    };
+    const result = await deleteTradeAction({ ok: false }, deleteForm());
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("You are not logged in. Please log in and try again.");
+    expect(tables.trades.find((r) => r.id === EDIT_ID)?.status).toBe("closed");
   });
 });

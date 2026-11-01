@@ -11,6 +11,8 @@ import type {
   EditTradeResponse,
   CreateGoalResponse,
   CreateTradeResponse,
+  DeleteTradeReason,
+  DeleteTradeResponse,
   GoalCreatePayload,
   GoalProgressPayload,
   MarkReadResponse,
@@ -146,6 +148,23 @@ export async function cancelTrade(tradeId: string): Promise<CancelTradeResponse>
   return apiFetch<CancelTradeResponse>(`/api/mobile/trades/${tradeId}/cancel`, {
     method: "POST",
     body: JSON.stringify({}),
+  });
+}
+
+/**
+ * POST /api/mobile/trades/[id]/delete — Delete Trade: removes
+ * the trade from the active journal (an open trade is
+ * cancelled, a closed trade is annulled by reversal; the
+ * record is never hard-deleted). The reason is optional —
+ * omitted entirely when not chosen.
+ */
+export async function deleteTrade(
+  tradeId: string,
+  reason?: DeleteTradeReason | null,
+): Promise<DeleteTradeResponse> {
+  return apiFetch<DeleteTradeResponse>(`/api/mobile/trades/${tradeId}/delete`, {
+    method: "POST",
+    body: JSON.stringify(reason ? { reason } : {}),
   });
 }
 

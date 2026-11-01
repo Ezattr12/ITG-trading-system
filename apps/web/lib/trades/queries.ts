@@ -23,6 +23,30 @@ import type {
 
 export const TRADE_LIST_FETCH_LIMIT = 500;
 
+/**
+ * Active-journal visibility (Delete Trade mandate): a removed
+ * trade never appears in the journal list. Cancelled trades
+ * are out, and a reversed trade with NO correcting trade
+ * (reversal_trade_id null) is a voided / annulled trade —
+ * also out. A reversed trade WITH a reversal_trade_id is a
+ * corrected original and stays visible, exactly as before.
+ *
+ * This runs post-fetch rather than as a PostgREST `.or(...)`
+ * filter for two reasons: the recording fake harness behind
+ * the query tests cannot express or-filters, and both call
+ * sites (the trades list page and the trade detail page's
+ * related trades, which call this same function) get the
+ * identical exclusion. The fetch is already capped at
+ * TRADE_LIST_FETCH_LIMIT most-recent rows, so the filter
+ * only ever removes rows from that capped set — the cap's
+ * documented semantics are unchanged.
+ */
+function isActiveJournalTrade(trade: TradeRow): boolean {
+  if (trade.status === "cancelled") return false;
+  if (trade.status === "reversed" && trade.reversal_trade_id === null) return false;
+  return true;
+}
+
 export async function getSystemStrategies(
   supabase: SupabaseClient,
 ): Promise<StrategyRow[]> {
@@ -61,7 +85,7 @@ export async function getTradeListItems(
   if (dbFilters.from) query = query.gte("opened_at", dbFilters.from);
   if (dbFilters.to) query = query.lte("opened_at", dbFilters.to);
   const { data: trades } = await query;
-  const rows = (trades ?? []) as TradeRow[];
+  const rows = ((trades ?? []) as TradeRow[]).filter(isActiveJournalTrade);
   if (rows.length === 0) return [];
 
   const tradeIds = rows.map((t) => t.id);

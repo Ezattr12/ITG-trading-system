@@ -11,6 +11,7 @@ import {
   correctTradeCore,
   createTradeCore,
   deleteScreenshotCore,
+  deleteTradeCore,
   editTradeCore,
   saveAdvancedReviewCore,
   uploadScreenshotCore,
@@ -335,6 +336,73 @@ export async function handleCancelTrade(
   }
   return finish(deps, CANCEL_CTX, userId, "ok", result.tradeId,
     apiOk({ trade_id: result.tradeId, status: result.status }));
+}
+
+/* ------------------------------------------- delete (Delete Trade) */
+
+const DELETE_CTX: HandlerContext = { operation: "trade_deleted", entityType: "trades" };
+
+/** The only body key a delete may carry: the optional reason. */
+const DELETE_KEYS = ["reason"] as const;
+
+/**
+ * POST /api/mobile/trades/[id]/delete — remove a trade via
+ * deleteTradeCore (the same core the web delete action
+ * calls): an open trade is cancelled, a closed trade is
+ * annulled by reversal, nothing is hard-deleted. The body
+ * is optional (the route's lenient parse turns a bodiless
+ * POST into {}); when sent it may carry only `reason`, held
+ * to the strict pipeline like every other key — and the
+ * core validates the reason against its enum, so an invalid
+ * value is a 400 with the core's message. A repeat delete
+ * answers 200 with already_removed: true (idempotent, no
+ * duplicate audit rows in the core).
+ */
+export async function handleDeleteTrade(
+  input: JsonHandlerInput & { tradeId: string },
+  deps: ApiDeps,
+): Promise<ApiHandlerResult> {
+  const gate = await requireApiAuth(input.token, deps, DELETE_CTX);
+  if (!gate.ok) return gate.response;
+  const { userId, supabase } = gate.auth;
+
+  if (input.bodyError) {
+    return finish(deps, DELETE_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", input.bodyError));
+  }
+  const validated = validateBody(input.body ?? {}, DELETE_KEYS);
+  if (!validated.ok) {
+    return finish(deps, DELETE_CTX, userId, "invalid_argument", null, validated.response);
+  }
+  if (!isUuid(input.tradeId)) {
+    return finish(deps, DELETE_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "trade id must be a valid UUID"));
+  }
+  const limited = checkApiRateLimit(deps, DELETE_CTX, userId);
+  if (limited) {
+    return finish(deps, DELETE_CTX, userId, "rate_limited", null, limited);
+  }
+  let result: Awaited<ReturnType<typeof deleteTradeCore>>;
+  try {
+    result = await deleteTradeCore(supabase, userId, input.tradeId, {
+      // Passed through verbatim: the core refuses any
+      // non-null value outside its reason enum (including a
+      // non-string) as invalid_input.
+      reason: (validated.body.reason ?? null) as string | null,
+    });
+  } catch {
+    return finish(deps, DELETE_CTX, userId, "error", null, apiError(500, "internal"));
+  }
+  if (!result.ok) {
+    const { response, outcome } = coreFailureResponse(result);
+    return finish(deps, DELETE_CTX, userId, outcome, input.tradeId, response);
+  }
+  return finish(deps, DELETE_CTX, userId, "ok", result.tradeId,
+    apiOk({
+      trade_id: result.tradeId,
+      previous_status: result.previousStatus,
+      already_removed: result.alreadyRemoved,
+    }));
 }
 
 /* --------------------------------------- screenshots (Phase 21, M2) */

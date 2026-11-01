@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
 import { TradeFiltersForm } from "@/components/trades/trade-filters";
+import { DeleteTradeButton } from "@/components/trades/delete-trade-button";
 import { getSystemStrategies, getTradeListItems } from "@/lib/trades/queries";
 import { applyTradeFilters, paginate } from "@/lib/trades/filters";
 import { SESSION_LABELS, tradeFiltersSchema } from "@/lib/trades/validation";
@@ -42,6 +43,10 @@ export default async function TradesPage({
   if (!user.onboarding?.is_complete) redirect("/onboarding");
 
   const raw = await searchParams;
+  // ?deleted=1 lands here after a Delete Trade (the action's
+  // redirect): a display flag only, read from the raw params
+  // — it is not a filter (the schema strips it as unknown).
+  const deletedNotice = first(raw.deleted) === "1";
   const rawFilters: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(raw)) rawFilters[key] = first(value);
   const parsed = tradeFiltersSchema.safeParse(rawFilters);
@@ -98,6 +103,12 @@ export default async function TradesPage({
             + Add trade
           </Link>
         </div>
+
+        {deletedNotice && (
+          <p role="status" className="itg2-notice itg2-notice-success motion-fade-in mt-6">
+            <span>Trade removed successfully.</span>
+          </p>
+        )}
 
         <div className="mt-6">
           <TradeFiltersForm filters={filters} strategies={strategies} />
@@ -173,6 +184,16 @@ export default async function TradesPage({
                         Edit
                       </Link>
                     ) : null}
+                    {trade.status === "open" || trade.status === "closed" ? (
+                      <DeleteTradeButton
+                        tradeId={trade.id}
+                        pair={trade.pair}
+                        direction={trade.direction}
+                        status={trade.status}
+                        openedAtLabel={new Date(trade.opened_at).toLocaleDateString()}
+                        pnlLabel={trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+                      />
+                    ) : null}
                   </p>
                 </li>
               ))}
@@ -246,6 +267,16 @@ export default async function TradesPage({
                             <Link href={`/trades/${trade.id}/edit`} className="itg2-link">
                               Edit
                             </Link>
+                          ) : null}
+                          {trade.status === "open" || trade.status === "closed" ? (
+                            <DeleteTradeButton
+                              tradeId={trade.id}
+                              pair={trade.pair}
+                              direction={trade.direction}
+                              status={trade.status}
+                              openedAtLabel={new Date(trade.opened_at).toLocaleDateString()}
+                              pnlLabel={trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+                            />
                           ) : null}
                         </span>
                       </td>

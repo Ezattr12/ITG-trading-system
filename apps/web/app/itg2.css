@@ -1586,3 +1586,24 @@ select.itg2-select {
   outline: 2px solid rgba(255, 77, 114, 0.8);
   outline-offset: 2px;
 }
+
+/*
+ * .itg2-link-danger (Delete Trade) — the danger-toned
+ * sibling of .itg2-link for the trades list's Delete
+ * trigger. It renders on a bare <button>, and its colour
+ * must beat the layered .itg2-link blue, so per the Page 3
+ * cascade rule it lives here in the unlayered tail. Quiet
+ * loss-red at rest, brighter with the link's underline on
+ * hover — Delete is discoverable, never primary.
+ */
+.itg2-link-danger {
+  color: #ff8296;
+}
+.itg2-link-danger:hover {
+  color: #ffb3c2;
+  text-decoration: underline;
+}
+.itg2-link-danger:focus-visible {
+  outline: 2px solid rgba(255, 77, 114, 0.8);
+  outline-offset: 2px;
+}

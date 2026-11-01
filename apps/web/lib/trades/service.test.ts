@@ -35,6 +35,7 @@ vi.mock("@/lib/supabase/config", () => ({
 import {
   correctTradeCore,
   createTradeCore,
+  deleteTradeCore,
   editTradeCore,
   saveAdvancedReviewCore,
   type EditTradeInput,
@@ -686,6 +687,155 @@ describe("editTradeCore", () => {
     expect(
       tables.setups.some((s) => s.id === stored?.setup_id && s.name === "Breakout retest"),
     ).toBe(true);
+  });
+});
+
+const DELETE_OPEN = "77777777-7777-4777-8777-777777777777";
+const DELETE_CLOSED = "88888888-8888-4888-8888-888888888888";
+
+function setupForDelete() {
+  const tables = baseTables();
+  tables.trades.push(
+    {
+      ...existingClosed(DELETE_OPEN, 0, "2026-10-14T10:00:00Z"),
+      status: "open",
+      pnl: null,
+      closed_at: null,
+      reversal_trade_id: null,
+    },
+    { ...editableClosed(DELETE_CLOSED), reversal_trade_id: null },
+    { ...editableClosed(CANCELLED_TRADE), status: "cancelled", reversal_trade_id: null },
+    { ...editableClosed(REVERSED_TRADE), status: "reversed", reversal_trade_id: null },
+  );
+  tables.trade_screenshots = [
+    {
+      id: "shot-1",
+      trade_id: DELETE_CLOSED,
+      user_id: USER,
+      storage_path: `${USER}/${DELETE_CLOSED}/1-chart.png`,
+      file_name: "chart.png",
+    },
+  ];
+  return setup(tables);
+}
+
+describe("deleteTradeCore", () => {
+  it("open trade: cancelled via cancelTradeCore, then ONE trade.deleted audit carrying the identity, P&L and reason", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, USER, DELETE_OPEN, { reason: "mistake" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.previousStatus).toBe("open");
+    expect(result.alreadyRemoved).toBe(false);
+    expect(tables.trades.find((r) => r.id === DELETE_OPEN)?.status).toBe("cancelled");
+
+    const audits = admin.fake.insertsFor("audit_logs");
+    expect(audits.filter((r) => r.action === "trade.cancelled")).toHaveLength(1);
+    const deleted = audits.filter((r) => r.action === "trade.deleted");
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0].entity_id).toBe(DELETE_OPEN);
+    expect(deleted[0].details).toMatchObject({
+      previousStatus: "open",
+      pair: "XAUUSD",
+      direction: "long",
+      pnl: null,
+      openedAt: "2026-10-12T09:00:00Z",
+      reason: "mistake",
+    });
+    // Delete NEVER awards or moves XP, and screenshots are untouched.
+    expect(admin.fake.insertsFor("xp_transactions")).toHaveLength(0);
+    expect(tables.trade_screenshots).toHaveLength(1);
+    expect(user.fake.deletesFor("trade_screenshots")).toHaveLength(0);
+    expect(user.fake.insertsFor("trade_screenshots")).toHaveLength(0);
+  });
+
+  it("closed trade: annulled to reversed with reversal_trade_id still null, trade.deleted audited, NO trade.cancelled, NO XP", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, USER, DELETE_CLOSED);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.previousStatus).toBe("closed");
+    expect(result.alreadyRemoved).toBe(false);
+    const stored = tables.trades.find((r) => r.id === DELETE_CLOSED);
+    expect(stored?.status).toBe("reversed");
+    expect(stored?.reversal_trade_id ?? null).toBeNull();
+
+    const audits = admin.fake.insertsFor("audit_logs");
+    expect(audits.some((r) => r.action === "trade.cancelled")).toBe(false);
+    const deleted = audits.filter((r) => r.action === "trade.deleted");
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0].details).toMatchObject({
+      previousStatus: "closed",
+      pair: "XAUUSD",
+      pnl: 1000,
+      reason: null,
+    });
+    expect(admin.fake.insertsFor("xp_transactions")).toHaveLength(0);
+    expect(tables.trade_screenshots).toHaveLength(1);
+    expect(user.fake.deletesFor("trade_screenshots")).toHaveLength(0);
+  });
+
+  it("already-cancelled trade: alreadyRemoved with ZERO writes and ZERO audit rows (idempotent)", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, USER, CANCELLED_TRADE);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.alreadyRemoved).toBe(true);
+    expect(result.previousStatus).toBe("cancelled");
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === CANCELLED_TRADE)?.status).toBe("cancelled");
+  });
+
+  it("already-reversed (voided) trade: alreadyRemoved with ZERO writes and ZERO audit rows", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, USER, REVERSED_TRADE, { reason: "duplicate" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.alreadyRemoved).toBe(true);
+    expect(result.previousStatus).toBe("reversed");
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === REVERSED_TRADE)?.status).toBe("reversed");
+  });
+
+  it("a second delete of a just-removed closed trade adds no second trade.deleted row", async () => {
+    const { user, admin } = setupForDelete();
+    const first = await deleteTradeCore(user.client, USER, DELETE_CLOSED);
+    expect(first.ok).toBe(true);
+    const second = await deleteTradeCore(user.client, USER, DELETE_CLOSED);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.alreadyRemoved).toBe(true);
+    expect(
+      admin.fake.insertsFor("audit_logs").filter((r) => r.action === "trade.deleted"),
+    ).toHaveLength(1);
+  });
+
+  it("another trader's trade is not_found and nothing is written", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, OTHER, DELETE_CLOSED);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_found");
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === DELETE_CLOSED)?.status).toBe("closed");
+  });
+
+  it("an invalid reason is refused as invalid_input before anything is written", async () => {
+    const { user, admin, tables } = setupForDelete();
+    const result = await deleteTradeCore(user.client, USER, DELETE_OPEN, { reason: "bogus" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("invalid_input");
+    expect(result.error).toContain("valid reason");
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === DELETE_OPEN)?.status).toBe("open");
   });
 });
 

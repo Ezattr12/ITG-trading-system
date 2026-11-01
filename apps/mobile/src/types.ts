@@ -390,6 +390,26 @@ export interface CancelTradeResponse {
   status: string;
 }
 
+/** The optional reason for removing a trade (the delete core's enum). */
+export type DeleteTradeReason =
+  | "mistake"
+  | "duplicate"
+  | "test"
+  | "incorrect_entry"
+  | "other";
+
+/**
+ * POST /api/mobile/trades/[id]/delete → 200. Removal is a
+ * lifecycle transition server-side (open → cancelled, closed
+ * → annulled by reversal), never a hard delete;
+ * already_removed is the idempotent repeat-delete answer.
+ */
+export interface DeleteTradeResponse {
+  trade_id: string;
+  previous_status: string;
+  already_removed: boolean;
+}
+
 /**
  * POST /api/mobile/trades/[id]/edit — Edit Trade: one
  * full-form save carrying both field sets. A financial

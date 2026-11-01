@@ -9,6 +9,7 @@ import {
   correctTradeCore,
   createTradeCore,
   deleteScreenshotCore,
+  deleteTradeCore,
   editTradeCore,
   saveAdvancedReviewCore,
   uploadScreenshotCore,
@@ -253,6 +254,53 @@ export async function cancelTradeAction(formData: FormData): Promise<void> {
   await cancelTradeCore(supabase, userId, tradeId);
   revalidatePath("/trades");
   redirect("/trades");
+}
+
+/* ------------------------------------------------------------------ delete */
+
+/**
+ * Delete Trade (Ezat's Delete Trade mandate): the dialog's
+ * action. Unlike the historic void cancel action, this one
+ * follows the ActionForm result pattern (like editTradeAction)
+ * because the confirmation dialog must surface failures in
+ * place and confirm success explicitly. The core performs the
+ * lifecycle transition — an open trade is cancelled, a closed
+ * trade is annulled by reversal; nothing is hard-deleted and
+ * no XP moves. Identity comes from the session only; the
+ * optional reason is validated by the core against its enum.
+ * A repeat delete answers the already-removed message and
+ * lands on the same list notice — safely idempotent.
+ */
+export async function deleteTradeAction(
+  _prev: TradeActionResult,
+  formData: FormData,
+): Promise<TradeActionResult> {
+  if (!isSupabaseConfigured()) return notConfigured();
+  const tradeId = toText(formData.get("tradeId"));
+  if (!tradeId) return { ok: false, error: "Trade is not valid." };
+  const reason = toText(formData.get("reason"));
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
+  const supabase = await createServerSupabaseClient();
+  const result = await deleteTradeCore(supabase, userId, tradeId, { reason });
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/trades");
+  revalidatePath(`/trades/${tradeId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
+  revalidatePath("/reports");
+  if (result.alreadyRemoved) {
+    return {
+      ok: true,
+      message: "This trade was already removed.",
+      redirectTo: "/trades?deleted=1",
+    };
+  }
+  return {
+    ok: true,
+    message: "Trade removed successfully.",
+    redirectTo: "/trades?deleted=1",
+  };
 }
 
 /* -------------------------------------------------------------- screenshots */

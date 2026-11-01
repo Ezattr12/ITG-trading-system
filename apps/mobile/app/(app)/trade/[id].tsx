@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { cancelTrade, deleteScreenshot, uploadScreenshot } from "../../../src/api";
+import {
+  cancelTrade,
+  deleteScreenshot,
+  deleteTrade,
+  uploadScreenshot,
+} from "../../../src/api";
 import { useAuth } from "../../../src/auth";
 import { supabase } from "../../../src/supabase";
 import {
@@ -21,9 +26,10 @@ import {
   formatPct,
   titleCase,
 } from "../../../src/format";
-import { FormError, FormSuccess } from "../../../src/forms";
+import { ChipSelect, FormError, FormSuccess } from "../../../src/forms";
 import { shared, tokens } from "../../../src/theme";
 import type {
+  DeleteTradeReason,
   LessonRow,
   PsychologyRow,
   ScreenshotRow,
@@ -60,6 +66,11 @@ export default function TradeDetailScreen() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [cancelArmed, setCancelArmed] = useState(false);
   const [deleteArmedId, setDeleteArmedId] = useState<string | null>(null);
+  // Delete Trade confirm panel (state swap inside the
+  // Actions card): open flag, optional reason, busy flag.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState<DeleteTradeReason | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!session || !id) return;
@@ -143,6 +154,35 @@ export default function TradeDetailScreen() {
       setActionError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setCancelArmed(false);
       setActionBusy(false);
+    }
+  }
+
+  /**
+   * Delete Trade confirm — the panel has already named the
+   * trade and its consequence, so this fires the endpoint
+   * directly. Success navigates back to the trades list (the
+   * same replace cancel uses; the list refetches on focus).
+   * already_removed shows its message first, then navigates
+   * the same way. Errors stay inline and the trade is
+   * preserved — the panel stays open for a retry.
+   */
+  async function handleDelete() {
+    if (!trade || deleteBusy) return;
+    setDeleteBusy(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const result = await deleteTrade(trade.id, deleteReason);
+      if (result.already_removed) {
+        setActionSuccess("This trade was already removed.");
+        setDeleteBusy(false);
+        setTimeout(() => router.replace("/(app)/trades"), 1500);
+        return;
+      }
+      router.replace("/(app)/trades");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setDeleteBusy(false);
     }
   }
 
@@ -333,37 +373,123 @@ export default function TradeDetailScreen() {
 
       {trade.status === "open" || trade.status === "closed" ? (
         <GlassCard>
-          <Text style={shared.heading}>Actions</Text>
-          <PrimaryButton
-            label="Review trade"
-            onPress={() => router.push(`/(app)/trade/${trade.id}/review`)}
-          />
-          <GhostButton
-            label="Edit trade"
-            onPress={() => router.push(`/(app)/trade/${trade.id}/edit`)}
-          />
-          {trade.status === "open" ? (
-            <GhostButton
-              label="Close trade"
-              onPress={() => router.push(`/(app)/trade/${trade.id}/close`)}
-            />
-          ) : null}
-          <GhostButton
-            label="Correct trade (creates a reversal)"
-            onPress={() => router.push(`/(app)/trade/${trade.id}/correct`)}
-          />
-          {trade.status === "open" ? (
-            <GhostButton
-              label={
-                actionBusy
-                  ? "Cancelling…"
-                  : cancelArmed
-                    ? "Tap again to cancel this trade"
-                    : "Cancel trade"
-              }
-              onPress={handleCancel}
-            />
-          ) : null}
+          {deleteOpen ? (
+            <>
+              <Text style={[shared.heading, { color: tokens.loss }]}>Delete trade?</Text>
+              <Text style={shared.body}>
+                This trade will be removed from your active trading journal, dashboard
+                and analytics. Its financial history and audit record will be preserved
+                for data integrity.
+              </Text>
+              <View style={shared.rowBetween}>
+                <Text style={shared.muted}>Pair</Text>
+                <Text style={{ color: tokens.textSecondary, fontSize: 14 }}>
+                  {trade.pair} · {titleCase(trade.direction)}
+                </Text>
+              </View>
+              <View style={shared.rowBetween}>
+                <Text style={shared.muted}>Opened</Text>
+                <Text style={{ color: tokens.textSecondary, fontSize: 14 }}>
+                  {formatDateTime(trade.opened_at)}
+                </Text>
+              </View>
+              <View style={shared.rowBetween}>
+                <Text style={shared.muted}>P&amp;L</Text>
+                <Text
+                  style={{
+                    color:
+                      trade.pnl === null
+                        ? tokens.textPrimary
+                        : trade.pnl >= 0
+                          ? tokens.profit
+                          : tokens.loss,
+                    fontSize: 14,
+                    fontWeight: "600",
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {trade.status === "open" ? "Open" : formatMoney(trade.pnl)}
+                </Text>
+              </View>
+              <ChipSelect<DeleteTradeReason>
+                label="Reason (optional)"
+                options={[
+                  { value: "mistake", label: "Mistake" },
+                  { value: "duplicate", label: "Duplicate" },
+                  { value: "test", label: "Test" },
+                  { value: "incorrect_entry", label: "Incorrect entry" },
+                  { value: "other", label: "Other" },
+                ]}
+                value={deleteReason}
+                onChange={setDeleteReason}
+                allowClear
+              />
+              <Pressable
+                accessibilityRole="button"
+                disabled={deleteBusy}
+                onPress={() => void handleDelete()}
+                style={({ pressed }) => [
+                  {
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 48,
+                    borderRadius: tokens.radiusSm,
+                    borderWidth: 1,
+                    borderColor: tokens.loss,
+                    backgroundColor: "rgba(255, 77, 114, 0.16)",
+                  },
+                  pressed && { opacity: 0.8 },
+                  deleteBusy && { opacity: 0.5 },
+                ]}
+              >
+                <Text style={{ color: "#ffb3c2", fontSize: 15, fontWeight: "700" }}>
+                  {deleteBusy ? "Removing…" : "Delete trade"}
+                </Text>
+              </Pressable>
+              <GhostButton
+                label="Cancel"
+                onPress={() => {
+                  setDeleteOpen(false);
+                  setDeleteReason(null);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={shared.heading}>Actions</Text>
+              <PrimaryButton
+                label="Review trade"
+                onPress={() => router.push(`/(app)/trade/${trade.id}/review`)}
+              />
+              <GhostButton
+                label="Edit trade"
+                onPress={() => router.push(`/(app)/trade/${trade.id}/edit`)}
+              />
+              {trade.status === "open" ? (
+                <GhostButton
+                  label="Close trade"
+                  onPress={() => router.push(`/(app)/trade/${trade.id}/close`)}
+                />
+              ) : null}
+              <GhostButton
+                label="Correct trade (creates a reversal)"
+                onPress={() => router.push(`/(app)/trade/${trade.id}/correct`)}
+              />
+              {trade.status === "open" ? (
+                <GhostButton
+                  label={
+                    actionBusy
+                      ? "Cancelling…"
+                      : cancelArmed
+                        ? "Tap again to cancel this trade"
+                        : "Cancel trade"
+                  }
+                  onPress={handleCancel}
+                />
+              ) : null}
+              <GhostButton label="Delete trade" onPress={() => setDeleteOpen(true)} />
+            </>
+          )}
         </GlassCard>
       ) : null}
 

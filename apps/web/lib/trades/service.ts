@@ -871,6 +871,119 @@ export async function cancelTradeCore(
   return { ok: true, tradeId, status: "cancelled" };
 }
 
+/* ------------------------------------------------------------------ delete */
+
+/** The optional reasons a trader may give for removing a trade. */
+export const DELETE_TRADE_REASONS = [
+  "mistake",
+  "duplicate",
+  "test",
+  "incorrect_entry",
+  "other",
+] as const;
+
+export type DeleteTradeReason = (typeof DELETE_TRADE_REASONS)[number];
+
+export type DeleteTradeCoreResult =
+  | { ok: true; tradeId: string; previousStatus: string; alreadyRemoved: boolean }
+  | CoreFailure;
+
+/**
+ * Delete Trade (Ezat's Delete Trade mandate) — the user-facing
+ * "remove this trade" operation. It creates NO new deletion
+ * mechanics and NEVER hard-deletes a row: it composes the
+ * established lifecycle transitions, exactly as editTradeCore
+ * composes the established write cores:
+ *
+ * - An OPEN trade is cancelled via cancelTradeCore (the one
+ *   established open-trade removal: status 'cancelled' +
+ *   trade.cancelled audit).
+ * - A CLOSED trade is a financial fact (migration 0004), so it
+ *   is annulled by the established reversal status: the row
+ *   becomes status 'reversed' with reversal_trade_id left NULL
+ *   — an annulment, not a correction (a correction always
+ *   carries its correcting trade's id). Analytics, reports and
+ *   the coach read only status 'closed', so the trade leaves
+ *   every aggregate; the week's coach insights are refreshed
+ *   through the same Phase 20 hook correctTradeCore uses.
+ * - A trade already 'cancelled' or 'reversed' is already
+ *   removed: the core answers alreadyRemoved with ZERO writes
+ *   and ZERO audit rows, so a repeat delete is safely
+ *   idempotent and never duplicates the audit trail (§14).
+ *
+ * On an actual removal, ONE `trade.deleted` audit row records
+ * the trade's identity and P&L before removal, its previous
+ * status and the optional reason. The reason is optional and
+ * never forced; a non-null value outside the enum is refused
+ * as invalid_input rather than silently dropped. Like cancel,
+ * correct and edit, delete NEVER touches XP (the append-only
+ * ledger precedent) and never touches screenshots or storage
+ * — the record, its screenshots and its audit trail are all
+ * preserved; only its lifecycle status changes.
+ */
+export async function deleteTradeCore(
+  supabase: SupabaseClient,
+  userId: string,
+  tradeId: string,
+  opts?: { reason?: string | null },
+): Promise<DeleteTradeCoreResult> {
+  if (!tradeId) return fail("invalid_input", "Trade is not valid.");
+  const reason = opts?.reason ?? null;
+  if (reason !== null && !(DELETE_TRADE_REASONS as readonly string[]).includes(reason)) {
+    return fail(
+      "invalid_input",
+      "Choose a valid reason for removing the trade, or leave the reason unspecified.",
+    );
+  }
+  const { data: trade } = await supabase
+    .from("trades")
+    .select("id, status, pair, direction, pnl, opened_at, closed_at")
+    .eq("id", tradeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!trade) return fail("not_found", "Trade not found.");
+  const previousStatus = trade.status as string;
+  if (previousStatus === "cancelled" || previousStatus === "reversed") {
+    return { ok: true, tradeId, previousStatus, alreadyRemoved: true };
+  }
+  if (previousStatus === "open") {
+    const cancelled = await cancelTradeCore(supabase, userId, tradeId);
+    if (!cancelled.ok) return cancelled;
+  } else if (previousStatus === "closed") {
+    const { error } = await supabase
+      .from("trades")
+      .update({ status: "reversed" })
+      .eq("id", tradeId)
+      .eq("user_id", userId);
+    if (error) return fail("save_failed", "Could not remove the trade. Please try again.");
+    // Phase 20 hook: the trade leaves its week's closed-trade
+    // evidence — refresh exactly like a correction does.
+    await refreshCoachAfterClosedTradeChange(
+      supabase,
+      userId,
+      trade.closed_at as string | null,
+      trade.opened_at as string,
+    );
+  } else {
+    return fail("business", "This trade can no longer be removed.");
+  }
+  await writeAuditLog({
+    userId,
+    action: "trade.deleted",
+    entityType: "trades",
+    entityId: tradeId,
+    details: {
+      previousStatus,
+      pair: trade.pair,
+      direction: trade.direction,
+      pnl: trade.pnl,
+      openedAt: trade.opened_at,
+      reason,
+    },
+  });
+  return { ok: true, tradeId, previousStatus, alreadyRemoved: false };
+}
+
 /* -------------------------------------------------------------- screenshots */
 
 export type UploadScreenshotCoreResult =
