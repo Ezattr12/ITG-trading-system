@@ -516,6 +516,28 @@
       var(--itg-shadow-elevated),
       0 0 52px rgba(124, 45, 255, 0.2);
   }
+  /* Earned-achievement card (Task 4 sweep, Achievements) —
+     gold is the premium / earned semantic: the L1 card
+     with a bronze-gold border and a quiet gold glow,
+     riding on .itg2-card (its top light and hover lift
+     are kept; these rules sit after the card hover rules
+     so the gold paint wins at equal specificity). Locked
+     achievements stay on the plain card, muted — the
+     contrast between the two IS the earned signal. */
+  .itg2-card-gold {
+    border-color: rgba(189, 147, 95, 0.48);
+    box-shadow:
+      inset 0 1px 0 rgba(230, 205, 165, 0.13),
+      var(--itg-shadow-card),
+      0 0 34px rgba(189, 147, 95, 0.13);
+  }
+  .itg2-card-gold:hover {
+    border-color: rgba(220, 189, 138, 0.68);
+    box-shadow:
+      inset 0 1px 0 rgba(230, 205, 165, 0.17),
+      var(--itg-shadow-elevated),
+      0 0 48px rgba(189, 147, 95, 0.2);
+  }
   .itg2-ai-orb {
     width: 40px;
     height: 40px;
