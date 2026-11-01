@@ -20,6 +20,18 @@ const SESSION_OPTIONS: { value: TradingSession; label: string }[] = [
  * Markets are a comma-separated list; sessions and preferred
  * setups are checkboxes. Saving replaces the trader's single
  * active plan (upsert in the Server Action).
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * fields moved onto the Page-2 form system (.itg2-field /
+ * .itg2-label / .itg2-input / .itg2-textarea) and the submit
+ * uses .itg2-btn-primary .itg2-btn-save via ActionForm's
+ * submitClassName. Hairline dividers mark the risk-limits
+ * and rules groups where the flat field list allows it
+ * without wrapping elements (a bordered fieldset would put
+ * the line through its legend) — no field was added,
+ * removed, renamed, reordered or given a new default; the
+ * checkbox groups keep their exact name/value/
+ * defaultChecked semantics.
  */
 export function TradingPlanForm({
   plan,
@@ -28,13 +40,13 @@ export function TradingPlanForm({
   plan: TradingPlan | null;
   setups: { id: string; name: string; strategyName: string | null }[];
 }) {
-  const inputClass = "min-h-[44px]";
+  const inputClass = "itg2-input";
   const value = (v: number | null | undefined) =>
     v === null || v === undefined ? "" : String(v);
   return (
-    <ActionForm action={saveTradingPlanAction} submitLabel="Save trading plan">
-      <div className="space-y-2">
-        <Label htmlFor="name">Plan name</Label>
+    <ActionForm action={saveTradingPlanAction} submitLabel="Save trading plan" submitClassName="itg2-btn-primary itg2-btn-save">
+      <div className="itg2-field space-y-2">
+        <Label className="itg2-label" htmlFor="name">Plan name</Label>
         <Input
           id="name"
           name="name"
@@ -44,8 +56,8 @@ export function TradingPlanForm({
           className={inputClass}
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="markets">Markets (comma-separated)</Label>
+      <div className="itg2-field space-y-2">
+        <Label className="itg2-label" htmlFor="markets">Markets (comma-separated)</Label>
         <Input
           id="markets"
           name="markets"
@@ -56,7 +68,7 @@ export function TradingPlanForm({
         />
       </div>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Sessions</legend>
+        <legend className="itg2-label">Sessions</legend>
         <div className="flex flex-wrap gap-4">
           {SESSION_OPTIONS.map((s) => (
             <label key={s.value} className="flex min-h-[44px] items-center gap-2 text-sm">
@@ -72,9 +84,9 @@ export function TradingPlanForm({
           ))}
         </div>
       </fieldset>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="riskPerTradePct">Risk per trade (%)</Label>
+      <div className="grid gap-4 border-t border-[rgba(120,175,255,0.1)] pt-4 sm:grid-cols-3">
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="riskPerTradePct">Risk per trade (%)</Label>
           <Input
             id="riskPerTradePct"
             name="riskPerTradePct"
@@ -88,8 +100,8 @@ export function TradingPlanForm({
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxDailyLoss">Max daily loss</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxDailyLoss">Max daily loss</Label>
           <Input
             id="maxDailyLoss"
             name="maxDailyLoss"
@@ -102,8 +114,8 @@ export function TradingPlanForm({
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxDailyTrades">Max daily trades</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxDailyTrades">Max daily trades</Label>
           <Input
             id="maxDailyTrades"
             name="maxDailyTrades"
@@ -119,7 +131,7 @@ export function TradingPlanForm({
         </div>
       </div>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Preferred setups</legend>
+        <legend className="itg2-label">Preferred setups</legend>
         {setups.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No setups yet — add setups to a strategy in your journal first.
@@ -141,30 +153,30 @@ export function TradingPlanForm({
           </div>
         )}
       </fieldset>
-      <div className="space-y-2">
-        <Label htmlFor="noTradeConditions">No-trade conditions</Label>
+      <div className="itg2-field space-y-2 border-t border-[rgba(120,175,255,0.1)] pt-4">
+        <Label className="itg2-label" htmlFor="noTradeConditions">No-trade conditions</Label>
         <textarea
           id="noTradeConditions"
           name="noTradeConditions"
           rows={3}
           placeholder="e.g. No trading during major news, no trading after 2 losses in a row"
           defaultValue={plan?.no_trade_conditions ?? ""}
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="itg2-textarea"
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="psychologyRules">Psychology rules</Label>
+      <div className="itg2-field space-y-2">
+        <Label className="itg2-label" htmlFor="psychologyRules">Psychology rules</Label>
         <textarea
           id="psychologyRules"
           name="psychologyRules"
           rows={3}
           placeholder="e.g. Stop after feeling FOMO, review the journal before the next session"
           defaultValue={plan?.psychology_rules ?? ""}
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="itg2-textarea"
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="scheduleNotes">Trading schedule</Label>
+      <div className="itg2-field space-y-2">
+        <Label className="itg2-label" htmlFor="scheduleNotes">Trading schedule</Label>
         <Input
           id="scheduleNotes"
           name="scheduleNotes"
