@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import Decimal from "decimal.js";
 import { calcRiskAmount } from "@itg/calc";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/auth/audit";
@@ -29,6 +30,7 @@ import {
   advancedReviewSchema,
   firstZodError,
   quickTradeSchema,
+  type AdvancedReviewInput,
   type QuickTradeInput,
 } from "./validation";
 
@@ -562,6 +564,267 @@ export async function correctTradeCore(
     await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
   }
   return { ok: true, tradeId: corrected.id as string, reversedTradeId: tradeId };
+}
+
+/* -------------------------------------------------------------------- edit */
+
+/**
+ * Edit Trade — the user-facing edit flow (Ezat's Edit Trade
+ * mandate). This core CREATES NO new write mechanics: it is a
+ * composition of the two established cores over one full-form
+ * submission (the quick-entry fields + the advanced-review
+ * fields, exactly what the edit form sends):
+ *
+ * - A FINANCIAL change (pair, direction, prices, TP/SL, size,
+ *   leverage, fees, open/close times) is corrected by reversal
+ *   via correctTradeCore — a financial fact is never silently
+ *   overwritten (migration 0004). The journal state from the
+ *   same submission is then applied to the CORRECTED trade
+ *   via saveAdvancedReviewCore, because a correction insert
+ *   copies the trade-row journal fields but never the
+ *   psychology record or the lessons: without this step the
+ *   trader's psychology/lesson would be stranded on the
+ *   reversed original. The form pre-fills every journal field
+ *   from the original, so the carry-over is lossless.
+ * - A JOURNAL-ONLY change is an in-place advanced-review save
+ *   via saveAdvancedReviewCore (the established review path:
+ *   trade-row journal fields + psychology upsert + deduped
+ *   lesson + audit + coach refresh).
+ * - NO change at all performs zero writes and writes no
+ *   audit row.
+ *
+ * On top of the cores' own audit rows (trade.corrected /
+ * trade.review_saved — the established trail), ONE
+ * `trade.edited` row records the user-facing edit: who (the
+ * audit actor), when, which fields changed, whether the
+ * change was financial and/or journal, the P&L before →
+ * after, and the trade the edit resolved to. Neither core
+ * awards XP, so an edit can never duplicate XP.
+ */
+
+export interface EditTradeInput {
+  correction: QuickTradeInput;
+  review: Omit<AdvancedReviewInput, "tradeId">;
+}
+
+export type EditTradeCoreResult =
+  | {
+      ok: true;
+      /** The trade the edit resolves to: the corrected trade
+       *  after a financial edit (the original is reversed),
+       *  otherwise the original trade itself. */
+      tradeId: string;
+      /** The reversed original after a financial edit, else null. */
+      reversedTradeId: string | null;
+      financialChanged: boolean;
+      journalChanged: boolean;
+      /** Stable field keys that actually changed (may be empty). */
+      changedFields: string[];
+    }
+  | CoreFailure;
+
+/** Decimal equality for money/price fields; null-safe both ways. */
+function numChanged(
+  a: number | string | null | undefined,
+  b: number | string | null | undefined,
+): boolean {
+  const aNull = a === null || a === undefined;
+  const bNull = b === null || b === undefined;
+  if (aNull || bNull) return aNull !== bNull;
+  return !new Decimal(a).equals(new Decimal(b));
+}
+
+/** Text equivalence for journal fields: blank and null are the same "not provided". */
+function blankToNull(v: string | null | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  const s = v.trim();
+  return s === "" ? null : s;
+}
+
+/** Instant equality for timestamps; falls back to string equality on unparseable input. */
+function instantChanged(a: string | null, b: string | null): boolean {
+  if (a === null || b === null) return a !== b;
+  const pa = Date.parse(a);
+  const pb = Date.parse(b);
+  if (Number.isNaN(pa) || Number.isNaN(pb)) return a !== b;
+  return pa !== pb;
+}
+
+export async function editTradeCore(
+  supabase: SupabaseClient,
+  userId: string,
+  tradeId: string,
+  input: EditTradeInput,
+): Promise<EditTradeCoreResult> {
+  if (!tradeId) return fail("invalid_input", "Trade is not valid.");
+  // The adapters hand over their parsed values; re-validating
+  // here keeps the core the validation source of truth for
+  // every caller (the schemas also normalise: pair casing,
+  // trimmed journal text).
+  const parsedCorrection = quickTradeSchema.safeParse(input?.correction);
+  if (!parsedCorrection.success) {
+    return fail("invalid_input", firstZodError(parsedCorrection.error));
+  }
+  const parsedReview = advancedReviewSchema.safeParse({
+    ...(input?.review ?? {}),
+    tradeId,
+  });
+  if (!parsedReview.success) {
+    return fail("invalid_input", firstZodError(parsedReview.error));
+  }
+  const correction: QuickTradeInput = parsedCorrection.data;
+  const review: Omit<AdvancedReviewInput, "tradeId"> = parsedReview.data;
+
+  const { data: original } = await supabase
+    .from("trades")
+    .select("*")
+    .eq("id", tradeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!original) return fail("not_found", "Trade not found.");
+  if (original.status === "reversed") {
+    return fail(
+      "business",
+      "This trade was corrected by a reversal — edit the correcting trade instead.",
+    );
+  }
+  if (original.status === "cancelled") {
+    return fail("business", "A cancelled trade can no longer be edited.");
+  }
+
+  // The stored journal state the submission is diffed against:
+  // the psychology record (absent row == all null), the trade's
+  // lessons, and the name of the trade's current setup.
+  const [{ data: psych }, { data: lessonRows }, setupNameRes] = await Promise.all([
+    supabase
+      .from("psychology_records")
+      .select("confidence, emotion, discipline")
+      .eq("trade_id", tradeId)
+      .maybeSingle(),
+    supabase.from("lessons").select("text").eq("trade_id", tradeId),
+    original.setup_id
+      ? supabase
+          .from("setups")
+          .select("name")
+          .eq("id", original.setup_id as string)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const storedSetupName = (setupNameRes.data as { name?: string } | null)?.name ?? null;
+
+  const changedFields: string[] = [];
+
+  /* Financial diff — correction values vs the stored row. */
+  if (correction.pair !== original.pair) changedFields.push("pair");
+  if (correction.direction !== original.direction) changedFields.push("direction");
+  if (numChanged(correction.entryPrice, original.entry_price)) changedFields.push("entryPrice");
+  if (numChanged(correction.exitPrice, original.exit_price)) changedFields.push("exitPrice");
+  if (numChanged(correction.tp, original.tp)) changedFields.push("tp");
+  if (numChanged(correction.sl, original.sl)) changedFields.push("sl");
+  if (numChanged(correction.positionSize, original.position_size)) changedFields.push("positionSize");
+  if (numChanged(correction.leverage, original.leverage)) changedFields.push("leverage");
+  if (numChanged(correction.fees ?? 0, original.fees ?? 0)) changedFields.push("fees");
+  if (instantChanged(correction.openedAt, original.opened_at)) changedFields.push("openedAt");
+  if (instantChanged(correction.closedAt, original.closed_at)) changedFields.push("closedAt");
+  const financialKeys = new Set([
+    "pair", "direction", "entryPrice", "exitPrice", "tp", "sl",
+    "positionSize", "leverage", "fees", "openedAt", "closedAt",
+  ]);
+  const financialChanged = changedFields.some((k) => financialKeys.has(k));
+
+  /* Journal diff — review values vs the stored journal state. */
+  if ((review.strategyId ?? null) !== (original.strategy_id ?? null)) changedFields.push("strategy");
+  if (blankToNull(review.setupName) !== blankToNull(storedSetupName)) changedFields.push("setup");
+  if ((review.session ?? null) !== (original.session ?? null)) changedFields.push("session");
+  if ((review.marketCondition ?? null) !== (original.market_condition ?? null)) {
+    changedFields.push("marketCondition");
+  }
+  if ((review.tradeReason ?? null) !== (original.trade_reason ?? null)) {
+    changedFields.push("tradeReason");
+  }
+  if ((review.confidence ?? null) !== (psych?.confidence ?? null)) changedFields.push("confidence");
+  if ((review.emotion ?? null) !== (psych?.emotion ?? null)) changedFields.push("emotion");
+  if ((review.discipline ?? null) !== (psych?.discipline ?? null)) changedFields.push("discipline");
+  const lessonText = blankToNull(review.lesson);
+  if (
+    lessonText !== null &&
+    !((lessonRows ?? []) as { text: string }[]).some(
+      (l) => normalizeLesson(l.text) === normalizeLesson(lessonText),
+    )
+  ) {
+    changedFields.push("lesson");
+  }
+  if (blankToNull(review.notes) !== blankToNull(original.notes)) changedFields.push("notes");
+  const journalChanged = changedFields.some((k) => !financialKeys.has(k));
+
+  if (!financialChanged && !journalChanged) {
+    // No change: zero writes, no audit — the adapters report
+    // "No changes to save."
+    return {
+      ok: true,
+      tradeId,
+      reversedTradeId: null,
+      financialChanged: false,
+      journalChanged: false,
+      changedFields: [],
+    };
+  }
+
+  const previousPnl = (original.pnl as number | null) ?? null;
+  let resultingId = tradeId;
+  let reversedTradeId: string | null = null;
+
+  if (financialChanged) {
+    const corrected = await correctTradeCore(supabase, userId, tradeId, correction);
+    if (!corrected.ok) return corrected;
+    resultingId = corrected.tradeId;
+    reversedTradeId = corrected.reversedTradeId;
+    // Always apply the submission's journal state to the
+    // corrected trade — even when the journal itself did not
+    // change — so psychology and lessons are carried over
+    // (a correction never carries them; see the header).
+    const carried = await saveAdvancedReviewCore(supabase, userId, {
+      ...review,
+      tradeId: resultingId,
+    });
+    if (!carried.ok) {
+      // Honest partial state: the correction is a saved
+      // financial fact and cannot be rolled back from here.
+      // The message names the corrected trade so the trader
+      // can finish the journal carry-over manually.
+      return fail(
+        "save_failed",
+        `The trade was corrected and saved as a new trade (${resultingId}), but its journal could not be carried over: ${carried.error} Open the corrected trade and save the review there to finish the edit.`,
+      );
+    }
+  } else {
+    const saved = await saveAdvancedReviewCore(supabase, userId, { ...review, tradeId });
+    if (!saved.ok) return saved;
+  }
+
+  await writeAuditLog({
+    userId,
+    action: "trade.edited",
+    entityType: "trades",
+    entityId: tradeId,
+    details: {
+      changedFields,
+      financialChanged,
+      journalChanged,
+      previousPnl,
+      newPnl: financialChanged ? computeTradeMetrics(correction).pnl : previousPnl,
+      resultingTradeId: resultingId,
+    },
+  });
+  return {
+    ok: true,
+    tradeId: resultingId,
+    reversedTradeId,
+    financialChanged,
+    journalChanged,
+    changedFields,
+  };
 }
 
 /* ------------------------------------------------------------------ cancel */

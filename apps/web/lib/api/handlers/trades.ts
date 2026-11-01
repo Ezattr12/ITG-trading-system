@@ -11,8 +11,10 @@ import {
   correctTradeCore,
   createTradeCore,
   deleteScreenshotCore,
+  editTradeCore,
   saveAdvancedReviewCore,
   uploadScreenshotCore,
+  type EditTradeInput,
 } from "@/lib/trades/service";
 import {
   checkApiRateLimit,
@@ -193,6 +195,97 @@ export async function handleCorrectTrade(
   }
   return finish(deps, CORRECT_CTX, begun.userId, "ok", result.tradeId,
     apiOk({ trade_id: result.tradeId, reversed_trade_id: result.reversedTradeId }, 201));
+}
+
+/* -------------------------------------------------------------- edit */
+
+/** Edit body sections: { correction, review } — the same two field sets as the parts. */
+const EDIT_KEYS = ["correction", "review"] as const;
+
+const EDIT_CTX: HandlerContext = { operation: "trade_edited", entityType: "trades" };
+
+/**
+ * POST /api/mobile/trades/[id]/edit — Edit Trade: one
+ * full-form save carrying both field sets, orchestrated by
+ * editTradeCore (the same core the web edit action calls).
+ * The envelope keys are exactly `correction` and `review`;
+ * each section is then held to the strict body rules on its
+ * own (identity fields and unknown keys are 400s naming the
+ * field, exactly as on the flat endpoints). Both sections
+ * are required — an edit is a full-form save, like the
+ * review endpoint's round-trip rule.
+ *
+ * Status mapping follows the two endpoints it composes: a
+ * financial edit creates a correcting trade, so it answers
+ * 201 like handleCorrectTrade; a journal-only edit updates
+ * in place and a no-change edit writes nothing — both answer
+ * 200 like handleSaveTradeReview.
+ */
+export async function handleEditTrade(
+  input: JsonHandlerInput & { tradeId: string },
+  deps: ApiDeps,
+): Promise<ApiHandlerResult> {
+  const gate = await requireApiAuth(input.token, deps, EDIT_CTX);
+  if (!gate.ok) return gate.response;
+  const { userId, supabase } = gate.auth;
+
+  if (input.bodyError) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", input.bodyError));
+  }
+  const envelope = validateBody(input.body, EDIT_KEYS);
+  if (!envelope.ok) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null, envelope.response);
+  }
+  const correctionRaw = envelope.body.correction;
+  const reviewRaw = envelope.body.review;
+  if (correctionRaw === undefined || reviewRaw === undefined) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "correction and review are both required"));
+  }
+  const correctionCheck = validateBody(correctionRaw, QUICK_TRADE_KEYS);
+  if (!correctionCheck.ok) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null, correctionCheck.response);
+  }
+  const reviewCheck = validateBody(reviewRaw, REVIEW_KEYS);
+  if (!reviewCheck.ok) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null, reviewCheck.response);
+  }
+  if (!isUuid(input.tradeId)) {
+    return finish(deps, EDIT_CTX, userId, "invalid_argument", null,
+      apiError(400, "invalid_argument", "trade id must be a valid UUID"));
+  }
+  const limited = checkApiRateLimit(deps, EDIT_CTX, userId);
+  if (limited) {
+    return finish(deps, EDIT_CTX, userId, "rate_limited", null, limited);
+  }
+  let result: Awaited<ReturnType<typeof editTradeCore>>;
+  try {
+    // The sections were shape-checked above; editTradeCore
+    // re-validates both with the Zod schemas (the validation
+    // source of truth) before diffing or writing anything.
+    result = await editTradeCore(supabase, userId, input.tradeId, {
+      correction: correctionCheck.body,
+      review: reviewCheck.body,
+    } as EditTradeInput);
+  } catch {
+    return finish(deps, EDIT_CTX, userId, "error", null, apiError(500, "internal"));
+  }
+  if (!result.ok) {
+    const { response, outcome } = coreFailureResponse(result);
+    return finish(deps, EDIT_CTX, userId, outcome, input.tradeId, response);
+  }
+  return finish(deps, EDIT_CTX, userId, "ok", result.tradeId,
+    apiOk(
+      {
+        trade_id: result.tradeId,
+        reversed_trade_id: result.reversedTradeId,
+        changed_fields: result.changedFields,
+        financial_changed: result.financialChanged,
+        journal_changed: result.journalChanged,
+      },
+      result.financialChanged ? 201 : 200,
+    ));
 }
 
 /* ------------------------------------------- cancel (Phase 21, M2) */

@@ -338,6 +338,10 @@ export default function TradeDetailScreen() {
             label="Review trade"
             onPress={() => router.push(`/(app)/trade/${trade.id}/review`)}
           />
+          <GhostButton
+            label="Edit trade"
+            onPress={() => router.push(`/(app)/trade/${trade.id}/edit`)}
+          />
           {trade.status === "open" ? (
             <GhostButton
               label="Close trade"

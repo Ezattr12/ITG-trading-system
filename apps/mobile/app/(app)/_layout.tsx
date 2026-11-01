@@ -54,6 +54,7 @@ export default function AppLayout() {
       <Tabs.Screen name="trade/[id]/close" options={{ href: null, title: "Close trade" }} />
       <Tabs.Screen name="trade/[id]/correct" options={{ href: null, title: "Correct trade" }} />
       <Tabs.Screen name="trade/[id]/review" options={{ href: null, title: "Review trade" }} />
+      <Tabs.Screen name="trade/[id]/edit" options={{ href: null, title: "Edit trade" }} />
       <Tabs.Screen name="goal/new" options={{ href: null, title: "New goal" }} />
       <Tabs.Screen name="goal/[id]" options={{ href: null, title: "Goal" }} />
       <Tabs.Screen name="risk" options={{ href: null, title: "Risk & plan" }} />

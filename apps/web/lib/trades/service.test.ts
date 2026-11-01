@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fakeSupabase, type Row } from "@/lib/test-helpers/fake-supabase";
+import {
+  fakeSupabase,
+  type FakeSupabaseClient,
+  type Row,
+} from "@/lib/test-helpers/fake-supabase";
 import { __clearRateLimitBuckets } from "@/lib/auth/rate-limit";
 
 /**
@@ -31,8 +35,11 @@ vi.mock("@/lib/supabase/config", () => ({
 import {
   correctTradeCore,
   createTradeCore,
+  editTradeCore,
   saveAdvancedReviewCore,
+  type EditTradeInput,
 } from "./service";
+import { calcPnl } from "@itg/calc";
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -312,6 +319,373 @@ describe("saveAdvancedReviewCore", () => {
     if (result.ok) return;
     expect(result.code).toBe("business");
     expect(result.error).toContain("corrected by a reversal");
+  });
+});
+
+const EDIT_TRADE = "44444444-4444-4444-8444-444444444444";
+const CANCELLED_TRADE = "55555555-5555-4555-8555-555555555555";
+
+function editableClosed(id: string, userId = USER): Row {
+  return {
+    id,
+    user_id: userId,
+    pair: "XAUUSD",
+    direction: "long",
+    status: "closed",
+    entry_price: 2000,
+    exit_price: 2010,
+    tp: 2020,
+    sl: 1995,
+    position_size: 100,
+    leverage: 1,
+    fees: 0,
+    pnl: 1000,
+    roi_pct: 0.5,
+    r_multiple: 2,
+    risk_reward: 4,
+    is_win: true,
+    duration_seconds: 3600,
+    strategy_id: null,
+    setup_id: null,
+    session: "london",
+    market_condition: null,
+    trade_reason: null,
+    notes: null,
+    opened_at: "2026-10-14T09:00:00Z",
+    closed_at: "2026-10-14T10:00:00Z",
+  };
+}
+
+/** The full-form edit submission that exactly matches editableClosed(). */
+const matchingEdit: EditTradeInput = {
+  correction: {
+    pair: "XAUUSD",
+    direction: "long",
+    entryPrice: 2000,
+    exitPrice: 2010,
+    tp: 2020,
+    sl: 1995,
+    positionSize: 100,
+    leverage: 1,
+    fees: 0,
+    openedAt: "2026-10-14T09:00:00Z",
+    closedAt: "2026-10-14T10:00:00Z",
+  },
+  review: {
+    strategyId: null,
+    setupName: null,
+    marketCondition: null,
+    tradeReason: null,
+    session: "london",
+    confidence: null,
+    emotion: null,
+    discipline: null,
+    lesson: null,
+    notes: null,
+  },
+};
+
+/**
+ * The fake assigns `fake-trades-N` ids to inserts, but the
+ * review schema (correctly) requires UUID trade ids — and
+ * editTradeCore feeds the corrected trade's id into the
+ * review core. Give trades inserted through this fake UUID
+ * ids, exactly what Postgres generates in production.
+ */
+function withUuidTradeIds(fake: FakeSupabaseClient): void {
+  const realFrom = fake.from.bind(fake);
+  let seq = 0;
+  fake.from = (table: string) => {
+    const query = realFrom(table);
+    if (table === "trades") {
+      const realInsert = query.insert.bind(query);
+      query.insert = (row: Row | Row[]) => {
+        const rows = Array.isArray(row) ? row : [row];
+        for (const r of rows) {
+          if (r.id === undefined) {
+            seq += 1;
+            r.id = `00000000-0000-4000-8000-${String(seq).padStart(12, "0")}`;
+          }
+        }
+        return realInsert(rows);
+      };
+    }
+    return query;
+  };
+}
+
+function setupWithEditTrade(extra?: (tables: Record<string, Row[]>) => void) {
+  const tables = baseTables();
+  tables.trades.push(editableClosed(EDIT_TRADE));
+  extra?.(tables);
+  const ctx = setup(tables);
+  withUuidTradeIds(ctx.user.fake);
+  return ctx;
+}
+
+describe("editTradeCore", () => {
+  it("financial-only edit: corrects by reversal with recomputed metrics, carries the journal, audits trade.edited, awards NO XP", async () => {
+    const { user, admin, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: { ...matchingEdit.correction, exitPrice: 1990 },
+      review: matchingEdit.review,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.financialChanged).toBe(true);
+    expect(result.journalChanged).toBe(false);
+    expect(result.changedFields).toEqual(["exitPrice"]);
+    expect(result.reversedTradeId).toBe(EDIT_TRADE);
+    expect(result.tradeId).not.toBe(EDIT_TRADE);
+
+    const original = tables.trades.find((r) => r.id === EDIT_TRADE);
+    expect(original?.status).toBe("reversed");
+    expect(original?.reversal_trade_id).toBe(result.tradeId);
+    const corrected = tables.trades.find((r) => r.id === result.tradeId);
+    // (1990 − 2000) × 100 = −1000, recomputed by the correction core.
+    expect(corrected?.pnl).toBe(-1000);
+    expect(corrected?.user_id).toBe(USER);
+    expect(corrected?.is_win).toBe(false);
+
+    // The journal state was applied to the CORRECTED trade:
+    // the review save updated its row and created its
+    // psychology record there (not on the reversed original).
+    expect(
+      tables.psychology_records.some((r) => r.trade_id === result.tradeId),
+    ).toBe(true);
+    expect(
+      user.fake
+        .updatesFor("trades")
+        .some((u) => u.matched.some((m) => m.id === result.tradeId)),
+    ).toBe(true);
+
+    const audits = admin.fake.insertsFor("audit_logs");
+    const edited = audits.find((r) => r.action === "trade.edited");
+    expect(edited?.entity_id).toBe(EDIT_TRADE);
+    expect(edited?.details).toMatchObject({
+      changedFields: ["exitPrice"],
+      financialChanged: true,
+      journalChanged: false,
+      previousPnl: 1000,
+      newPnl: -1000,
+      resultingTradeId: result.tradeId,
+    });
+    // The cores' established trail still fires.
+    expect(audits.some((r) => r.action === "trade.corrected")).toBe(true);
+    // An edit NEVER awards XP.
+    expect(admin.fake.insertsFor("xp_transactions")).toHaveLength(0);
+  });
+
+  it("journal-only edit: saves in place on the same trade, no correction is created", async () => {
+    const { user, admin, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: matchingEdit.correction,
+      review: {
+        ...matchingEdit.review,
+        confidence: 4,
+        emotion: "calm",
+        notes: "Updated note.",
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.tradeId).toBe(EDIT_TRADE);
+    expect(result.reversedTradeId).toBeNull();
+    expect(result.financialChanged).toBe(false);
+    expect(result.journalChanged).toBe(true);
+    expect(result.changedFields).toEqual(["confidence", "emotion", "notes"]);
+    // No new trade rows anywhere; the original is untouched in status.
+    expect(user.fake.insertsFor("trades")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === EDIT_TRADE)?.status).toBe("closed");
+    expect(tables.trades.find((r) => r.id === EDIT_TRADE)?.notes).toBe("Updated note.");
+    const psych = tables.psychology_records.find((r) => r.trade_id === EDIT_TRADE);
+    expect(psych?.confidence).toBe(4);
+    expect(psych?.emotion).toBe("calm");
+    const audits = admin.fake.insertsFor("audit_logs");
+    expect(audits.some((r) => r.action === "trade.edited")).toBe(true);
+    expect(audits.some((r) => r.action === "trade.corrected")).toBe(false);
+    expect(admin.fake.insertsFor("xp_transactions")).toHaveLength(0);
+  });
+
+  it("financial + journal edit: the corrected trade carries the NEW journal values", async () => {
+    const { user, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: { ...matchingEdit.correction, entryPrice: 2005 },
+      review: { ...matchingEdit.review, notes: "Both changed.", confidence: 5 },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.financialChanged).toBe(true);
+    expect(result.journalChanged).toBe(true);
+    expect(result.changedFields).toEqual(["entryPrice", "confidence", "notes"]);
+    const corrected = tables.trades.find((r) => r.id === result.tradeId);
+    // (2010 − 2005) × 100 = 500; journal written onto the corrected trade.
+    expect(corrected?.pnl).toBe(500);
+    expect(corrected?.notes).toBe("Both changed.");
+    expect(
+      tables.psychology_records.find((r) => r.trade_id === result.tradeId)?.confidence,
+    ).toBe(5);
+  });
+
+  it("no change: ok with empty changedFields and ZERO writes of any kind", async () => {
+    const { user, admin, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, matchingEdit);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.tradeId).toBe(EDIT_TRADE);
+    expect(result.changedFields).toEqual([]);
+    expect(result.financialChanged).toBe(false);
+    expect(result.journalChanged).toBe(false);
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === EDIT_TRADE)?.status).toBe("closed");
+  });
+
+  it("another trader's trade is not_found and nothing is written", async () => {
+    const { user, admin, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, OTHER, EDIT_TRADE, {
+      correction: { ...matchingEdit.correction, exitPrice: 1990 },
+      review: { ...matchingEdit.review, notes: "hostile" },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_found");
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(admin.fake.insertsFor("audit_logs")).toHaveLength(0);
+    expect(tables.trades.find((r) => r.id === EDIT_TRADE)?.status).toBe("closed");
+  });
+
+  it("a reversed trade and a cancelled trade refuse with business errors", async () => {
+    const { user, tables } = setupWithEditTrade((t) => {
+      t.trades.push({ ...editableClosed(REVERSED_TRADE), status: "reversed" });
+      t.trades.push({ ...editableClosed(CANCELLED_TRADE), status: "cancelled" });
+    });
+    const reversed = await editTradeCore(user.client, USER, REVERSED_TRADE, matchingEdit);
+    expect(reversed.ok).toBe(false);
+    if (!reversed.ok) {
+      expect(reversed.code).toBe("business");
+      expect(reversed.error).toBe(
+        "This trade was corrected by a reversal — edit the correcting trade instead.",
+      );
+    }
+    const cancelled = await editTradeCore(user.client, USER, CANCELLED_TRADE, matchingEdit);
+    expect(cancelled.ok).toBe(false);
+    if (!cancelled.ok) {
+      expect(cancelled.code).toBe("business");
+      expect(cancelled.error).toBe("A cancelled trade can no longer be edited.");
+    }
+    expect(tables.trades.find((r) => r.id === REVERSED_TRADE)?.status).toBe("reversed");
+  });
+
+  it("a forged user_id inside the payloads cannot steer ownership — the schemas strip it", async () => {
+    const { user, tables } = setupWithEditTrade();
+    const forgedCorrection = {
+      ...matchingEdit.correction,
+      exitPrice: 1990,
+      user_id: OTHER,
+    } as unknown as EditTradeInput["correction"];
+    const forgedReview = {
+      ...matchingEdit.review,
+      user_id: OTHER,
+    } as unknown as EditTradeInput["review"];
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: forgedCorrection,
+      review: forgedReview,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const corrected = tables.trades.find((r) => r.id === result.tradeId);
+    expect(corrected?.user_id).toBe(USER);
+  });
+
+  it("direction flip long → short recalculates the P&L sign via @itg/calc", async () => {
+    const { user, tables } = setupWithEditTrade();
+    const expected = calcPnl({
+      direction: "short",
+      entryPrice: 2000,
+      exitPrice: 1990,
+      positionSize: 100,
+      fees: 0,
+    });
+    expect(expected).toBe(1000);
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: { ...matchingEdit.correction, direction: "short", exitPrice: 1990 },
+      review: matchingEdit.review,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.changedFields).toEqual(["direction", "exitPrice"]);
+    const corrected = tables.trades.find((r) => r.id === result.tradeId);
+    expect(corrected?.pnl).toBe(expected);
+    expect(corrected?.is_win).toBe(true);
+  });
+
+  it("a fees-only change counts as financial and nets off the P&L", async () => {
+    const { user, tables } = setupWithEditTrade();
+    const result = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: { ...matchingEdit.correction, fees: 5 },
+      review: matchingEdit.review,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.financialChanged).toBe(true);
+    expect(result.changedFields).toEqual(["fees"]);
+    expect(tables.trades.find((r) => r.id === result.tradeId)?.pnl).toBe(995);
+  });
+
+  it("a lesson-only change is journal-only, and re-saving the same lesson is a no-change (dedupe)", async () => {
+    const { user, tables } = setupWithEditTrade();
+    const withLesson: EditTradeInput = {
+      correction: matchingEdit.correction,
+      review: { ...matchingEdit.review, lesson: "Wait for the retest." },
+    };
+    const first = await editTradeCore(user.client, USER, EDIT_TRADE, withLesson);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.financialChanged).toBe(false);
+    expect(first.journalChanged).toBe(true);
+    expect(first.changedFields).toEqual(["lesson"]);
+    expect(user.fake.insertsFor("lessons")).toHaveLength(1);
+    expect(tables.trades.find((r) => r.id === EDIT_TRADE)?.status).toBe("closed");
+
+    const again = await editTradeCore(user.client, USER, EDIT_TRADE, withLesson);
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.changedFields).toEqual([]);
+    // Still exactly one lesson row — the repeat save deduped.
+    expect(user.fake.insertsFor("lessons")).toHaveLength(1);
+  });
+
+  it("setup round-trips by name: the same name is no change, a new name is a journal change", async () => {
+    const SETUP_ID = "66666666-6666-4666-8666-666666666666";
+    const { user, tables } = setupWithEditTrade((t) => {
+      const row = t.trades.find((r) => r.id === EDIT_TRADE);
+      if (row) row.setup_id = SETUP_ID;
+      t.setups.push({ id: SETUP_ID, user_id: USER, strategy_id: null, name: "London open" });
+    });
+    const same = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: matchingEdit.correction,
+      review: { ...matchingEdit.review, setupName: "London open" },
+    });
+    expect(same.ok).toBe(true);
+    if (!same.ok) return;
+    expect(same.changedFields).toEqual([]);
+
+    const renamed = await editTradeCore(user.client, USER, EDIT_TRADE, {
+      correction: matchingEdit.correction,
+      review: { ...matchingEdit.review, setupName: "Breakout retest" },
+    });
+    expect(renamed.ok).toBe(true);
+    if (!renamed.ok) return;
+    expect(renamed.changedFields).toEqual(["setup"]);
+    expect(renamed.financialChanged).toBe(false);
+    const stored = tables.trades.find((r) => r.id === EDIT_TRADE);
+    expect(stored?.setup_id).not.toBe(SETUP_ID);
+    expect(
+      tables.setups.some((s) => s.id === stored?.setup_id && s.name === "Breakout retest"),
+    ).toBe(true);
   });
 });
 

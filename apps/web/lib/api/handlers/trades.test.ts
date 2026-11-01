@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fakeSupabase, type Row } from "@/lib/test-helpers/fake-supabase";
+import {
+  fakeSupabase,
+  type FakeSupabaseClient,
+  type Row,
+} from "@/lib/test-helpers/fake-supabase";
 import { __clearRateLimitBuckets } from "@/lib/auth/rate-limit";
 import type { ApiAuditEntry, ApiDeps } from "@/lib/api/auth";
 
@@ -31,6 +35,7 @@ vi.mock("@/lib/supabase/config", () => ({
 import {
   handleCorrectTrade,
   handleCreateTrade,
+  handleEditTrade,
   handleSaveTradeReview,
 } from "./trades";
 
@@ -267,6 +272,251 @@ describe("handleSaveTradeReview", () => {
     );
     expect(missing.status).toBe(404);
     expect(missing.body).toEqual(res.body);
+  });
+});
+
+describe("handleEditTrade", () => {
+  const matchingReview = {
+    strategyId: null,
+    setupName: null,
+    marketCondition: null,
+    tradeReason: null,
+    session: "london",
+    confidence: null,
+    emotion: null,
+    discipline: null,
+    lesson: null,
+    notes: null,
+  };
+
+  /**
+   * The fake assigns `fake-trades-N` ids; the review schema
+   * requires UUID trade ids and editTradeCore feeds the
+   * corrected id into it — give inserted trades UUID ids,
+   * as Postgres does in production.
+   */
+  function withUuidTradeIds(fake: FakeSupabaseClient): void {
+    const realFrom = fake.from.bind(fake);
+    let seq = 0;
+    fake.from = (table: string) => {
+      const query = realFrom(table);
+      if (table === "trades") {
+        const realInsert = query.insert.bind(query);
+        query.insert = (row: Row | Row[]) => {
+          const rows = Array.isArray(row) ? row : [row];
+          for (const r of rows) {
+            if (r.id === undefined) {
+              seq += 1;
+              r.id = `00000000-0000-4000-8000-${String(seq).padStart(12, "0")}`;
+            }
+          }
+          return realInsert(rows);
+        };
+      }
+      return query;
+    };
+  }
+
+  /** Give TRADE_A the full stored financials that closedBody round-trips. */
+  function makeEditDeps() {
+    const ctx = makeDeps();
+    withUuidTradeIds(ctx.a.fake);
+    withUuidTradeIds(ctx.b.fake);
+    const row = ctx.tables.trades.find((r) => r.id === TRADE_A);
+    if (row) {
+      Object.assign(row, {
+        entry_price: 2000,
+        exit_price: 2010,
+        tp: 2020,
+        sl: 1995,
+        position_size: 100,
+        leverage: 1,
+        fees: 0,
+        opened_at: "2026-10-14T09:00:00Z",
+        closed_at: "2026-10-14T10:00:00Z",
+      });
+    }
+    return ctx;
+  }
+
+  it("financial edit → 201 with the corrected id; the original is reversed; one API audit row", async () => {
+    const { deps, audits, tables } = makeEditDeps();
+    const res = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: {
+          correction: { ...closedBody, exitPrice: 1990 },
+          review: matchingReview,
+        },
+      },
+      deps,
+    );
+    expect(res.status).toBe(201);
+    expect(res.body.reversed_trade_id).toBe(TRADE_A);
+    expect(typeof res.body.trade_id).toBe("string");
+    expect(res.body.trade_id).not.toBe(TRADE_A);
+    expect(res.body.financial_changed).toBe(true);
+    expect(res.body.journal_changed).toBe(false);
+    expect(res.body.changed_fields).toEqual(["exitPrice"]);
+    expect(tables.trades.find((r) => r.id === TRADE_A)?.status).toBe("reversed");
+    const corrected = tables.trades.find((r) => r.id === res.body.trade_id);
+    expect(corrected?.pnl).toBe(-1000);
+    expect(corrected?.user_id).toBe(USER_A);
+    const apiAudits = audits.filter((e) => e.operation === "trade_edited");
+    expect(apiAudits).toHaveLength(1);
+    expect(apiAudits[0]).toMatchObject({ userId: USER_A, outcome: "ok" });
+  });
+
+  it("journal-only edit → 200 on the same trade, no correction created", async () => {
+    const { deps, tables } = makeEditDeps();
+    const res = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: {
+          correction: closedBody,
+          review: { ...matchingReview, notes: "API edit" },
+        },
+      },
+      deps,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.trade_id).toBe(TRADE_A);
+    expect(res.body.reversed_trade_id).toBeNull();
+    expect(res.body.financial_changed).toBe(false);
+    expect(res.body.journal_changed).toBe(true);
+    expect(res.body.changed_fields).toEqual(["notes"]);
+    expect(tables.trades).toHaveLength(2);
+    expect(tables.trades.find((r) => r.id === TRADE_A)?.notes).toBe("API edit");
+  });
+
+  it("no-change edit → 200 with empty changed_fields and no core audit row", async () => {
+    const { deps, audits, tables, admin } = makeEditDeps();
+    const res = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: { correction: closedBody, review: matchingReview },
+      },
+      deps,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.changed_fields).toEqual([]);
+    expect(tables.trades).toHaveLength(2);
+    expect(tables.trades.find((r) => r.id === TRADE_A)?.status).toBe("closed");
+    expect(
+      admin.fake.insertsFor("audit_logs").filter((r) => r.action === "trade.edited"),
+    ).toHaveLength(0);
+    expect(audits.filter((e) => e.operation === "trade_edited")).toHaveLength(1);
+  });
+
+  it("smuggled user_id inside the correction → 400 naming the field, no write", async () => {
+    const { deps, tables } = makeEditDeps();
+    const res = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: {
+          correction: { ...closedBody, user_id: USER_B },
+          review: matchingReview,
+        },
+      },
+      deps,
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_argument");
+    expect(String(res.body.message)).toContain("user_id");
+    expect(tables.trades).toHaveLength(2);
+    expect(tables.trades.find((r) => r.id === TRADE_A)?.status).toBe("closed");
+  });
+
+  it("identity field at the envelope level and unknown keys in a section → 400 naming them", async () => {
+    const { deps } = makeEditDeps();
+    const envelope = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: { correction: closedBody, review: matchingReview, tenant_id: "x" },
+      },
+      deps,
+    );
+    expect(envelope.status).toBe(400);
+    expect(String(envelope.body.message)).toContain("tenant_id");
+    const unknown = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: {
+          correction: closedBody,
+          review: { ...matchingReview, pnl: 5 },
+        },
+      },
+      deps,
+    );
+    expect(unknown.status).toBe(400);
+    expect(String(unknown.body.message)).toContain("pnl");
+  });
+
+  it("a missing section → 400; a schema-invalid correction → 400 with the schema message", async () => {
+    const { deps } = makeEditDeps();
+    const missing = await handleEditTrade(
+      { token: "token-a", tradeId: TRADE_A, body: { correction: closedBody } },
+      deps,
+    );
+    expect(missing.status).toBe(400);
+    expect(missing.body.error).toBe("invalid_argument");
+    const invalid = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: {
+          correction: { ...closedBody, entryPrice: -5 },
+          review: matchingReview,
+        },
+      },
+      deps,
+    );
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.message).toBe("Entry price must be greater than 0");
+  });
+
+  it("another trader's trade → 404 byte-identical to a missing trade, nothing written", async () => {
+    const { deps, tables } = makeEditDeps();
+    const body = {
+      correction: { ...closedBody, exitPrice: 1990 },
+      review: matchingReview,
+    };
+    const cross = await handleEditTrade({ token: "token-b", tradeId: TRADE_A, body }, deps);
+    expect(cross.status).toBe(404);
+    expect(cross.body).toEqual({ error: "not_found" });
+    const missing = await handleEditTrade(
+      { token: "token-a", tradeId: "33333333-3333-4333-8333-333333333333", body },
+      deps,
+    );
+    expect(missing.status).toBe(404);
+    expect(missing.body).toEqual(cross.body);
+    expect(tables.trades).toHaveLength(2);
+    expect(tables.trades.find((r) => r.id === TRADE_A)?.status).toBe("closed");
+  });
+
+  it("editing a reversed trade → 422 with the edit-specific message", async () => {
+    const { deps, tables } = makeEditDeps();
+    const row = tables.trades.find((r) => r.id === TRADE_A);
+    if (row) row.status = "reversed";
+    const res = await handleEditTrade(
+      {
+        token: "token-a",
+        tradeId: TRADE_A,
+        body: { correction: closedBody, review: matchingReview },
+      },
+      deps,
+    );
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("validation_failed");
+    expect(res.body.message).toBe(
+      "This trade was corrected by a reversal — edit the correcting trade instead.",
+    );
   });
 });
 

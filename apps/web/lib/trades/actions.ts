@@ -9,6 +9,7 @@ import {
   correctTradeCore,
   createTradeCore,
   deleteScreenshotCore,
+  editTradeCore,
   saveAdvancedReviewCore,
   uploadScreenshotCore,
 } from "./service";
@@ -175,6 +176,64 @@ export async function correctTradeAction(
   revalidatePath("/trades");
   revalidatePath(`/trades/${tradeId}`);
   // Same ?saved=1 confirmation as a new trade (Phase 16).
+  return { ok: true, redirectTo: `/trades/${result.tradeId}?saved=1` };
+}
+
+/* -------------------------------------------------------------------- edit */
+
+/**
+ * Edit Trade (Ezat's Edit Trade mandate): one full-form save
+ * carrying BOTH field sets — the quick-entry fields (parsed
+ * by the same parseQuickForm as create/correct) and the
+ * advanced-review fields (read with the same keys as
+ * saveAdvancedReviewAction). The core decides what changed:
+ * a financial change corrects by reversal, a journal-only
+ * change saves in place, no change writes nothing. Identity
+ * comes from the session only.
+ */
+export async function editTradeAction(
+  _prev: TradeActionResult,
+  formData: FormData,
+): Promise<TradeActionResult> {
+  if (!isSupabaseConfigured()) return notConfigured();
+  const tradeId = toText(formData.get("tradeId"));
+  if (!tradeId) return { ok: false, error: "Trade is not valid." };
+  let correction: QuickTradeInput;
+  try {
+    correction = parseQuickForm(formData);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Please check the form and try again." };
+  }
+  const reviewParsed = advancedReviewSchema.safeParse({
+    tradeId,
+    strategyId: toText(formData.get("strategyId")),
+    setupName: toText(formData.get("setupName")),
+    marketCondition: toText(formData.get("marketCondition")),
+    tradeReason: toText(formData.get("tradeReason")),
+    session: toText(formData.get("session")),
+    confidence: toNumberOrNull(formData.get("confidence")),
+    emotion: toText(formData.get("emotion")),
+    discipline: toText(formData.get("discipline")),
+    lesson: toText(formData.get("lesson")),
+    notes: toText(formData.get("notes")),
+  });
+  if (!reviewParsed.success) return { ok: false, error: firstZodError(reviewParsed.error) };
+  const { tradeId: _reviewTradeId, ...review } = reviewParsed.data;
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "You are not logged in. Please log in and try again." };
+  const supabase = await createServerSupabaseClient();
+  const result = await editTradeCore(supabase, userId, tradeId, { correction, review });
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/trades");
+  revalidatePath(`/trades/${tradeId}`);
+  revalidatePath(`/trades/${result.tradeId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
+  if (result.changedFields.length === 0) {
+    return { ok: true, message: "No changes to save." };
+  }
+  // Land on the trade the edit resolved to (the corrected
+  // trade after a financial edit) with the saved confirmation.
   return { ok: true, redirectTo: `/trades/${result.tradeId}?saved=1` };
 }
 

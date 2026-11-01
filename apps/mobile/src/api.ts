@@ -7,6 +7,8 @@ import type {
   CoachChatAnswer,
   CoachChatHistoryTurn,
   CorrectTradeResponse,
+  EditTradePayload,
+  EditTradeResponse,
   CreateGoalResponse,
   CreateTradeResponse,
   GoalCreatePayload,
@@ -117,6 +119,23 @@ export async function correctTrade(
   payload: QuickTradePayload,
 ): Promise<CorrectTradeResponse> {
   return apiFetch<CorrectTradeResponse>(`/api/mobile/trades/${tradeId}/correct`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * POST /api/mobile/trades/[id]/edit — Edit Trade: a financial
+ * change corrects by reversal (the response's trade_id is
+ * the corrected trade, reversed_trade_id the original); a
+ * journal-only change saves in place; no change writes
+ * nothing. The endpoint orchestrates both halves.
+ */
+export async function editTrade(
+  tradeId: string,
+  payload: EditTradePayload,
+): Promise<EditTradeResponse> {
+  return apiFetch<EditTradeResponse>(`/api/mobile/trades/${tradeId}/edit`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

@@ -164,6 +164,16 @@ export default async function TradesPage({
                     <span className="tnum">{trade.r_multiple === null ? "—" : `${trade.r_multiple.toFixed(2)}R`}</span>
                     <span>Entry {trade.entry_price} · Exit {trade.exit_price ?? "—"}</span>
                   </p>
+                  <p className="mt-3 flex items-center gap-4 text-sm">
+                    <Link href={`/trades/${trade.id}`} className="itg2-link min-h-11 inline-flex items-center">
+                      View
+                    </Link>
+                    {trade.status === "open" || trade.status === "closed" ? (
+                      <Link href={`/trades/${trade.id}/edit`} className="itg2-link min-h-11 inline-flex items-center">
+                        Edit
+                      </Link>
+                    ) : null}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -180,6 +190,7 @@ export default async function TradesPage({
                     <th className="text-right">P&amp;L</th>
                     <th className="text-right">R</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -224,6 +235,18 @@ export default async function TradesPage({
                           className={`itg2-chip capitalize ${trade.status === "open" ? "" : "itg2-chip-muted"}`}
                         >
                           {trade.status}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="flex items-center gap-3">
+                          <Link href={`/trades/${trade.id}`} className="itg2-link">
+                            View
+                          </Link>
+                          {trade.status === "open" || trade.status === "closed" ? (
+                            <Link href={`/trades/${trade.id}/edit`} className="itg2-link">
+                              Edit
+                            </Link>
+                          ) : null}
                         </span>
                       </td>
                     </tr>

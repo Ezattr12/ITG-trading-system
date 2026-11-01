@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeSupabaseClient, type Row } from "@/lib/test-helpers/fake-supabase";
+import { __clearRateLimitBuckets } from "@/lib/auth/rate-limit";
 
 /**
  * Trade-action tests (Phase 20): the automatic coach refresh
@@ -28,7 +29,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { createTradeAction } from "./actions";
+import { createTradeAction, editTradeAction } from "./actions";
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 // The new trade closes Wednesday 2026-10-14; the week's Monday
@@ -152,5 +153,159 @@ describe("createTradeAction — Phase 20 coach trigger", () => {
     expect(result.ok).toBe(true);
     expect(result.redirectTo).toContain("?saved=1");
     expect(admin.fake.insertsFor("ai_insights")).toHaveLength(0);
+  });
+});
+
+/* ---------------------------------------------------------- edit action */
+
+const EDIT_ID = "44444444-4444-4444-8444-444444444444";
+
+function setupForEdit() {
+  __clearRateLimitBuckets();
+  const tables: Record<string, Row[]> = {
+    trades: [
+      {
+        id: EDIT_ID,
+        user_id: USER,
+        pair: "XAUUSD",
+        direction: "long",
+        status: "closed",
+        entry_price: 2000,
+        exit_price: 2010,
+        tp: 2020,
+        sl: 1995,
+        position_size: 100,
+        leverage: 1,
+        fees: 0,
+        pnl: 1000,
+        strategy_id: null,
+        setup_id: null,
+        session: "london",
+        market_condition: null,
+        trade_reason: null,
+        notes: null,
+        opened_at: "2026-10-14T09:00:00Z",
+        closed_at: "2026-10-14T10:00:00Z",
+      },
+    ],
+    psychology_records: [],
+    strategies: [],
+    setups: [],
+    lessons: [],
+    goals: [],
+    risk_events: [],
+    risk_rules: [],
+    profiles: [{ id: USER, trading_capital: null }],
+    ai_insights: [],
+    xp_transactions: [],
+    audit_logs: [],
+    user_levels: [],
+    achievements: [],
+    user_achievements: [],
+    notifications: [],
+  };
+  const user = fakeSupabase(tables);
+  const admin = fakeSupabase(tables);
+  (user.fake as unknown as { auth: unknown }).auth = {
+    getUser: async () => ({ data: { user: { id: USER } } }),
+  };
+  // UUID ids for inserted trades, as Postgres generates
+  // (the review schema requires UUID trade ids).
+  const realFrom = user.fake.from.bind(user.fake);
+  let seq = 0;
+  user.fake.from = (table: string) => {
+    const query = realFrom(table);
+    if (table === "trades") {
+      const realInsert = query.insert.bind(query);
+      query.insert = (row: Row | Row[]) => {
+        const rows = Array.isArray(row) ? row : [row];
+        for (const r of rows) {
+          if (r.id === undefined) {
+            seq += 1;
+            r.id = `00000000-0000-4000-8000-${String(seq).padStart(12, "0")}`;
+          }
+        }
+        return realInsert(rows);
+      };
+    }
+    return query;
+  };
+  harness.userClient = user.fake;
+  harness.adminClient = admin.fake;
+  return { user, admin, tables };
+}
+
+/** datetime-local text for a stored ISO instant (the form's own conversion). */
+function toLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** The edit form for the setupForEdit trade, exactly as the page submits it. */
+function editForm(overrides: Record<string, string | null> = {}): FormData {
+  const values: Record<string, string | null> = {
+    tradeId: EDIT_ID,
+    pair: "XAUUSD",
+    direction: "long",
+    entryPrice: "2000",
+    exitPrice: "2010",
+    tp: "2020",
+    sl: "1995",
+    positionSize: "100",
+    leverage: "1",
+    fees: "0",
+    openedAt: toLocal("2026-10-14T09:00:00Z"),
+    closedAt: toLocal("2026-10-14T10:00:00Z"),
+    strategyId: null,
+    setupName: null,
+    marketCondition: null,
+    tradeReason: null,
+    session: "london",
+    confidence: null,
+    emotion: null,
+    discipline: null,
+    lesson: null,
+    notes: null,
+    ...overrides,
+  };
+  const fd = new FormData();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== null) fd.set(key, value);
+  }
+  return fd;
+}
+
+describe("editTradeAction", () => {
+  it("a financial edit redirects to the CORRECTED trade with ?saved=1", async () => {
+    const { tables } = setupForEdit();
+    const result = await editTradeAction({ ok: false }, editForm({ exitPrice: "1990" }));
+    expect(result.ok).toBe(true);
+    expect(result.redirectTo).toMatch(
+      /^\/trades\/00000000-0000-4000-8000-000000000001\?saved=1$/,
+    );
+    expect(tables.trades.find((r) => r.id === EDIT_ID)?.status).toBe("reversed");
+  });
+
+  it("a journal-only edit redirects back to the same trade", async () => {
+    const { tables } = setupForEdit();
+    const result = await editTradeAction(
+      { ok: false },
+      editForm({ notes: "Edited via the form." }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.redirectTo).toBe(`/trades/${EDIT_ID}?saved=1`);
+    expect(tables.trades.find((r) => r.id === EDIT_ID)?.notes).toBe("Edited via the form.");
+  });
+
+  it("an unchanged form answers 'No changes to save.' and writes nothing", async () => {
+    const { user, tables } = setupForEdit();
+    const result = await editTradeAction({ ok: false }, editForm());
+    expect(result.ok).toBe(true);
+    expect(result.message).toBe("No changes to save.");
+    expect(result.redirectTo).toBeUndefined();
+    expect(user.fake.inserts).toHaveLength(0);
+    expect(user.fake.updates).toHaveLength(0);
+    expect(tables.trades).toHaveLength(1);
   });
 });

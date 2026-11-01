@@ -190,6 +190,11 @@ export default async function TradeDetailPage({
               </span>
               {trade.is_win === true && <span className="itg2-chip itg2-chip-profit">Win</span>}
               {trade.is_win === false && <span className="itg2-chip itg2-chip-loss">Loss</span>}
+              {editable && (
+                <Link href={`/trades/${trade.id}/edit`} className="itg2-btn-primary ml-auto shrink-0">
+                  Edit Trade
+                </Link>
+              )}
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               Opened {new Date(trade.opened_at).toLocaleString()}

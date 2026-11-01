@@ -390,6 +390,26 @@ export interface CancelTradeResponse {
   status: string;
 }
 
+/**
+ * POST /api/mobile/trades/[id]/edit — Edit Trade: one
+ * full-form save carrying both field sets. A financial
+ * change corrects by reversal (201, trade_id is the
+ * corrected trade); a journal-only or no-change edit
+ * answers 200 with the original trade_id.
+ */
+export interface EditTradePayload {
+  correction: QuickTradePayload;
+  review: AdvancedReviewPayload;
+}
+
+export interface EditTradeResponse {
+  trade_id: string;
+  reversed_trade_id: string | null;
+  changed_fields: string[];
+  financial_changed: boolean;
+  journal_changed: boolean;
+}
+
 export type MarketCondition =
   | "trending"
   | "ranging"
