@@ -1,13 +1,19 @@
-import type { LevelRowLite, ProfileRow } from "./types";
+import type { LevelRowLite } from "./types";
 
 /**
  * Profile derivations for mobile — PORTS of the web app's pure
  * profile logic. These functions must stay in lockstep with
  * their web sources:
- * - calcProfileCompletion  ← apps/web/lib/profile/completion.ts
  * - progressToNextLevel    ← apps/web/lib/gamification/scoring.ts
  *   (+ calcLevelForScore / DEFAULT_LEVELS from @itg/calc)
  * - identity helpers       ← apps/web/lib/profile/identity.ts
+ *
+ * Profile completion is deliberately NOT ported here: it has
+ * ONE canonical implementation in @itg/calc (packages/calc/
+ * src/profile-completion.ts), vendored into this app
+ * (scripts/vendor-calc.mjs) and deep-imported by the profile
+ * screen, so web and mobile can never drift apart on the
+ * Verified-badge rule.
  *
  * Everything here is computed from the caller's STORED rows
  * (read under RLS) at render time. Nothing is stored, nothing
@@ -17,121 +23,18 @@ import type { LevelRowLite, ProfileRow } from "./types";
 
 /* ---------------- profile completion + verified badge ----------------
  *
- * The "ITG Verified Profile" badge is a PROFILE-COMPLETENESS
- * badge, not identity/KYC verification: it is active only when
- * every required piece of professional profile information is
- * actually present in the stored profile row (100% of the 8
- * items below). It is derived from the completion result on
- * every render — there is no stored boolean that could drift
- * out of sync. The admin-reviewed `verification_status` column
- * is a separate status, shown separately on the profile.
+ * No local implementation — deliberately. Profile completion
+ * has ONE canonical implementation: calcProfileCompletion in
+ * @itg/calc (packages/calc/src/profile-completion.ts),
+ * vendored into this app by scripts/vendor-calc.mjs and
+ * deep-imported by the profile screen as
+ * "@itg/calc/src/profile-completion". The badge rule lives
+ * there and only there: the "ITG Verified Profile" badge is a
+ * completeness badge (not identity/KYC) that is active
+ * exactly when completion is 100% of the 8 stored items. Do
+ * not re-add a port of it here — that is how web and mobile
+ * drifted into duplicate logic.
  */
-
-export interface CompletionItem {
-  key: string;
-  label: string;
-  complete: boolean;
-  /** What to do when this item is missing. */
-  hint: string;
-}
-
-export interface ProfileCompletion {
-  /** 0–100, whole percent. */
-  percent: number;
-  completed: number;
-  total: number;
-  items: CompletionItem[];
-  missing: CompletionItem[];
-  /** True only when every required item is complete. */
-  verified: boolean;
-  /** The first missing item's hint, or null when complete. */
-  nextStep: string | null;
-}
-
-function hasText(value: string | null | undefined): boolean {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-const ITEM_DEFS: {
-  key: string;
-  label: string;
-  hint: string;
-  check: (p: ProfileRow) => boolean;
-}[] = [
-  {
-    key: "full_name",
-    label: "Full name",
-    hint: "Add your full name",
-    check: (p) => hasText(p.full_name),
-  },
-  {
-    key: "avatar_url",
-    label: "Profile photo",
-    hint: "Add a profile photo",
-    check: (p) => hasText(p.avatar_url),
-  },
-  {
-    key: "father_name",
-    label: "Father's name",
-    hint: "Add your father's name",
-    check: (p) => hasText(p.father_name),
-  },
-  {
-    key: "date_of_birth",
-    label: "Date of birth",
-    hint: "Add your date of birth",
-    check: (p) => hasText(p.date_of_birth),
-  },
-  {
-    key: "country",
-    label: "Country",
-    hint: "Add your country",
-    check: (p) => hasText(p.country),
-  },
-  {
-    key: "trading_experience",
-    label: "Trading experience",
-    hint: "Add your trading experience",
-    check: (p) => hasText(p.trading_experience),
-  },
-  {
-    key: "trading_education",
-    label: "Trading education",
-    hint: "Add your trading education",
-    check: (p) => hasText(p.trading_education),
-  },
-  {
-    key: "employment_status",
-    label: "Work status",
-    hint: "Add your work status",
-    check: (p) =>
-      hasText(p.employment_status) && p.employment_status !== "not_provided",
-  },
-];
-
-/** Completion of a profile row, from the stored data only. */
-export function calcProfileCompletion(profile: ProfileRow): ProfileCompletion {
-  const items: CompletionItem[] = ITEM_DEFS.map((def) => ({
-    key: def.key,
-    label: def.label,
-    complete: def.check(profile),
-    hint: def.hint,
-  }));
-  const completed = items.filter((i) => i.complete).length;
-  const total = items.length;
-  const percent = Math.round((completed / total) * 100);
-  const missing = items.filter((i) => !i.complete);
-  return {
-    percent,
-    completed,
-    total,
-    items,
-    missing,
-    // The badge rule: verified ⟺ completion is exactly 100%.
-    verified: percent === 100,
-    nextStep: missing.length > 0 ? missing[0].hint : null,
-  };
-}
 
 /* ---------------- level band progress ----------------
  *

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { Image, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { updateProfile } from "../../src/api";
 import { useAuth } from "../../src/auth";
+import { calcProfileCompletion } from "@itg/calc/src/profile-completion";
 import {
   ErrorState,
-  GlassCard,
+  GradientCard,
   LoadingState,
   Screen,
 } from "../../src/components";
@@ -48,6 +49,10 @@ export default function ProfileEditScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  // The stored row as loaded — display-only (header strip:
+  // avatar, name, completion %). Form fields keep their own
+  // state below; the save path is unchanged.
+  const [storedProfile, setStoredProfile] = useState<ProfileRow | null>(null);
 
   const [fullName, setFullName] = useState("");
   const [fatherName, setFatherName] = useState("");
@@ -85,6 +90,7 @@ export default function ProfileEditScreen() {
     }
     const p = (data as ProfileRow | null) ?? null;
     if (p) {
+      setStoredProfile(p);
       setFullName(p.full_name ?? "");
       setFatherName(p.father_name ?? "");
       setDateOfBirth(p.date_of_birth ?? "");
@@ -172,6 +178,12 @@ export default function ProfileEditScreen() {
 
   if (loading) return <LoadingState label="Loading your profile…" />;
 
+  // Completion of the STORED row, from the one canonical
+  // calculator — the same figure the Profile screen shows.
+  const completion = storedProfile
+    ? calcProfileCompletion(storedProfile)
+    : null;
+
   return (
     <Screen>
       <Text style={shared.title}>Edit profile</Text>
@@ -179,9 +191,40 @@ export default function ProfileEditScreen() {
       {!loadError && !ready ? (
         <ErrorState message="Your profile row could not be loaded. Sign out and back in, then try again." />
       ) : null}
+      {ready && storedProfile && completion ? (
+        <GradientCard level="elevated">
+          <View style={styles.headerStrip}>
+            {storedProfile.avatar_url ? (
+              <Image
+                source={{ uri: storedProfile.avatar_url }}
+                style={styles.headerAvatar}
+              />
+            ) : (
+              <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
+                <Text style={styles.headerAvatarInitial}>
+                  {(storedProfile.full_name ?? session?.user.email ?? "?")
+                    .slice(0, 1)
+                    .toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.headerText}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {storedProfile.full_name ?? "Trader"}
+              </Text>
+              <Text style={shared.muted}>
+                {completion.verified
+                  ? "ITG Verified Profile"
+                  : "Complete your profile to earn the Verified badge"}
+              </Text>
+            </View>
+            <Text style={styles.headerPct}>{completion.percent}%</Text>
+          </View>
+        </GradientCard>
+      ) : null}
       {ready ? (
         <>
-          <GlassCard>
+          <GradientCard level="standard">
             <Text style={shared.heading}>Personal information</Text>
             <TextField label="Full name" value={fullName} onChangeText={setFullName} />
             <TextField
@@ -204,9 +247,9 @@ export default function ProfileEditScreen() {
               onChangeText={setCountry}
               placeholder="Not provided"
             />
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
+          <GradientCard level="standard">
             <Text style={shared.heading}>Trading background</Text>
             <TextField
               label="Trading experience"
@@ -249,9 +292,9 @@ export default function ProfileEditScreen() {
               value={demoTrading}
               onChange={setDemoTrading}
             />
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
+          <GradientCard level="standard">
             <Text style={shared.heading}>Work & trading</Text>
             <ChipSelect
               label="Work status"
@@ -267,10 +310,10 @@ export default function ProfileEditScreen() {
               value={tradesRealMoney}
               onChange={setTradesRealMoney}
             />
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
-            <Text style={shared.heading}>Private financial</Text>
+          <GradientCard level="standard">
+            <Text style={shared.heading}>Trading history & capital</Text>
             <TextField
               label="Trading capital (private)"
               value={tradingCapital}
@@ -286,7 +329,7 @@ export default function ProfileEditScreen() {
               keyboardType="decimal-pad"
             />
             <Text style={styles.hint}>Private — only you can see these values.</Text>
-          </GlassCard>
+          </GradientCard>
 
           <SubmitBar
             label="Save profile"
@@ -330,6 +373,41 @@ function numText(value: number | null | undefined): string {
 }
 
 const styles = StyleSheet.create({
+  headerStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  headerAvatarFallback: {
+    backgroundColor: tokens.deep,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatarInitial: {
+    color: tokens.textPrimary,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  headerText: {
+    flex: 1,
+    gap: 2,
+  },
+  headerName: {
+    color: tokens.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  headerPct: {
+    color: tokens.cyanBright,
+    fontSize: 17,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",

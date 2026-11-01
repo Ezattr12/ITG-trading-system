@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "@/lib/auth/actions";
 import { displayOrNotProvided } from "@/lib/onboarding/completion";
-import { calcProfileCompletion } from "@/lib/profile/completion";
+import {
+  calcProfileCompletion,
+  type ProfileCompletionRow,
+} from "@/lib/profile/completion";
 import {
   bestStrategy,
   identityMarkets,
@@ -27,6 +30,21 @@ import { LevelRing } from "@/components/profile/level-ring";
 import { CountUpXp } from "@/components/analytics/count-up";
 
 export const metadata = { title: "Profile — ITG TraderOS" };
+
+/**
+ * An all-empty stored row, used when there is no profile row yet
+ * (e.g. Supabase not connected): completion is honestly 0%.
+ */
+const EMPTY_PROFILE_ROW: ProfileCompletionRow = {
+  full_name: null,
+  father_name: null,
+  date_of_birth: null,
+  country: null,
+  avatar_url: null,
+  trading_experience: null,
+  trading_education: null,
+  employment_status: null,
+};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -76,16 +94,9 @@ export default async function ProfilePage() {
   const p = user.profile;
   const configured = isSupabaseConfigured();
 
-  const completion = calcProfileCompletion({
-    fullName: p?.full_name,
-    fatherName: p?.father_name,
-    dateOfBirth: p?.date_of_birth,
-    country: p?.country,
-    avatarUrl: p?.avatar_url,
-    tradingExperience: p?.trading_experience,
-    tradingEducation: p?.trading_education,
-    employmentStatus: p?.employment_status,
-  });
+  // The ONE canonical calculator (@itg/calc) reads the stored
+  // row directly — no per-surface field mapping to drift.
+  const completion = calcProfileCompletion(p ?? EMPTY_PROFILE_ROW);
 
   let bundle: Awaited<ReturnType<typeof getGamificationBundle>> | null = null;
   let plan: Awaited<ReturnType<typeof getTradingPlan>> = null;

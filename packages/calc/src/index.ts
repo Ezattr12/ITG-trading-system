@@ -353,3 +353,22 @@ export function calcRDistribution(
   }
   return { buckets: R_BUCKETS.map((label) => ({ label, count: counts.get(label) ?? 0 })), noR };
 }
+
+// ---------------------------------------------------------------- Profile completion
+
+/**
+ * Profile completion + the "ITG Verified Profile" badge live in
+ * their own module (no decimal.js — completion is counting, not
+ * money math) and are re-exported here so `@itg/calc` stays the
+ * one import surface. That module is the ONLY implementation of
+ * the calculation: web imports it through this package, mobile
+ * deep-imports the file directly. See profile-completion.ts for
+ * the product rule.
+ */
+export {
+  calcProfileCompletion,
+  PROFILE_VERIFIED_THRESHOLD,
+  type CompletionItem,
+  type ProfileCompletion,
+  type ProfileCompletionRow,
+} from "./profile-completion";

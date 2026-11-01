@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { uploadAvatar } from "../../src/api";
 import { useAuth } from "../../src/auth";
 import { supabase } from "../../src/supabase";
@@ -16,16 +19,16 @@ import {
   EmptyState,
   ErrorState,
   GhostButton,
-  GlassCard,
+  GradientCard,
   LoadingState,
   PrimaryButton,
+  ProgressRing,
   Screen,
-  Stat,
 } from "../../src/components";
 import { FormError } from "../../src/forms";
 import { formatDate, formatNumber, titleCase } from "../../src/format";
+import { calcProfileCompletion } from "@itg/calc/src/profile-completion";
 import {
-  calcProfileCompletion,
   identityMarkets,
   identitySessions,
   mostUsedStrategy,
@@ -44,19 +47,37 @@ import type {
   UserLevelRow,
 } from "../../src/types";
 
+type IconName = ComponentProps<typeof Ionicons>["name"];
+
+/** Bright gold for achievement / level iconography on dark glass. */
+const GOLD_BRIGHT = "#E9C37C";
+
+/** Icon per Trading Identity row — labels come from the derivations below. */
+const IDENTITY_ICONS: Record<string, IconName> = {
+  Markets: "globe",
+  "Primary strategy": "layers",
+  Experience: "time",
+  "Risk profile": "shield-checkmark",
+  "Preferred sessions": "moon",
+};
+
 /**
  * Profile — premium trader identity page (Phase 19 composition,
- * M2 correction pass). Everything shown is the caller's own
- * stored data, read under RLS:
- * - Hero: photo (tap to replace, via the avatar endpoint),
- *   name, professional identity, level + stored score, total
+ * M2 correction pass; Profile correction pass: physical-glass
+ * redesign). Everything shown is the caller's own stored data,
+ * read under RLS:
+ * - Hero: photo (tap to replace, via the avatar endpoint) in a
+ *   blue → cyan gradient ring with a camera badge, name,
+ *   professional identity, the level ring + stored score, total
  *   XP (sum of xp_transactions), and the level-band progress
  *   bar (port of the web progressToNextLevel).
  * - "ITG Verified Profile": a profile-COMPLETENESS badge,
  *   derived on every render from the stored row (100% of the
- *   8 required items in src/profile.ts). It is NOT identity /
- *   KYC verification — the admin-reviewed verification_status
- *   is shown separately in Details as "Admin review status".
+ *   8 required items, computed by the ONE canonical calculator
+ *   in @itg/calc — the same module the web app uses). It is
+ *   NOT identity / KYC verification — the admin-reviewed
+ *   verification_status is shown separately in Details as
+ *   "Admin review status".
  * - Stats / Trading Identity / Achievements: derived from the
  *   caller's closed trades, active plan and risk rules, and
  *   earned user_achievements — never invented; a value with
@@ -343,53 +364,84 @@ export default function ProfileScreen() {
       ) : null}
       {profile && completion ? (
         <>
-          <GlassCard hero>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Change profile photo"
-                onPress={() => void handleAvatarPick()}
-                style={styles.avatarWrap}
-              >
-                {profile.avatar_url ? (
-                  <Image
-                    source={{ uri: profile.avatar_url }}
-                    style={styles.avatar}
-                  />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarFallback]}>
-                    <Text
-                      style={{
-                        color: tokens.textPrimary,
-                        fontSize: 22,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {(profile.full_name ?? session?.user.email ?? "?")
-                        .slice(0, 1)
-                        .toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                {avatarBusy ? (
-                  <View style={styles.avatarBusy}>
-                    <ActivityIndicator color={tokens.textPrimary} />
-                  </View>
-                ) : null}
-              </Pressable>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={shared.heading}>{profile.full_name ?? "Trader"}</Text>
+          <GradientCard level="hero">
+            <View style={styles.heroRow}>
+              <View style={styles.avatarOuter}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Change profile photo"
+                  onPress={() => void handleAvatarPick()}
+                >
+                  <LinearGradient
+                    colors={[tokens.cyanBright, tokens.blueBright, tokens.royal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.avatarRing}
+                  >
+                    {profile.avatar_url ? (
+                      <Image
+                        source={{ uri: profile.avatar_url }}
+                        style={styles.avatarImg}
+                      />
+                    ) : (
+                      <View style={styles.avatarFallback}>
+                        <Text style={styles.avatarInitial}>
+                          {(profile.full_name ?? session?.user.email ?? "?")
+                            .slice(0, 1)
+                            .toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                  {avatarBusy ? (
+                    <View style={styles.avatarBusy}>
+                      <ActivityIndicator color={tokens.textPrimary} />
+                    </View>
+                  ) : null}
+                </Pressable>
+                <LinearGradient
+                  colors={[tokens.blueBright, tokens.royal]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cameraBadge}
+                  pointerEvents="none"
+                >
+                  <Ionicons name="camera" size={14} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <View style={styles.heroIdentity}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.heroName} numberOfLines={1}>
+                    {profile.full_name ?? "Trader"}
+                  </Text>
+                  {completion.verified ? (
+                    <View style={styles.verifiedCheck}>
+                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    </View>
+                  ) : null}
+                </View>
                 <Text style={shared.muted}>
                   {profile.role === "admin" ? "Admin" : "Professional Trader"}
                   {profile.country ? ` · ${profile.country}` : ""}
                 </Text>
-                {levelName ? (
-                  <Text style={{ color: tokens.gold, fontWeight: "700", fontSize: 13 }}>
-                    {levelName}
-                    {score !== null ? ` · Score ${formatNumber(score, 1)}` : ""}
-                  </Text>
+                {completion.verified ? (
+                  <View style={styles.verifiedPill}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={14}
+                      color={tokens.cyanBright}
+                    />
+                    <Text style={styles.verifiedPillText}>
+                      ITG Verified Profile
+                    </Text>
+                  </View>
                 ) : (
-                  <Text style={shared.muted}>Level not scored yet</Text>
+                  <View style={styles.progressPill}>
+                    <Text style={styles.progressPillText}>
+                      Profile {completion.percent}% complete
+                      {completion.nextStep ? ` · ${completion.nextStep}` : ""}
+                    </Text>
+                  </View>
                 )}
               </View>
             </View>
@@ -397,22 +449,6 @@ export default function ProfileScreen() {
               {avatarBusy ? "Uploading photo…" : "Tap your photo to change it"}
             </Text>
             <FormError message={avatarError} />
-
-            {completion.verified ? (
-              <View style={styles.verifiedPill}>
-                <Text style={{ color: tokens.profit, fontWeight: "800" }}>✓</Text>
-                <Text style={{ color: tokens.textPrimary, fontWeight: "700", fontSize: 13 }}>
-                  ITG Verified Profile
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.progressPill}>
-                <Text style={{ color: tokens.textSecondary, fontWeight: "600", fontSize: 13 }}>
-                  Profile {completion.percent}% complete
-                  {completion.nextStep ? ` · ${completion.nextStep}` : ""}
-                </Text>
-              </View>
-            )}
             <Text style={shared.muted}>
               {completion.verified
                 ? "Profile complete — this badge confirms your profile information is complete. It is not identity (KYC) verification."
@@ -420,26 +456,55 @@ export default function ProfileScreen() {
             </Text>
 
             <View style={styles.xpBlock}>
-              <View style={shared.rowBetween}>
-                <Text style={styles.xpValue}>
-                  {formatNumber(xpTotal, 0)}
-                  <Text style={styles.xpCaption}> total XP earned</Text>
-                </Text>
-                <Text style={shared.muted}>
-                  {progress === null
-                    ? "Journal trades to earn a level"
-                    : progress.nextLevel === null
-                      ? "Top level reached"
-                      : `${formatNumber(progress.pointsToNext, 1)} points to ${progress.nextLevel}`}
-                </Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { width: `${progress?.progressPct ?? 0}%` },
-                  ]}
-                />
+              <View style={styles.xpRow}>
+                <ProgressRing
+                  size={64}
+                  strokeWidth={5}
+                  progress={progress ? progress.progressPct / 100 : 0}
+                >
+                  <Text style={styles.ringLevelName} numberOfLines={1}>
+                    {progress?.currentLevel ?? levelName ?? "—"}
+                  </Text>
+                </ProgressRing>
+                <View style={styles.xpColumn}>
+                  <View style={shared.rowBetween}>
+                    {levelName ? (
+                      <Text style={styles.xpLevelLine}>
+                        {levelName}
+                        {score !== null ? (
+                          <Text style={styles.xpScoreText}>
+                            {` · Score ${formatNumber(score, 1)}`}
+                          </Text>
+                        ) : null}
+                      </Text>
+                    ) : (
+                      <Text style={shared.muted}>Level not scored yet</Text>
+                    )}
+                    <Text style={shared.muted}>
+                      {progress === null
+                        ? "Journal trades to earn a level"
+                        : progress.nextLevel === null
+                          ? "Top level reached"
+                          : `${formatNumber(progress.pointsToNext, 1)} points to ${progress.nextLevel}`}
+                    </Text>
+                  </View>
+                  <Text style={styles.xpValue}>
+                    {formatNumber(xpTotal, 0)}
+                    <Text style={styles.xpCaption}> total XP earned</Text>
+                  </Text>
+                  <View style={styles.barWrap}>
+                    <View style={styles.barTrack} />
+                    <LinearGradient
+                      colors={[tokens.blueBright, tokens.cyanBright]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[
+                        styles.barFill,
+                        { width: `${progress?.progressPct ?? 0}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
               </View>
               <Text style={shared.muted}>
                 Your level is scored on discipline, risk, journaling, goals,
@@ -447,48 +512,31 @@ export default function ProfileScreen() {
                 alone.
               </Text>
             </View>
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
-            <View style={shared.rowBetween}>
-              <Text style={shared.heading}>Profile completion</Text>
-              <Text style={styles.completionPct}>{completion.percent}%</Text>
-            </View>
-            <View style={styles.barTrack}>
-              <View
-                style={[styles.barFill, { width: `${completion.percent}%` }]}
+          <GradientCard level="elevated">
+            <View style={styles.statRow}>
+              <StatTile
+                icon="swap-horizontal"
+                label="Total trades"
+                value={String(stats.totalTrades)}
               />
-            </View>
-            {completion.missing.length === 0 ? (
-              <Text style={{ color: tokens.profit, fontSize: 13, lineHeight: 18 }}>
-                ✓ Your profile is complete — the ITG Verified Profile badge is
-                active.
-              </Text>
-            ) : (
-              completion.missing.map((item) => (
-                <Text key={item.key} style={shared.muted}>
-                  • {item.hint}
-                </Text>
-              ))
-            )}
-          </GlassCard>
-
-          <GlassCard>
-            <Text style={shared.heading}>Key stats</Text>
-            <View style={styles.statGrid}>
-              <Stat label="Total trades" value={String(stats.totalTrades)} />
-              <Stat
+              <View style={styles.statDivider} />
+              <StatTile
+                icon="trophy"
                 label="Win rate"
                 value={
                   stats.winRate === null ? "—" : `${Math.round(stats.winRate)}%`
                 }
-                tone={
+                valueColor={
                   stats.winRate !== null && stats.winRate >= 50
-                    ? "profit"
-                    : "default"
+                    ? tokens.profit
+                    : undefined
                 }
               />
-              <Stat
+              <View style={styles.statDivider} />
+              <StatTile
+                icon="scale"
                 label="Profit factor"
                 value={
                   stats.profitFactor === null
@@ -496,15 +544,17 @@ export default function ProfileScreen() {
                     : formatNumber(stats.profitFactor)
                 }
               />
-              <Stat
+              <View style={styles.statDivider} />
+              <StatTile
+                icon="pulse"
                 label="Average R"
                 value={stats.avgR === null ? "—" : formatNumber(stats.avgR)}
-                tone={
+                valueColor={
                   stats.avgR === null
-                    ? "default"
+                    ? undefined
                     : stats.avgR >= 0
-                      ? "profit"
-                      : "loss"
+                      ? tokens.profit
+                      : tokens.loss
                 }
               />
             </View>
@@ -514,71 +564,154 @@ export default function ProfileScreen() {
                 estimated.
               </Text>
             ) : null}
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
-            <Text style={shared.heading}>Trading identity</Text>
+          <GradientCard level="standard">
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <LinearGradient
+                  colors={[tokens.royal, tokens.azure]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.sectionIconTile}
+                >
+                  <Ionicons name="person" size={15} color={tokens.cyanBright} />
+                </LinearGradient>
+                <Text style={shared.heading}>Trading Identity</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                onPress={() => router.push("/(app)/profile-edit")}
+                style={({ pressed }) => [
+                  styles.editPill,
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <Ionicons name="pencil" size={12} color={tokens.cyanBright} />
+                <Text style={styles.editPillText}>Edit</Text>
+              </Pressable>
+            </View>
             {identityRows.length === 0 ? (
               <Text style={shared.muted}>
                 Not provided yet — set a trading plan or log trades and your
                 identity appears here.
               </Text>
             ) : (
-              identityRows.map((row) => (
-                <View key={row.label} style={shared.rowBetween}>
-                  <Text style={shared.muted}>{row.label}</Text>
-                  <Text
-                    style={{
-                      color: tokens.textSecondary,
-                      fontSize: 14,
-                      flexShrink: 1,
-                      textAlign: "right",
-                    }}
-                  >
-                    {row.value}
-                  </Text>
-                </View>
-              ))
+              <View style={styles.identityGrid}>
+                {identityRows.map((row) => (
+                  <IdentityModule
+                    key={row.label}
+                    icon={IDENTITY_ICONS[row.label] ?? "ellipse"}
+                    label={row.label}
+                    value={row.value}
+                  />
+                ))}
+              </View>
             )}
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
-            <Text style={shared.heading}>Achievements</Text>
+          <GradientCard level="standard">
+            <View style={styles.sectionHeaderLeft}>
+              <LinearGradient
+                colors={[tokens.royal, tokens.azure]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sectionIconTile}
+              >
+                <Ionicons name="trophy" size={15} color={GOLD_BRIGHT} />
+              </LinearGradient>
+              <Text style={shared.heading}>Achievements</Text>
+            </View>
             {achievements.length === 0 ? (
               <Text style={shared.muted}>
                 No achievements yet — they unlock as you trade and review.
               </Text>
             ) : (
-              achievements.map((a) => (
-                <View key={`${a.name}-${a.unlockedAt}`} style={shared.rowBetween}>
-                  <View style={styles.achievementDot} />
-                  <Text
-                    style={{ color: tokens.textSecondary, fontSize: 14, flex: 1, marginLeft: 8 }}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.achievementScroll}
+                contentContainerStyle={styles.achievementRow}
+              >
+                {achievements.map((a) => (
+                  <View
+                    key={`${a.name}-${a.unlockedAt}`}
+                    style={styles.achievementCard}
                   >
-                    {a.name}
-                  </Text>
-                  <Text style={shared.muted}>{formatDate(a.unlockedAt)}</Text>
-                </View>
-              ))
+                    <LinearGradient
+                      colors={[
+                        "rgba(233, 195, 124, 0.22)",
+                        "rgba(189, 147, 95, 0.08)",
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.achievementMedallion}
+                    >
+                      <Ionicons name="trophy" size={20} color={GOLD_BRIGHT} />
+                    </LinearGradient>
+                    <Text style={styles.achievementName} numberOfLines={2}>
+                      {a.name}
+                    </Text>
+                    <Text style={styles.achievementDate}>
+                      {formatDate(a.unlockedAt)}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
             )}
-          </GlassCard>
+          </GradientCard>
 
-          <GlassCard>
-            {detailRows.map((row) => (
-              <View key={row.label} style={shared.rowBetween}>
-                <Text style={shared.muted}>{row.label}</Text>
-                <Text style={{ color: tokens.textSecondary, fontSize: 14 }}>
-                  {row.value}
+          <GradientCard level="elevated">
+            <View style={styles.completionRow}>
+              <ProgressRing
+                size={84}
+                strokeWidth={7}
+                progress={completion.percent / 100}
+              >
+                <Text style={styles.completionRingPct}>
+                  {completion.percent}%
                 </Text>
+              </ProgressRing>
+              <View style={styles.completionBody}>
+                <Text style={shared.heading}>Profile completion</Text>
+                {completion.missing.length === 0 ? (
+                  <Text style={styles.completionDoneText}>
+                    ✓ Your profile is complete — the ITG Verified Profile badge is
+                    active.
+                  </Text>
+                ) : (
+                  completion.missing.map((item) => (
+                    <Text key={item.key} style={shared.muted}>
+                      • {item.hint}
+                    </Text>
+                  ))
+                )}
+              </View>
+            </View>
+          </GradientCard>
+
+          <GradientCard level="standard">
+            {detailRows.map((row, index) => (
+              <View
+                key={row.label}
+                style={[
+                  styles.detailRow,
+                  index > 0 && styles.detailRowBorder,
+                ]}
+              >
+                <Text style={shared.muted}>{row.label}</Text>
+                <Text style={styles.detailValue}>{row.value}</Text>
               </View>
             ))}
-          </GlassCard>
+          </GradientCard>
         </>
       ) : null}
 
       <PrimaryButton
         label="Edit profile"
         onPress={() => router.push("/(app)/profile-edit")}
+        gradient
       />
       <GhostButton
         label="Risk rules & trading plan"
@@ -593,53 +726,178 @@ export default function ProfileScreen() {
   );
 }
 
+function StatTile({
+  icon,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  return (
+    <View style={styles.statTile}>
+      <LinearGradient
+        colors={[tokens.royal, tokens.azure]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.statIconTile}
+      >
+        <Ionicons
+          name={icon}
+          size={15}
+          color={icon === "trophy" ? GOLD_BRIGHT : tokens.cyanBright}
+        />
+      </LinearGradient>
+      <Text style={styles.statTileLabel} numberOfLines={2}>
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.statTileValue,
+          valueColor ? { color: valueColor } : null,
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function IdentityModule({
+  icon,
+  label,
+  value,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.identityModule}>
+      <LinearGradient
+        colors={[tokens.royal, tokens.azure]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.identityIconTile}
+      >
+        <Ionicons name={icon} size={17} color={tokens.cyanBright} />
+      </LinearGradient>
+      <View style={styles.identityText}>
+        <Text style={shared.label}>{label}</Text>
+        <Text style={styles.identityValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  avatarWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    // The one violet accent kept on Profile: the avatar ring.
-    borderColor: tokens.violetLight,
-    borderWidth: 2,
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  avatarOuter: {
+    width: 104,
+    height: 104,
+    shadowColor: tokens.cyanBright,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  avatarRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    padding: 4,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  avatarImg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
   },
   avatarFallback: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: tokens.deep,
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarInitial: {
+    color: tokens.textPrimary,
+    fontSize: 34,
+    fontWeight: "700",
+  },
   avatarBusy: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 34,
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 48,
     backgroundColor: "rgba(4, 6, 11, 0.55)",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarHint: {
-    color: tokens.textMuted,
-    fontSize: 12,
+  cameraBadge: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: tokens.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroIdentity: {
+    flex: 1,
+    gap: 5,
+    paddingTop: 4,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  heroName: {
+    color: tokens.textPrimary,
+    fontSize: 21,
+    fontWeight: "800",
+    flexShrink: 1,
+  },
+  verifiedCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: tokens.blueBright,
+    alignItems: "center",
+    justifyContent: "center",
   },
   verifiedPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    borderColor: tokens.profit,
+    borderColor: tokens.glassBorderBright,
     borderWidth: 1,
     borderRadius: tokens.radiusPill,
-    backgroundColor: "rgba(33, 243, 165, 0.10)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "rgba(18, 104, 216, 0.25)",
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    marginTop: 2,
+  },
+  verifiedPillText: {
+    color: tokens.textPrimary,
+    fontWeight: "700",
+    fontSize: 12.5,
   },
   progressPill: {
     alignSelf: "flex-start",
@@ -647,14 +905,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: tokens.radiusPill,
     backgroundColor: tokens.glass,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    marginTop: 2,
+  },
+  progressPillText: {
+    color: tokens.textSecondary,
+    fontWeight: "600",
+    fontSize: 12.5,
+  },
+  avatarHint: {
+    color: tokens.textMuted,
+    fontSize: 12,
   },
   xpBlock: {
     borderTopColor: tokens.glassBorder,
     borderTopWidth: 1,
-    paddingTop: 12,
-    gap: 8,
+    paddingTop: 14,
+    marginTop: 4,
+    gap: 10,
+  },
+  xpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  ringLevelName: {
+    color: tokens.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  xpColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  xpLevelLine: {
+    color: tokens.gold,
+    fontWeight: "700",
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  xpScoreText: {
+    color: tokens.textSecondary,
+    fontWeight: "600",
   },
   xpValue: {
     color: tokens.textPrimary,
@@ -667,33 +961,208 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
-  completionPct: {
-    color: tokens.cyanBright,
-    fontSize: 18,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
+  barWrap: {
+    height: 10,
+    justifyContent: "center",
   },
   barTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: tokens.glassElevated,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: tokens.blueBright,
-  },
-  statGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  achievementDot: {
-    width: 10,
+    position: "absolute",
+    left: 0,
+    right: 0,
     height: 10,
     borderRadius: 5,
-    // Gold is reserved for achievements / premium recognition.
-    backgroundColor: tokens.gold,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  barFill: {
+    height: 10,
+    borderRadius: 5,
+    shadowColor: tokens.cyanBright,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  statTile: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 2,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    marginVertical: 4,
+  },
+  statIconTile: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: tokens.glassBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statTileLabel: {
+    color: tokens.textMuted,
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    textAlign: "center",
+    minHeight: 26,
+  },
+  statTileValue: {
+    color: tokens.textPrimary,
+    fontSize: 19,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionIconTile: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: tokens.glassBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderColor: tokens.glassBorderBright,
+    borderWidth: 1,
+    borderRadius: tokens.radiusPill,
+    backgroundColor: "rgba(18, 104, 216, 0.18)",
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  editPillText: {
+    color: tokens.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  identityGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 14,
+  },
+  identityModule: {
+    flexBasis: "47.5%",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+  },
+  identityIconTile: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: tokens.glassBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  identityText: {
+    flex: 1,
+    gap: 2,
+  },
+  identityValue: {
+    color: tokens.textPrimary,
+    fontSize: 13.5,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  achievementScroll: {
+    marginHorizontal: -16,
+  },
+  achievementRow: {
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+  },
+  achievementCard: {
+    width: 118,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: tokens.glassBorder,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    padding: 12,
+    alignItems: "center",
+    gap: 6,
+  },
+  achievementMedallion: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: "rgba(233, 195, 124, 0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  achievementName: {
+    color: tokens.textPrimary,
+    fontSize: 12.5,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 16,
+    minHeight: 32,
+  },
+  achievementDate: {
+    color: tokens.textMuted,
+    fontSize: 11,
+    textAlign: "center",
+  },
+  completionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  completionBody: {
+    flex: 1,
+    gap: 6,
+  },
+  completionRingPct: {
+    color: tokens.cyanBright,
+    fontSize: 17,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
+  completionDoneText: {
+    color: tokens.profit,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 7,
+  },
+  detailRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.06)",
+  },
+  detailValue: {
+    color: tokens.textSecondary,
+    fontSize: 14,
+    flexShrink: 1,
+    textAlign: "right",
   },
 });

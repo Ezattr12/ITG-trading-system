@@ -50,6 +50,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Vendor @itg/calc into the mobile app (canonical profile completion)
+        run: node scripts/vendor-calc.mjs
+
       - name: Install mobile dependencies (standalone, outside workspaces)
         run: npm install --workspaces=false
 

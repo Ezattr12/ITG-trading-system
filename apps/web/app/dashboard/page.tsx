@@ -19,7 +19,10 @@ import { Money } from "@/components/analytics/stat-card";
 import { CountUpDecimal, CountUpMoney, CountUpPct } from "@/components/analytics/count-up";
 import { ensureDisciplineReminderLogged } from "@/lib/discipline/actions";
 import { getLatestCoachInsights } from "@/lib/coach/queries";
-import { calcProfileCompletion } from "@/lib/profile/completion";
+import {
+  calcProfileCompletion,
+  type ProfileCompletionRow,
+} from "@/lib/profile/completion";
 import { LevelRing } from "@/components/profile/level-ring";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { motivationContextFor, selectMotivationMessage } from "@/lib/discipline/motivation";
@@ -30,6 +33,21 @@ import {
 } from "@/lib/discipline/queries";
 
 export const metadata = { title: "Dashboard — ITG TraderOS" };
+
+/**
+ * An all-empty stored row, used when there is no profile row yet:
+ * completion is honestly 0%.
+ */
+const EMPTY_PROFILE_ROW: ProfileCompletionRow = {
+  full_name: null,
+  father_name: null,
+  date_of_birth: null,
+  country: null,
+  avatar_url: null,
+  trading_experience: null,
+  trading_education: null,
+  employment_status: null,
+};
 
 /**
  * Dashboard (Phase 4, spec §17). Computed from the trader's real
@@ -101,16 +119,9 @@ export default async function DashboardPage() {
   // trader's real trades and goals — not profit alone.
   const nextLevel = progressToNextLevel(bundle.levelScore, bundle.levels);
   // Real profile completion (Phase 19) for the completion ring.
-  const profileCompletion = calcProfileCompletion({
-    fullName: user.profile?.full_name,
-    fatherName: user.profile?.father_name,
-    dateOfBirth: user.profile?.date_of_birth,
-    country: user.profile?.country,
-    avatarUrl: user.profile?.avatar_url,
-    tradingExperience: user.profile?.trading_experience,
-    tradingEducation: user.profile?.trading_education,
-    employmentStatus: user.profile?.employment_status,
-  });
+  // The ONE canonical calculator (@itg/calc) reads the stored
+  // row directly — the same calculation as the profile page.
+  const profileCompletion = calcProfileCompletion(user.profile ?? EMPTY_PROFILE_ROW);
   const streakLabel =
     summary.currentStreak === 0
       ? "—"

@@ -29,14 +29,18 @@ export const tokens = {
   auroraCyan: "#00cfff", // aurora depth glow (cyan)
   blueBright: "#2E7CF6", // primary interactive blue
   cyanBright: "#00CFFF", // primary information cyan (active states)
+  navy: "#06152F", // deep-blue gradient base (mandated palette)
+  azure: "#08245A", // deep-blue gradient mid (mandated palette)
+  deepBlue: "#0B3F91", // deep-blue gradient high (mandated palette)
+  royal: "#1268D8", // royal blue gradient stop (mandated palette)
   glass: "rgba(255, 255, 255, 0.075)", // --itg-glass-standard
   glassElevated: "rgba(255, 255, 255, 0.12)", // --itg-glass-elevated
   glassHero: "rgba(255, 255, 255, 0.16)", // --itg-glass-hero
   glassBorder: "rgba(130, 175, 255, 0.16)", // blue-tinted glass border
   glassBorderBright: "rgba(130, 175, 255, 0.32)", // blue-tinted hero border
-  textPrimary: "#f8f7ff", // --itg-text-primary
-  textSecondary: "#d4d5e8", // --itg-text-secondary
-  textMuted: "#8589a6", // --itg-text-muted
+  textPrimary: "#F4F8FF", // mandated white foreground language
+  textSecondary: "#C9D6F2", // mandated soft blue-white
+  textMuted: "#7E8DB0", // mandated muted blue-grey
   profit: "#21f3a5", // --itg-profit
   loss: "#ff4d72", // --itg-loss
   warning: "#f5c451", // --itg-warning
