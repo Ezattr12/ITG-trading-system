@@ -17,7 +17,7 @@ import {
 import { EquityChart, EquitySparkline } from "@/components/analytics/charts";
 import { Money } from "@/components/analytics/stat-card";
 import { CountUpDecimal, CountUpMoney, CountUpPct } from "@/components/analytics/count-up";
-import { ensureDisciplineReminderLogged } from "@/lib/discipline/actions";
+import { ensureDisciplineReminderLogged } from "@/lib/discipline/service";
 import { getLatestCoachInsights } from "@/lib/coach/queries";
 import {
   calcProfileCompletion,

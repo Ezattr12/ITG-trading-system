@@ -37,7 +37,7 @@ vi.mock("@/lib/auth/session", () => ({
     onboarding: null,
   }),
 }));
-vi.mock("@/lib/discipline/actions", () => ({
+vi.mock("@/lib/discipline/service", () => ({
   createNotification: async (input: Record<string, unknown>) => {
     harness.notifications.push(input);
     return true;

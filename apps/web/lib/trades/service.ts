@@ -15,13 +15,13 @@ import {
   hasCriticalBreach,
   utcDate,
 } from "@/lib/risk/engine";
-import { logRiskEvent } from "@/lib/risk/actions";
+import { logRiskEvent } from "@/lib/risk/service";
 import {
   getRecentClosedTrades,
   getRiskDayContext,
   getRiskRules,
 } from "@/lib/risk/queries";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import { refreshCoachInsightsSafely } from "@/lib/coach/service";
 import { createNotification } from "@/lib/discipline/service";
 import { computeTradeMetrics } from "./calculations";

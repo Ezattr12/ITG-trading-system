@@ -10,7 +10,6 @@ import {
   tradingPlanSchema,
 } from "./validation";
 import { saveRiskRulesCore, saveTradingPlanCore } from "./service";
-import type { RiskEventType } from "./types";
 
 /**
  * Risk & trading-plan Server Actions (Phase 5, spec §19–20).
@@ -26,6 +25,11 @@ import type { RiskEventType } from "./types";
  * client, because `risk_events` has no client INSERT policy
  * (migration 0011, append-only like `audit_logs`). Logging is
  * best-effort and never blocks a trade or a save.
+ *
+ * Task 13 (finding F3): the `logRiskEvent` engine moved from
+ * this "use server" module to lib/risk/service.ts, so it is no
+ * longer invocable as a Server Action with a caller-supplied
+ * userId. The trade service core calls it there.
  */
 
 function notConfigured(): ActionResult {
@@ -59,32 +63,6 @@ async function currentUserId(): Promise<string | null> {
     data: { user },
   } = await supabase.auth.getUser();
   return user?.id ?? null;
-}
-
-/** Log a risk event. Returns true only when a row was inserted. */
-export async function logRiskEvent(input: {
-  userId: string;
-  type: RiskEventType;
-  severity: "warning" | "critical" | "positive";
-  message: string;
-  planId?: string | null;
-  riskRuleId?: string | null;
-  tradeId?: string | null;
-  details?: Record<string, unknown>;
-}): Promise<boolean> {
-  const admin = createServiceRoleSupabaseClient();
-  if (!admin) return false;
-  const { error } = await admin.from("risk_events").insert({
-    user_id: input.userId,
-    plan_id: input.planId ?? null,
-    risk_rule_id: input.riskRuleId ?? null,
-    trade_id: input.tradeId ?? null,
-    type: input.type,
-    severity: input.severity,
-    message: input.message,
-    details: input.details ?? {},
-  });
-  return !error;
 }
 
 /* ------------------------------------------------------------ risk rules */

@@ -6,7 +6,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/auth/audit";
-import { createNotification } from "@/lib/discipline/actions";
+import { createNotification } from "@/lib/discipline/service";
 import {
   eligibilityToCriteriaMet,
   evaluateMonthlyEligibility,

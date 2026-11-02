@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import { createNotification } from "@/lib/discipline/service";
 import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";

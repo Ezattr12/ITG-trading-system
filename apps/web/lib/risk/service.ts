@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
+import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { CoreFailure } from "@/lib/trades/service";
+import type { RiskEventType } from "./types";
 import {
   firstZodError,
   riskRulesSchema,
@@ -141,4 +143,42 @@ export async function saveTradingPlanCore(
     details: { name: v.name, markets: v.markets, sessions: v.sessions },
   });
   return { ok: true, planId: created.id as string };
+}
+
+/* ------------------------------------------------------------ risk events */
+
+/**
+ * Log a risk event. Returns true only when a row was inserted.
+ *
+ * Task 13 (security hardening, finding F3): this engine lived
+ * in lib/risk/actions.ts, a "use server" module, which made it
+ * invocable as a Server Action over the wire with a
+ * caller-supplied userId. It now lives here, a plain server
+ * module, callable only from other server code (the trade
+ * service core passes the session/token-derived user id).
+ * Moved verbatim — behaviour unchanged.
+ */
+export async function logRiskEvent(input: {
+  userId: string;
+  type: RiskEventType;
+  severity: "warning" | "critical" | "positive";
+  message: string;
+  planId?: string | null;
+  riskRuleId?: string | null;
+  tradeId?: string | null;
+  details?: Record<string, unknown>;
+}): Promise<boolean> {
+  const admin = createServiceRoleSupabaseClient();
+  if (!admin) return false;
+  const { error } = await admin.from("risk_events").insert({
+    user_id: input.userId,
+    plan_id: input.planId ?? null,
+    risk_rule_id: input.riskRuleId ?? null,
+    trade_id: input.tradeId ?? null,
+    type: input.type,
+    severity: input.severity,
+    message: input.message,
+    details: input.details ?? {},
+  });
+  return !error;
 }

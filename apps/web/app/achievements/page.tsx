@@ -6,9 +6,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
 import { getGamificationBundle } from "@/lib/gamification/queries";
-import { refreshGamification } from "@/lib/gamification/actions";
+import { refreshGamification } from "@/lib/gamification/service";
 import { describeCriteria } from "@/lib/gamification/achievements";
-import { createNotification } from "@/lib/discipline/actions";
+import { createNotification } from "@/lib/discipline/service";
 
 export const metadata = { title: "Achievements — ITG TraderOS" };
 

@@ -37,15 +37,14 @@ export default async function AdminUserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireAdmin();
+  await requireAdmin();
   const configured = isSupabaseConfigured();
   const detail = configured
     ? await getAdminUserDetail(await createServerSupabaseClient(), id)
     : null;
   if (!detail) notFound();
 
-  const financials =
-    configured && user ? await getAuthorisedFinancials(id, user.id) : null;
+  const financials = configured ? await getAuthorisedFinancials(id) : null;
 
   return (
     <>

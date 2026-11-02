@@ -364,9 +364,24 @@ export async function requestFinancialViewAction(
   };
 }
 
-/** Helper for the user-detail page: financials only when a recent audit row exists. */
-export async function getAuthorisedFinancials(userId: string, adminId: string) {
+/**
+ * Helper for the user-detail page: financials only when a recent
+ * audit row exists.
+ *
+ * Task 13 (finding F3): the admin's id used to be a parameter —
+ * as an export of this "use server" module the function was
+ * invocable as a Server Action with a caller-supplied admin id,
+ * so the audit-authorisation check could be made against any
+ * admin's grants. The admin identity is now derived from the
+ * caller's own session (requireAdmin) and only the target user
+ * id remains a parameter; an admin can only ever exercise their
+ * own authorised financial views.
+ */
+export async function getAuthorisedFinancials(userId: string) {
   if (!isSupabaseConfigured()) return null;
+  const admin = await requireAdmin();
+  if (!admin.ok) return null;
+  const adminId = admin.user.id;
   const supabase = await createServerSupabaseClient();
   const rows = await getRecentAuditForUser(supabase, adminId, userId);
   if (!hasRecentFinancialAccess(rows, adminId, userId)) return null;

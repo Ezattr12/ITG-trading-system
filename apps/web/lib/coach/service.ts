@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { mondayOfWeek } from "@/lib/reviews/reviews";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import { deterministicUuid, XP_TABLE } from "@/lib/gamification/xp";
 import type { CoreFailure } from "@/lib/trades/service";
 import { generateCoachInsights } from "./insights";

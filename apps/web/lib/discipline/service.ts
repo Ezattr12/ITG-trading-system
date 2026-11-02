@@ -1,15 +1,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
-import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { awardXp, refreshGamification } from "@/lib/gamification/actions";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import {
+  createServerSupabaseClient,
+  createServiceRoleSupabaseClient,
+} from "@/lib/supabase/server";
+import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import type { CoreFailure } from "@/lib/trades/service";
+import {
+  buildDisciplineReminder,
+  currentRunLoggedLevel,
+  escalationNeeded,
+} from "./engine";
 import {
   firstZodError,
   goalProgressSchema,
   goalSchema,
   goalStatusSchema,
 } from "./validation";
-import { getGoalById } from "./queries";
+import { getGoalById, getLatestDisciplineEvent } from "./queries";
 import type { DisciplineEventKind, NotificationType } from "./types";
 
 /**
@@ -19,8 +28,11 @@ import type { DisciplineEventKind, NotificationType } from "./types";
  *
  * 1. The server-side write engines `logDisciplineEvent` /
  *    `createNotification` (moved verbatim from
- *    lib/discipline/actions.ts; that module re-exports them
- *    so every existing import site is unchanged).
+ *    lib/discipline/actions.ts). Task 13 (finding F3): the
+ *    delegating re-export wrappers in that "use server" module
+ *    were removed — they made the engines invocable as Server
+ *    Actions with a caller-supplied userId — and every import
+ *    site now imports from this module directly.
  *    `discipline_events` and `notifications` have no client
  *    INSERT policy (migrations 0010/0012, append-only like
  *    `audit_logs`) — rows are written server-side via the
@@ -335,4 +347,54 @@ export async function updateGoalStatusCore(
     }
   }
   return { ok: true, goalId: goal.id, status: parsed.data.status };
+}
+
+/* --------------------------------------------------- discipline reminders */
+
+/**
+ * Log the current discipline reminder when it escalated past the
+ * highest level already logged for this missed run, and mirror it
+ * as an in-app notification. Idempotent: the same level is never
+ * logged twice (unique key + escalation check), so calling this
+ * on a page render is safe. Returns the reminder (level 0 = none).
+ *
+ * Called from the dashboard render, where the reminder is shown —
+ * there is no daily cron yet (Phase 13), so the render is the
+ * moment the trader can actually see the reminder.
+ *
+ * Task 13 (finding F3): moved verbatim from
+ * lib/discipline/actions.ts, where as an export of a "use server"
+ * module it was invocable as a Server Action with a
+ * caller-supplied userId. It now lives in this plain server
+ * module; the dashboard passes the session-derived user id.
+ */
+export async function ensureDisciplineReminderLogged(
+  userId: string,
+  lastJournalDate: string | null,
+  today: string,
+): Promise<{ level: 0 | 1 | 2 | 3; title: string; body: string; missedDays: number }> {
+  const reminder = buildDisciplineReminder(lastJournalDate, today);
+  if (reminder.level === 0) return reminder;
+  if (!isSupabaseConfigured()) return reminder;
+  const supabase = await createServerSupabaseClient();
+  const latest = await getLatestDisciplineEvent(supabase, userId, "missed_journal");
+  const loggedLevel = currentRunLoggedLevel(latest, lastJournalDate);
+  if (!escalationNeeded(loggedLevel, reminder.level)) return reminder;
+  const logged = await logDisciplineEvent({
+    userId,
+    eventDate: today,
+    kind: "missed_journal",
+    level: reminder.level,
+    message: reminder.body,
+    details: { missedDays: reminder.missedDays, lastJournalDate },
+  });
+  if (logged) {
+    await createNotification({
+      userId,
+      type: reminder.level === 1 ? "journal_reminder" : "discipline_warning",
+      title: reminder.title,
+      body: reminder.body,
+    });
+  }
+  return reminder;
 }
