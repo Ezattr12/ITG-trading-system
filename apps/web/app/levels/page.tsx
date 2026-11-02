@@ -23,6 +23,18 @@ export const metadata = { title: "Levels — ITG TraderOS" };
  * dimension with no data yet is shown as "No data yet", not
  * scored as 0. Visiting the page also stores the current score
  * and awards any newly earned achievements (best-effort).
+ *
+ * Master Web UI Redesign (Task 5) — PRESENTATION ONLY: the
+ * page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, the level summary as .itg2-kpi
+ * cards with the level name in gold and XP in plain white,
+ * the shared ProgressBar re-scoped by .itg2-goalbar-scope,
+ * the score breakdown as an .itg2-table, the shared XP chart
+ * re-scoped blue -> cyan by .itg2-xp-scope — XP is not AI, so
+ * no violet anywhere — and the level ladder on .itg2-row with
+ * a gold Current chip). All data, copy, score expressions and
+ * empty states are exactly as before, including the
+ * null-score "No level yet" state.
  */
 
 export default async function LevelsPage() {
@@ -63,72 +75,80 @@ export default async function LevelsPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Trader level</h1>
-        <p className="page-lede">
-          Your level is scored on discipline, risk, journaling, goals, psychology,
-          strategy, consistency and performance — not profit alone. Performance is
-          only 5% of the score.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Levels</p>
+          <h1 className="itg2-page-title mt-1">Trader level</h1>
+          <p className="mt-2 text-muted-foreground">
+            Your level is scored on discipline, risk, journaling, goals, psychology,
+            strategy, consistency and performance — not profit alone. Performance is
+            only 5% of the score.
+          </p>
+        </header>
 
         {bundle === null ? (
-          <p className="mt-6 sm:mt-8 text-muted-foreground">
-            Supabase is not connected yet — your level will be calculated from your
-            real trades once the database is connected. Nothing here is estimated.
-          </p>
+          <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+            <p className="text-muted-foreground">
+              Supabase is not connected yet — your level will be calculated from your
+              real trades once the database is connected. Nothing here is estimated.
+            </p>
+          </section>
         ) : bundle.score.score === null ? (
-          <section className="hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6">
-            <h2 className="section-title">No level yet</h2>
+          <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+            <h2 className="itg2-section-title">No level yet</h2>
             <p className="mt-2 text-muted-foreground">
               Journal your first trade, set your risk rules and create a goal — your
               level is calculated from what you actually do, so there is nothing to
               show until then.
             </p>
             <div className="mt-4 flex gap-4">
-              <Link href="/trades/new" className="text-sm font-medium underline">Add a trade</Link>
-              <Link href="/goals" className="text-sm font-medium underline">Create a goal</Link>
-              <Link href="/risk" className="text-sm font-medium underline">Set risk rules</Link>
+              <Link href="/trades/new" className="itg2-link text-sm font-medium">Add a trade</Link>
+              <Link href="/goals" className="itg2-link text-sm font-medium">Create a goal</Link>
+              <Link href="/risk" className="itg2-link text-sm font-medium">Set risk rules</Link>
             </div>
           </section>
         ) : (
           <>
             <section className="motion-reveal mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Level summary">
-              {/* Current level is the hero of this page: raised,
-                  gold glow, gradient level name — premium status
+              {/* Current level is the hero of this page: elevated
+                  glass, the level name in gold — premium status
                   earned from real multi-dimensional scoring. */}
-              <article className="hero-card card-surface-raised card-glow-amber p-4 sm:p-5">
-                <h2 className="text-sm font-medium text-muted-foreground">Current level</h2>
-                <p className="metric-hero text-gradient-gold mt-2">{bundle.score.levelName}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <article className="itg2-card itg2-card-elevated itg2-kpi">
+                <h2 className="itg2-kpi-label">Current level</h2>
+                <p className="itg2-kpi-value">
+                  <span className="itg2-text-gold">{bundle.score.levelName}</span>
+                </p>
+                <p className="itg2-kpi-hint">
                   Score <CountUpDecimal value={bundle.score.score} decimals={1} /> / 100
                 </p>
               </article>
-              <article className="card-surface p-4 sm:p-5">
-                <h2 className="text-sm font-medium text-muted-foreground">Next level</h2>
-                <p className="mt-2 text-xl font-semibold">{progress?.nextLevel ?? "Top level reached"}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Next level</h2>
+                <p className="itg2-kpi-value">{progress?.nextLevel ?? "Top level reached"}</p>
+                <p className="itg2-kpi-hint">
                   {progress?.pointsToNext === null
                     ? "You hold the highest level."
                     : `${progress?.pointsToNext} points to go`}
                 </p>
               </article>
-              <article className="card-surface p-4 sm:p-5">
-                <h2 className="text-sm font-medium text-muted-foreground">Total XP</h2>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Total XP</h2>
                 {/* XP counts up (Phase 16) — XP rewards discipline,
                     journaling and reviews, and the count-up marks
-                    the total without flashing a reward. */}
-                <p className="mt-2 text-xl font-semibold">
+                    the total without flashing a reward. XP stays
+                    plain white in v2: it is not AI. */}
+                <p className="itg2-kpi-value">
                   <CountUpXp value={bundle.xpTotal} />
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="itg2-kpi-hint">
                   Earned for journaling, goals, reviews and discipline.
                 </p>
               </article>
             </section>
 
             {progress !== null && progress.nextLevel !== null ? (
-              <section className="motion-reveal motion-reveal-1 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Progress to next level">
-                <h2 className="section-title">Progress to {progress.nextLevel}</h2>
-                <div className="mt-4">
+              <section className="motion-reveal motion-reveal-1 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Progress to next level">
+                <h2 className="itg2-section-title">Progress to {progress.nextLevel}</h2>
+                <div className="itg2-goalbar-scope mt-4">
                   <ProgressBar
                     percent={progress.progressPct}
                     label={`${progress.progressPct.toFixed(0)}% through ${progress.currentLevel} — ${progress.pointsToNext} points to ${progress.nextLevel}`}
@@ -137,29 +157,29 @@ export default async function LevelsPage() {
               </section>
             ) : null}
 
-            <section className="motion-reveal motion-reveal-2 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Score breakdown">
-              <h2 className="section-title">Score breakdown</h2>
+            <section className="motion-reveal motion-reveal-2 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Score breakdown">
+              <h2 className="itg2-section-title">Score breakdown</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Each dimension is scored 0–100 from your real data. Dimensions with no
                 data yet are not counted — they do not drag your score down.
               </p>
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="itg2-table itg2-table-fit">
                   <thead>
-                    <tr className="text-muted-foreground">
-                      <th className="py-2 pr-4 font-medium">Dimension</th>
-                      <th className="py-2 pr-4 font-medium">Score</th>
-                      <th className="py-2 font-medium">Weight</th>
+                    <tr>
+                      <th>Dimension</th>
+                      <th>Score</th>
+                      <th>Weight</th>
                     </tr>
                   </thead>
-                  <tbody className="list-divider">
+                  <tbody>
                     {bundle.score.dimensions.map((d) => (
-                      <tr key={d.key} className="list-row-premium">
-                        <td className="py-2 pr-4">{d.label}</td>
-                        <td className="py-2 pr-4 tnum">
+                      <tr key={d.key}>
+                        <td>{d.label}</td>
+                        <td className="tnum">
                           {d.value === null ? "No data yet" : `${d.value.toFixed(0)} / 100`}
                         </td>
-                        <td className="py-2 tnum">{(d.weight * 100).toFixed(0)}%</td>
+                        <td className="tnum">{(d.weight * 100).toFixed(0)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -167,15 +187,15 @@ export default async function LevelsPage() {
               </div>
             </section>
 
-            <section className="motion-reveal motion-reveal-3 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="XP history">
-              <h2 className="section-title">XP over time</h2>
+            <section className="motion-reveal motion-reveal-3 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="XP history">
+              <h2 className="itg2-section-title">XP over time</h2>
               {bundle.xpHistory.length === 0 ? (
                 <p className="mt-2 text-muted-foreground">
                   No XP yet — journal a trade or complete a goal to earn your first XP.
                 </p>
               ) : (
                 <div className="mt-4">
-                  <div className="chart-panel">
+                  <div className="itg2-xp-scope">
                     <XpHistoryChart data={bundle.xpHistory} />
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -185,17 +205,17 @@ export default async function LevelsPage() {
               )}
             </section>
 
-            <section className="motion-reveal motion-reveal-4 mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="All levels">
-              <h2 className="section-title">Levels</h2>
-              <ul className="mt-3 list-divider text-sm">
+            <section className="motion-reveal motion-reveal-4 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="All levels">
+              <h2 className="itg2-section-title">Levels</h2>
+              <ul className="mt-3 text-sm">
                 {bundle.levels.map((level) => {
                   const isCurrent = level.name === bundle?.score.levelName;
                   return (
-                    <li key={level.id} className="list-row-premium flex flex-wrap items-center justify-between gap-2 py-2">
+                    <li key={level.id} className="itg2-row flex-wrap gap-2">
                       <span>
-                        <strong className={isCurrent ? "text-gradient-gold" : ""}>{level.name}</strong>
+                        <strong className={isCurrent ? "itg2-text-gold" : ""}>{level.name}</strong>
                         {isCurrent ? (
-                          <span className="ml-2 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+                          <span className="itg2-chip itg2-chip-gold ml-2">
                             Current
                           </span>
                         ) : null}
@@ -211,7 +231,7 @@ export default async function LevelsPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 Thresholds and weights are configurable by an admin in the levels table.
               </p>
-              <Link href="/achievements" className="mt-4 inline-block text-sm font-medium underline">
+              <Link href="/achievements" className="itg2-link mt-4 inline-block text-sm font-medium">
                 View achievements
               </Link>
             </section>
