@@ -20,6 +20,19 @@ export const metadata = { title: "Certificates — ITG TraderOS" };
  * not met, the page shows exactly which criteria are missing.
  * Issued certificates download as a PDF generated on demand
  * from the stored certificate record.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * the page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, the eligibility panel as the
+ * .itg2-hero, criteria markers in the semantic text colours
+ * over a v2 hairline divider, issued rows as .itg2-card with
+ * .itg2-chip status variants and the PDF download as
+ * .itg2-link). The v1 per-state hero glows (emerald / amber /
+ * blue) were retired with the rest of the glow props: the
+ * hero keeps the one v2 treatment and the state stays
+ * carried by the criteria list and the status copy, exactly
+ * as before. All data, eligibility logic, copy and empty
+ * states are exactly as before.
  */
 export default async function CertificatesPage() {
   const user = await getCurrentUser();
@@ -46,25 +59,19 @@ export default async function CertificatesPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Certificates</h1>
-        <p className="page-lede">
-          A monthly ITG Performance Certificate is earned, not bought — it is
-          issued only when the month&apos;s journaling, risk discipline,
-          routine and review requirements are all met.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Certificates</p>
+          <h1 className="itg2-page-title mt-1">Certificates</h1>
+          <p className="mt-2 text-muted-foreground">
+            A monthly ITG Performance Certificate is earned, not bought — it is
+            issued only when the month&apos;s journaling, risk discipline,
+            routine and review requirements are all met.
+          </p>
+        </header>
 
-        <section
-          className={`hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6 ${
-            !configured || !eligibility
-              ? ""
-              : alreadyIssued
-                ? "card-glow-emerald"
-                : eligibility.eligible
-                  ? "card-glow-amber"
-                  : "card-glow-blue"
-          }`}
-        >
-          <h2 className="section-title">
+        <section className="itg2-hero mt-6 sm:mt-8">
+          <div className="itg2-hero-inner p-4 sm:p-6">
+          <h2 className="itg2-section-title">
             {monthLabel(currentMonth)} — eligibility
           </h2>
           {!configured || !eligibility ? (
@@ -75,10 +82,10 @@ export default async function CertificatesPage() {
             </p>
           ) : (
             <>
-              <ul className="mt-4 list-divider">
+              <ul className="mt-4 divide-y divide-[rgba(120,175,255,0.08)]">
                 {eligibility.criteria.map((c) => (
                   <li key={c.key} className="flex items-start gap-2 py-2 text-sm">
-                    <span aria-hidden className={c.met ? "text-emerald-400" : "text-muted-foreground"}>{c.met ? "✓" : "○"}</span>
+                    <span aria-hidden className={c.met ? "itg2-text-profit" : "text-muted-foreground"}>{c.met ? "✓" : "○"}</span>
                     <span>
                       <span className="font-medium">{c.label}</span>
                       <span className="text-muted-foreground"> — {c.detail}</span>
@@ -88,7 +95,7 @@ export default async function CertificatesPage() {
               </ul>
               <div className="mt-4">
                 {alreadyIssued ? (
-                  <p className="text-sm text-emerald-300">
+                  <p className="text-sm itg2-text-profit">
                     Certificate already issued for this month — see below to
                     download it.
                   </p>
@@ -103,10 +110,11 @@ export default async function CertificatesPage() {
               </div>
             </>
           )}
+          </div>
         </section>
 
         <section className="mt-6 sm:mt-8">
-          <h2 className="section-title">Issued certificates</h2>
+          <h2 className="itg2-section-title">Issued certificates</h2>
           {certificates.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No certificates issued yet. Meet a month&apos;s requirements and
@@ -117,7 +125,7 @@ export default async function CertificatesPage() {
               {certificates.map((c) => (
                 <li
                   key={c.id}
-                  className="list-row-premium flex flex-wrap items-center justify-between gap-3 card-surface p-4 sm:p-5"
+                  className="itg2-card flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5"
                 >
                   <div>
                     <p className="font-medium tnum">
@@ -125,12 +133,12 @@ export default async function CertificatesPage() {
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${
+                        className={`itg2-chip capitalize ${
                           c.status === "issued"
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                            ? "itg2-chip-profit"
                             : c.status === "revoked"
-                              ? "border-red-500/40 bg-red-500/10 text-red-300"
-                              : "border-border bg-muted/60 text-muted-foreground"
+                              ? "itg2-chip-loss"
+                              : "itg2-chip-muted"
                         }`}
                       >
                         {c.status}
@@ -141,7 +149,7 @@ export default async function CertificatesPage() {
                   {c.status === "issued" ? (
                     <Link
                       href={`/certificates/${encodeURIComponent(c.certificate_id)}/pdf`}
-                      className="text-sm font-medium text-emerald-300 underline"
+                      className="itg2-link"
                     >
                       Download PDF
                     </Link>

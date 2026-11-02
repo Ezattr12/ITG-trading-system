@@ -1929,6 +1929,13 @@ select.itg2-select {
     0 0 34px rgba(18, 104, 216, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
+/* Disabled primary (a pending submit): the dim the shadcn
+   Button used to supply, so a native .itg2-btn-primary
+   submit reads as inert while its action is in flight. */
+.itg2-btn-primary:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .itg2-btn-ai {
   display: inline-flex;
   align-items: center;
