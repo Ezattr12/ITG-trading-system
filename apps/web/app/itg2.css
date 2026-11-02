@@ -388,6 +388,16 @@
     background: rgba(245, 196, 81, 0.1);
     color: #f7dfa0;
   }
+  /* AI chip (Task 4 sweep, AI Coach): the chat's
+     narration badge — violet is the AI identity, and this
+     is its chip form. The values mirror the Tailwind
+     violet badge it replaces (violet-400 border/fill,
+     violet-200 text). */
+  .itg2-chip-ai {
+    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(167, 139, 250, 0.1);
+    color: #ddd6fe;
+  }
   .itg2-chip-dir {
     text-transform: uppercase;
   }
@@ -1960,6 +1970,14 @@ select.itg2-select {
     0 0 34px rgba(124, 45, 255, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
+/* Disabled AI button (a pending or disabled submit):
+   the same parity dim as .itg2-btn-primary:disabled —
+   the shadcn Button it replaces supplied it, so a native
+   .itg2-btn-ai submit reads as inert while disabled. */
+.itg2-btn-ai:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .itg2-btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -1978,6 +1996,44 @@ select.itg2-select {
 .itg2-btn-ghost:hover {
   border-color: rgba(0, 207, 255, 0.55);
   background: rgba(46, 124, 246, 0.16);
+}
+
+/*
+ * .itg2-chip-btn (Task 4 sweep, AI Coach) — the chat's
+ * suggestion chips: small ghost pills on bare <button>s,
+ * so per the Page 3 rule their box, type AND paint live
+ * here in the unlayered tail with the other button rules.
+ * Hairline blue border over a faint blue wash, muted text
+ * that brightens to the primary white on hover, and the
+ * disabled dim the utility version carried.
+ */
+.itg2-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  border: 1px solid rgba(120, 175, 255, 0.22);
+  background: rgba(46, 124, 246, 0.06);
+  cursor: pointer;
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.itg2-chip-btn:hover {
+  color: var(--itg-text-primary);
+  border-color: rgba(140, 195, 255, 0.45);
+  background: rgba(46, 124, 246, 0.14);
+}
+.itg2-chip-btn:focus-visible {
+  outline: 2px solid var(--itg-cyan-400);
+  outline-offset: 2px;
+}
+.itg2-chip-btn:disabled {
+  opacity: 0.5;
 }
 
 /*

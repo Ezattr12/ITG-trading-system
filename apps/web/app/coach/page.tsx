@@ -29,6 +29,16 @@ export const metadata = { title: "AI Coach — ITG TraderOS" };
  * connected LLM under the number guard — each answer badges
  * which of the two produced it, so a model is never claimed
  * when none was involved.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION
+ * ONLY: the page moved onto the v2 system (flat header
+ * band with the AI eyebrow, the week's analysis and the
+ * Ask section on .itg2-card-ai — violet stays the AI
+ * identity on this surface — insight cards on .itg2-card
+ * with severity carried by .itg2-chip variants, the forms
+ * on the v2 form system). The engine, the chat pipeline,
+ * the evidence strings and every behaviour are exactly
+ * as before.
  */
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -51,24 +61,24 @@ function InsightCard({ insight, index = 0 }: { insight: AiInsightRow; index?: nu
     evidence.push(`journal completion ${s.journalCompletionPct}%`);
   if (s.criticalRiskEvents !== undefined) evidence.push(`${s.criticalRiskEvents} critical risk events`);
   if (s.goalsTotal !== undefined) evidence.push(`goals ${s.goalsCompleted ?? 0}/${s.goalsTotal}`);
-  const severityStyle =
+  const severityChip =
     s.severity === "high"
-      ? "border-red-500/40 bg-red-500/10 text-red-300"
+      ? "itg2-chip-loss"
       : s.severity === "medium"
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+        ? "itg2-chip-warning"
         : s.severity === "positive"
-          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-          : "border-border bg-muted/60 text-muted-foreground";
+          ? "itg2-chip-profit"
+          : "itg2-chip-muted";
   return (
     // Insights reveal one after another (Phase 16), 60ms apart.
     <article
-      className="motion-reveal card-surface p-4 sm:p-5"
+      className="motion-reveal itg2-card p-4 sm:p-5"
       style={{ animationDelay: `${Math.min(index, 5) * 60}ms` }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">{insight.summary}</h3>
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${severityStyle}`}>
+          <span className={`itg2-chip ${severityChip}`}>
             {SEVERITY_LABEL[s.severity] ?? s.severity}
           </span>
           <span className="text-xs capitalize text-muted-foreground">
@@ -137,20 +147,24 @@ export default async function CoachPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">AI Coach</h1>
-        <p className="page-lede">
-          Weekly analysis of your own trading data — performance, mistakes, strategies, psychology,
-          risk, goals and discipline. Every insight cites the real numbers it was computed from.
-          Ask the coach a question below: answers are computed from your stored trades by the
-          deterministic coach engine, and each answer shows whether it was narrated by a
-          connected AI model or produced by that built-in analysis.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow itg2-eyebrow-ai">AI Coach</p>
+          <h1 className="itg2-page-title mt-1">AI Coach</h1>
+          <p className="mt-2 text-muted-foreground">
+            Weekly analysis of your own trading data — performance, mistakes, strategies, psychology,
+            risk, goals and discipline. Every insight cites the real numbers it was computed from.
+            Ask the coach a question below: answers are computed from your stored trades by the
+            deterministic coach engine, and each answer shows whether it was narrated by a
+            connected AI model or produced by that built-in analysis.
+          </p>
+        </header>
 
         {/* AI intelligence hero (Phase 18): the week's analysis
-            leads in a raised card with the violet AI glow — the
-            one place violet is the accent. */}
-        <section className="hero-card motion-reveal mt-6 sm:mt-8 card-surface-raised card-glow-violet p-4 sm:p-6" aria-label="This week's analysis">
-          <h2 className="section-title flex items-center gap-2">
+            leads in the AI card with the violet AI glow — the
+            one place violet is the accent (v2: .itg2-card-ai,
+            the same treatment as the dashboard's AI card). */}
+        <section className="motion-reveal itg2-card itg2-card-ai mt-6 p-4 sm:mt-8 sm:p-6" aria-label="This week's analysis">
+          <h2 className="itg2-section-title flex items-center gap-2">
             {/* AI status indicator (Phase 16): a soft purple pulse.
                 Decorative only — the text beside it carries the
                 meaning, and reduced motion stops the pulse. */}
@@ -192,8 +206,8 @@ export default async function CoachPage() {
             chat is read-only and every answer labels its facts,
             inferences and recommendations, plus how it was
             produced (AI-narrated vs deterministic analysis). */}
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Ask the coach">
-          <h2 className="section-title flex items-center gap-2">
+        <section className="itg2-card itg2-card-ai mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Ask the coach">
+          <h2 className="itg2-section-title flex items-center gap-2">
             <span aria-hidden="true" className="motion-ai-dot inline-block h-2 w-2 shrink-0 rounded-full bg-ai" />
             Ask the coach
           </h2>
@@ -202,18 +216,16 @@ export default async function CoachPage() {
           </div>
         </section>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6" aria-label="Backtesting">
-          <h2 className="section-title">Backtesting</h2>
+        <section className="itg2-card mt-6 p-4 sm:mt-8 sm:p-6" aria-label="Backtesting">
+          <h2 className="itg2-section-title">Backtesting</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Log the backtesting sessions you completed. Each session earns +15 XP.
           </p>
-          <div className="card-surface-inset mt-4 p-4">
-            <BacktestingForm defaultDate={today} />
-          </div>
+          <BacktestingForm defaultDate={today} />
         </section>
 
         <section className="mt-6 sm:mt-8" aria-label="Insight history">
-          <h2 className="section-title">Insight history</h2>
+          <h2 className="itg2-section-title">Insight history</h2>
           {storedHistory.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No stored insights yet — refresh an analysis to start your history.
@@ -226,11 +238,11 @@ export default async function CoachPage() {
             </div>
           )}
           <p className="mt-4 text-sm">
-            <Link href="/reviews/weekly" className="underline">
+            <Link href="/reviews/weekly" className="itg2-link">
               Weekly review
             </Link>
             {" · "}
-            <Link href="/reports" className="underline">
+            <Link href="/reports" className="itg2-link">
               Reports
             </Link>
           </p>

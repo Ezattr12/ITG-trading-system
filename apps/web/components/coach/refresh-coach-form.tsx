@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
 import { refreshCoachAnalysisAction } from "@/lib/coach/actions";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -12,6 +11,17 @@ import type { ActionResult } from "@/lib/auth/actions";
  * stores only insights that are new or changed — a refresh
  * with unchanged data stores nothing, and the result message
  * says so.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION
+ * ONLY: the form moved onto the v2 form system
+ * (.itg2-label / .itg2-input) and the submit is a native
+ * button on .itg2-btn-ai — violet, because refreshing the
+ * analysis IS the AI action (the class carries its full
+ * box/type/paint in the unlayered tail of itg2.css, like
+ * the other v2 form submits). The result lines use the
+ * semantic .itg2-text-loss / .itg2-text-profit tones. The
+ * action, the field and the pending content are exactly
+ * as before.
  */
 export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: string }) {
   const [state, formAction, pending] = useActionState<
@@ -21,7 +31,7 @@ export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: strin
   return (
     <form action={formAction} className="mt-4 flex flex-wrap items-end gap-4">
       <div>
-        <label htmlFor="weekStartDate" className="text-sm font-medium">
+        <label htmlFor="weekStartDate" className="itg2-label">
           Week starting (Monday)
         </label>
         <input
@@ -30,10 +40,10 @@ export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: strin
           type="date"
           defaultValue={defaultWeekStart}
           required
-          className="mt-1 block h-11 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 block itg2-input"
         />
       </div>
-      <Button type="submit" disabled={pending} aria-busy={pending}>
+      <button type="submit" disabled={pending} aria-busy={pending} className="itg2-btn-ai">
         {pending ? (
           <>
             {/* Generating state (Phase 16): a soft purple pulse
@@ -45,9 +55,9 @@ export function RefreshCoachForm({ defaultWeekStart }: { defaultWeekStart: strin
         ) : (
           "Refresh analysis"
         )}
-      </Button>
-      {state.error && <p className="motion-fade-in w-full text-sm text-red-400">{state.error}</p>}
-      {state.message && <p className="motion-fade-in w-full text-sm text-emerald-400">{state.message}</p>}
+      </button>
+      {state.error && <p className="motion-fade-in w-full text-sm itg2-text-loss">{state.error}</p>}
+      {state.message && <p className="motion-fade-in w-full text-sm itg2-text-profit">{state.message}</p>}
     </form>
   );
 }

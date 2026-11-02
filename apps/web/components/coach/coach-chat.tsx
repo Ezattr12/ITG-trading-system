@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 /**
  * Interactive AI Coach chat (Phase 22).
@@ -16,6 +15,16 @@ import { Button } from "@/components/ui/button";
  * model rewrote the engine's analysis, "Deterministic
  * analysis" when it did not. Nothing here claims a model
  * is involved when one is not.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION
+ * ONLY: the turns sit on .itg2-inset wells inside the
+ * page's AI card, the narration badge is an .itg2-chip
+ * (.itg2-chip-ai when a model narrated, .itg2-chip-muted
+ * when it did not), the suggestion chips are .itg2-chip-btn
+ * ghost pills, the question field is .itg2-input and the
+ * submit a native button on .itg2-btn-ai. The ask()
+ * pipeline, history building and every string are exactly
+ * as before.
  */
 
 interface CoachEvidence {
@@ -83,20 +92,14 @@ function AnswerSections({ answer }: { answer: CoachAnswer }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-            answer.narration === "llm"
-              ? "border-violet-400/40 bg-violet-400/10 text-violet-200"
-              : "border-border bg-muted/60 text-muted-foreground"
-          }`}
+          className={`itg2-chip ${answer.narration === "llm" ? "itg2-chip-ai" : "itg2-chip-muted"}`}
         >
           {answer.narration === "llm"
             ? `AI-narrated${answer.narrationProvider ? ` · ${answer.narrationProvider}` : ""}`
             : "Deterministic analysis"}
         </span>
         {answer.status === "insufficient_data" && (
-          <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-200">
-            Not enough data yet
-          </span>
+          <span className="itg2-chip itg2-chip-warning">Not enough data yet</span>
         )}
       </div>
       {section("Facts", answer.facts)}
@@ -167,10 +170,10 @@ export function CoachChat() {
           {turns.map((turn, i) =>
             turn.kind === "user" ? (
               <div key={i} className="flex justify-end">
-                <p className="card-surface-inset max-w-[85%] px-4 py-2.5 text-sm">{turn.content}</p>
+                <p className="itg2-inset max-w-[85%] px-4 py-2.5 text-sm">{turn.content}</p>
               </div>
             ) : (
-              <div key={i} className="card-surface-inset motion-fade-in px-4 py-3.5">
+              <div key={i} className="itg2-inset motion-fade-in px-4 py-3.5">
                 <AnswerSections answer={turn.answer} />
               </div>
             ),
@@ -185,7 +188,7 @@ export function CoachChat() {
             type="button"
             disabled={pending}
             onClick={() => void ask(suggestion)}
-            className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-50"
+            className="itg2-chip-btn"
           >
             {suggestion}
           </button>
@@ -209,10 +212,15 @@ export function CoachChat() {
             onChange={(e) => setInput(e.target.value)}
             maxLength={1000}
             placeholder="Ask about your trading…"
-            className="block h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="itg2-input"
           />
         </div>
-        <Button type="submit" disabled={pending || input.trim() === ""} aria-busy={pending}>
+        <button
+          type="submit"
+          disabled={pending || input.trim() === ""}
+          aria-busy={pending}
+          className="itg2-btn-ai"
+        >
           {pending ? (
             <>
               <span aria-hidden="true" className="motion-ai-dot inline-block h-2 w-2 rounded-full bg-ai" />
@@ -221,10 +229,10 @@ export function CoachChat() {
           ) : (
             "Ask"
           )}
-        </Button>
+        </button>
       </form>
       {error && (
-        <p className="motion-fade-in mt-3 text-sm text-red-400" role="alert">
+        <p className="motion-fade-in mt-3 text-sm itg2-text-loss" role="alert">
           {error}
         </p>
       )}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
 import { logBacktestingSessionAction } from "@/lib/coach/actions";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -12,6 +11,15 @@ import type { ActionResult } from "@/lib/auth/actions";
  * per session through the existing awardXp path. Re-submitting
  * the same total awards nothing new; raising the total awards
  * only the new sessions.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION
+ * ONLY: the form moved onto the v2 form system
+ * (.itg2-label / .itg2-input) and the submit is a native
+ * button on .itg2-btn-primary — blue, not violet, because
+ * logging a session is a journal action, not an AI action.
+ * The result lines use the semantic .itg2-text-loss /
+ * .itg2-text-profit tones. The action, the fields and the
+ * +15 XP wiring are exactly as before.
  */
 export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
   const [state, formAction, pending] = useActionState<
@@ -21,7 +29,7 @@ export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
   return (
     <form action={formAction} className="mt-4 flex flex-wrap items-end gap-4">
       <div>
-        <label htmlFor="activityDate" className="text-sm font-medium">
+        <label htmlFor="activityDate" className="itg2-label">
           Date
         </label>
         <input
@@ -30,11 +38,11 @@ export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
           type="date"
           defaultValue={defaultDate}
           required
-          className="mt-1 block h-11 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 block itg2-input"
         />
       </div>
       <div>
-        <label htmlFor="sessions" className="text-sm font-medium">
+        <label htmlFor="sessions" className="itg2-label">
           Backtesting sessions today (total)
         </label>
         <input
@@ -45,14 +53,14 @@ export function BacktestingForm({ defaultDate }: { defaultDate: string }) {
           max={10}
           defaultValue={1}
           required
-          className="mt-1 block h-11 w-24 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 block itg2-input"
         />
       </div>
-      <Button type="submit" disabled={pending}>
+      <button type="submit" disabled={pending} className="itg2-btn-primary">
         {pending ? "Logging…" : "Log backtesting (+15 XP per session)"}
-      </Button>
-      {state.error && <p className="w-full text-sm text-red-400">{state.error}</p>}
-      {state.message && <p className="w-full text-sm text-emerald-400">{state.message}</p>}
+      </button>
+      {state.error && <p className="w-full text-sm itg2-text-loss">{state.error}</p>}
+      {state.message && <p className="w-full text-sm itg2-text-profit">{state.message}</p>}
     </form>
   );
 }
