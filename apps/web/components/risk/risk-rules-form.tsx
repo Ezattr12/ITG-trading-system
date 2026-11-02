@@ -12,13 +12,20 @@ import type { RiskRules } from "@/lib/risk/types";
  * Every limit is optional — a blank field means "no limit set"
  * and the engine skips that check. Saving replaces the trader's
  * single active rules row (upsert in the Server Action).
+ *
+ * Master Web UI Redesign (Task 7) — PRESENTATION ONLY: fields
+ * moved onto the v2 form system (.itg2-field / .itg2-label /
+ * .itg2-input, the same system as the trading plan form) and
+ * the submit uses .itg2-btn-primary .itg2-btn-save via
+ * ActionForm's submitClassName. No field was added, removed,
+ * renamed, reordered or given a new default.
  */
 export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
-  const inputClass = "min-h-[44px]";
+  const inputClass = "itg2-input";
   const value = (v: number | null | undefined) =>
     v === null || v === undefined ? "" : String(v);
   return (
-    <ActionForm action={saveRiskRulesAction} submitLabel="Save risk rules">
+    <ActionForm action={saveRiskRulesAction} submitLabel="Save risk rules" submitClassName="itg2-btn-primary itg2-btn-save">
       <p className="text-sm text-muted-foreground">
         Leave a field blank to turn that rule off. Breaches are
         warnings in your journal — the daily loss limit and maximum
@@ -26,8 +33,8 @@ export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
         Nothing here closes or executes a real trade.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="maxRiskPerTradePct">Max risk per trade (%)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxRiskPerTradePct">Max risk per trade (%)</Label>
           <Input
             id="maxRiskPerTradePct"
             name="maxRiskPerTradePct"
@@ -41,8 +48,8 @@ export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxDailyLoss">Max daily loss</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxDailyLoss">Max daily loss</Label>
           <Input
             id="maxDailyLoss"
             name="maxDailyLoss"
@@ -55,8 +62,8 @@ export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
             inputMode="decimal"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxTradesPerDay">Max trades per day</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxTradesPerDay">Max trades per day</Label>
           <Input
             id="maxTradesPerDay"
             name="maxTradesPerDay"
@@ -70,8 +77,8 @@ export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
             inputMode="numeric"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxConsecutiveLosses">Max consecutive losses</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxConsecutiveLosses">Max consecutive losses</Label>
           <Input
             id="maxConsecutiveLosses"
             name="maxConsecutiveLosses"
@@ -85,8 +92,8 @@ export function RiskRulesForm({ rules }: { rules: RiskRules | null }) {
             inputMode="numeric"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="maxLeverage">Max leverage (×)</Label>
+        <div className="itg2-field space-y-2">
+          <Label className="itg2-label" htmlFor="maxLeverage">Max leverage (×)</Label>
           <Input
             id="maxLeverage"
             name="maxLeverage"
