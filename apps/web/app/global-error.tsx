@@ -5,9 +5,11 @@
  * of the root layout when the layout itself fails, so it
  * cannot rely on globals.css, Tailwind, or the self-hosted
  * font — everything is inline, using the app's palette values
- * (globals.css: background hsl(270 100% 6%), foreground
- * hsl(272 25% 94%), primary hsl(262 83% 58%)). Last-resort UI:
- * if this shows, the only safe action offered is a full reload.
+ * (the v2 tokens in globals.css: background #04060C,
+ * foreground #F4F8FF, primary #1268D8 — Task 10 aligned these
+ * literals to the v2 palette; they were the v1 violet values
+ * before). Last-resort UI: if this shows, the only safe
+ * action offered is a full reload.
  */
 export default function GlobalError({
   error,
@@ -21,8 +23,8 @@ export default function GlobalError({
       <body
         style={{
           margin: 0,
-          backgroundColor: "#0d0217",
-          color: "#efeaf6",
+          backgroundColor: "#04060C",
+          color: "#F4F8FF",
           fontFamily:
             "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
         }}
@@ -58,7 +60,7 @@ export default function GlobalError({
                 padding: "0 1.25rem",
                 borderRadius: "0.375rem",
                 border: "none",
-                backgroundColor: "#7c3aed",
+                backgroundColor: "#1268D8",
                 color: "#ffffff",
                 fontSize: "0.875rem",
                 fontWeight: 500,

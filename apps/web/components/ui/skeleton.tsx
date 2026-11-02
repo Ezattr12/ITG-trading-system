@@ -12,6 +12,13 @@ import { cn } from "@/lib/utils";
  * token system with no edit. The card skeletons now carry the
  * shared card radius (rounded-xl) instead of the base .skeleton
  * radius, so a loading card matches a loaded card.
+ * Task 10: the card and panel blocks now also carry
+ * .itg2-skeleton (apps/web/app/itg2.css) — the L1 glass
+ * surface at the v2 card radius (24px, so the rounded-xl is
+ * gone: the class supplies the radius), so a loading page
+ * wears the same glass as the loaded one. The title and lede
+ * bars stay flat .skeleton shimmer — they stand in for text,
+ * not for cards. Geometry (heights, grid, gaps) is unchanged.
  */
 export function Skeleton({ className }: { className?: string }) {
   return <div aria-hidden="true" className={cn("skeleton", className)} />;
@@ -25,10 +32,10 @@ export function PageSkeleton({ cards = 4 }: { cards?: number }) {
       <Skeleton className="mt-2 h-5 w-72 max-w-full" />
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: cards }, (_, i) => (
-          <Skeleton key={i} className="h-28 rounded-xl" />
+          <Skeleton key={i} className="itg2-skeleton h-28" />
         ))}
       </div>
-      <Skeleton className="mt-6 h-64 w-full rounded-xl" />
+      <Skeleton className="itg2-skeleton mt-6 h-64 w-full" />
     </div>
   );
 }

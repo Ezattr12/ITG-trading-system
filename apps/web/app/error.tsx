@@ -25,7 +25,7 @@ export default function AppError({
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-4 text-center">
+      <div className="itg2-card itg2-card-flat w-full max-w-md space-y-4 p-8 text-center">
         <h1 className="text-2xl font-bold">Something went wrong</h1>
         <p className="text-sm text-muted-foreground">
           This page hit an unexpected error. Nothing was saved or changed by
@@ -37,11 +37,7 @@ export default function AppError({
             Reference: <span className="font-mono">{error.digest}</span>
           </p>
         ) : null}
-        <button
-          type="button"
-          onClick={reset}
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground"
-        >
+        <button type="button" onClick={reset} className="itg2-btn-primary">
           Try again
         </button>
       </div>
