@@ -19,6 +19,15 @@ export const metadata = { title: "Psychology — ITG TraderOS" };
  * from the trader's real closed trades and the psychology records
  * they entered in Advanced Review. With no psychology data yet
  * the page says so honestly; nothing is estimated.
+ *
+ * Master Web UI Redesign (Task 8) — PRESENTATION ONLY: the
+ * page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, the summary as .itg2-kpi cards,
+ * and each breakdown as a glass panel holding an .itg2-table
+ * whose P&L keeps its profit / loss tone via .itg2-text-profit
+ * / .itg2-text-loss). All data, copy and empty states are
+ * exactly as before. Psychology is the trader's own record,
+ * not AI — no violet anywhere on this page.
  */
 
 function BreakdownTable({
@@ -29,31 +38,31 @@ function BreakdownTable({
   rows: { label: string; trades: number; pnl: number; winRate: number | null }[];
 }) {
   return (
-    <section className="mt-6 sm:mt-8" aria-label={title}>
-      <h2 className="section-title">{title}</h2>
+    <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label={title}>
+      <h2 className="itg2-section-title">{title}</h2>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
           No data yet — record emotion, confidence and discipline in
           a trade&apos;s Advanced Review and it will appear here.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto card-surface">
-          <table className="w-full text-sm">
+        <div className="mt-4 overflow-x-auto">
+          <table className="itg2-table itg2-table-fit">
             <thead>
-              <tr className="border-b bg-muted/40 text-left text-muted-foreground">
-                <th className="px-3 py-2 font-medium">Group</th>
-                <th className="px-3 py-2 font-medium">Trades</th>
-                <th className="px-3 py-2 font-medium">P&amp;L</th>
-                <th className="px-3 py-2 font-medium">Win rate</th>
+              <tr>
+                <th>Group</th>
+                <th>Trades</th>
+                <th>P&amp;L</th>
+                <th>Win rate</th>
               </tr>
             </thead>
-            <tbody className="list-divider">
+            <tbody>
               {rows.map((row) => (
-                <tr key={row.label} className="list-row-premium">
-                  <td className="px-3 py-2 font-medium capitalize">{row.label}</td>
-                  <td className="px-3 py-2 tnum">{row.trades}</td>
-                  <td className={`px-3 py-2 tnum ${row.pnl > 0 ? "text-emerald-400" : row.pnl < 0 ? "text-red-400" : ""}`}>{formatMoney(row.pnl)}</td>
-                  <td className="px-3 py-2 tnum">
+                <tr key={row.label}>
+                  <td className="capitalize">{row.label}</td>
+                  <td className="tnum">{row.trades}</td>
+                  <td className={`tnum ${row.pnl > 0 ? "itg2-text-profit" : row.pnl < 0 ? "itg2-text-loss" : ""}`}>{formatMoney(row.pnl)}</td>
+                  <td className="tnum">
                     {row.winRate === null ? "—" : `${row.winRate.toFixed(1)}%`}
                   </td>
                 </tr>
@@ -89,41 +98,44 @@ export default async function PsychologyPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Psychology</h1>
-        <p className="page-lede">
-          How your state of mind lines up with your results. These
-          options exist for honest journaling — FOMO and revenge
-          trades are recorded so you can see their cost, not
-          encouraged.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Psychology</p>
+          <h1 className="itg2-page-title mt-1">Psychology</h1>
+          <p className="mt-2 text-muted-foreground">
+            How your state of mind lines up with your results. These
+            options exist for honest journaling — FOMO and revenge
+            trades are recorded so you can see their cost, not
+            encouraged.
+          </p>
+        </header>
 
         {bundle.trades.length === 0 && (
-          <p role="status" className="mt-4 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+          <p role="status" className="itg2-notice itg2-notice-neutral mt-4">
             No closed trades yet — psychology data appears here once
             you journal trades with emotion, confidence and discipline.
           </p>
         )}
 
         <section className="mt-6 sm:mt-8 grid gap-4 sm:grid-cols-3" aria-label="Psychology summary">
-          <article className="card-surface p-4 sm:p-5">
-            <h2 className="text-sm font-medium text-muted-foreground">Average confidence</h2>
-            <p className="mt-2 text-xl font-semibold tnum">
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Average confidence</h2>
+            <p className="itg2-kpi-value tnum">
               {psych.avgConfidence === null ? "—" : `${psych.avgConfidence.toFixed(1)} / 5`}
             </p>
           </article>
-          <article className="card-surface p-4 sm:p-5">
-            <h2 className="text-sm font-medium text-muted-foreground">Good discipline</h2>
-            <p className="mt-2 text-xl font-semibold tnum">
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Good discipline</h2>
+            <p className="itg2-kpi-value tnum">
               {psych.goodDisciplinePct === null ? "—" : `${psych.goodDisciplinePct.toFixed(0)}%`}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Share of rated trades with good discipline.</p>
+            <p className="itg2-kpi-hint">Share of rated trades with good discipline.</p>
           </article>
-          <article className="card-surface p-4 sm:p-5">
-            <h2 className="text-sm font-medium text-muted-foreground">Journal completion</h2>
-            <p className="mt-2 text-xl font-semibold tnum">
+          <article className="itg2-card itg2-kpi">
+            <h2 className="itg2-kpi-label">Journal completion</h2>
+            <p className="itg2-kpi-value tnum">
               {psych.journalCompletionPct.toFixed(0)}%
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Closed trades with a psychology record or lesson.</p>
+            <p className="itg2-kpi-hint">Closed trades with a psychology record or lesson.</p>
           </article>
         </section>
 

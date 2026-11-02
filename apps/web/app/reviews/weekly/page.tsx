@@ -17,6 +17,14 @@ export const metadata = { title: "Weekly Review — ITG TraderOS" };
  * week's aggregates are computed from the real trades when the
  * review is saved. A completed review also counts toward the
  * monthly certificate's review criterion.
+ *
+ * Master Web UI Redesign (Task 8) — PRESENTATION ONLY: the
+ * page moved onto the v2 system (flat header band with
+ * eyebrow + .itg2-page-title, the review form in a flat glass
+ * panel, and past reviews as .itg2-card rows whose P&L keeps
+ * its profit / loss tone via .itg2-text-profit /
+ * .itg2-text-loss). All data, copy and empty states are
+ * exactly as before.
  */
 export default async function WeeklyReviewPage() {
   const user = await getCurrentUser();
@@ -35,16 +43,19 @@ export default async function WeeklyReviewPage() {
 
   return (
     <AppShell email={user.email}>
-        <h1 className="page-title">Weekly Review</h1>
-        <p className="page-lede">
-          Review the week honestly — what worked, what did not, and what to
-          focus on next. Completing a review earns +30 XP, and the
-          week&apos;s trades, P&L and win rate are filled in automatically
-          from your journal.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Weekly Review</p>
+          <h1 className="itg2-page-title mt-1">Weekly Review</h1>
+          <p className="mt-2 text-muted-foreground">
+            Review the week honestly — what worked, what did not, and what to
+            focus on next. Completing a review earns +30 XP, and the
+            week&apos;s trades, P&L and win rate are filled in automatically
+            from your journal.
+          </p>
+        </header>
 
-        <section className="hero-card mt-6 sm:mt-8 card-surface-raised card-glow-blue p-4 sm:p-6">
-          <h2 className="section-title">New weekly review</h2>
+        <section className="itg2-card itg2-card-flat mt-6 sm:mt-8 p-4 sm:p-6">
+          <h2 className="itg2-section-title">New weekly review</h2>
           {!configured ? (
             <p className="mt-2 text-muted-foreground">
               Supabase is not connected yet — weekly reviews will be saved
@@ -56,7 +67,7 @@ export default async function WeeklyReviewPage() {
         </section>
 
         <section className="mt-6 sm:mt-8">
-          <h2 className="section-title">Past reviews</h2>
+          <h2 className="itg2-section-title">Past reviews</h2>
           {reviews.length === 0 ? (
             <p className="mt-2 text-muted-foreground">
               No weekly reviews yet. Complete your first one above.
@@ -64,13 +75,13 @@ export default async function WeeklyReviewPage() {
           ) : (
             <ul className="mt-4 space-y-3">
               {reviews.map((r) => (
-                <li key={r.id} className="list-row-premium card-surface p-4 sm:p-5">
+                <li key={r.id} className="itg2-card p-4 sm:p-5">
                   <p className="font-medium">
                     Week of {r.week_start_date} — {r.trades_count} trades
                     {r.total_pnl !== null ? (
                       <>
                         {" · P&L "}
-                        <span className={`tnum ${r.total_pnl > 0 ? "text-emerald-400" : r.total_pnl < 0 ? "text-red-400" : ""}`}>
+                        <span className={`tnum ${r.total_pnl > 0 ? "itg2-text-profit" : r.total_pnl < 0 ? "itg2-text-loss" : ""}`}>
                           {r.total_pnl.toFixed(2)}
                         </span>
                       </>
