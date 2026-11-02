@@ -95,24 +95,48 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
   if (!user.onboarding?.is_complete) redirect("/onboarding");
 
-  const bundle = isSupabaseConfigured()
-    ? await getAnalyticsBundle(await createServerSupabaseClient(), user.id)
-    : EMPTY_BUNDLE;
+  // Performance (2026-11-02): the analytics bundle, the
+  // recent-trades read, the motivation messages, the coach
+  // insights and the discipline reminder are independent of
+  // each other and previously awaited one-by-one (six-plus
+  // sequential round trips after the session chain). They now
+  // run concurrently. The reminder branch keeps its internal
+  // order (last journal date, then the idempotent log), and
+  // the recent-activity read further below still runs AFTER
+  // the reminder resolves — exactly as before — so a reminder
+  // notification created by this render still appears in it.
+  const today = new Date().toISOString().slice(0, 10);
+  let lastJournalDate: string | null = null;
+  const [bundle, recentTrades, motivationMessages, latestInsights, reminder] = await Promise.all([
+    isSupabaseConfigured()
+      ? getAnalyticsBundle(await createServerSupabaseClient(), user.id)
+      : EMPTY_BUNDLE,
+    (async (): Promise<{ id: string; pair: string; direction: string; opened_at: string; pnl: number | null; status: string }[]> => {
+      if (!isSupabaseConfigured()) return [];
+      const supabase = await createServerSupabaseClient();
+      const { data: recent } = await supabase
+        .from("trades")
+        .select("id, pair, direction, opened_at, pnl, status")
+        .eq("user_id", user.id)
+        .order("opened_at", { ascending: false })
+        .limit(5);
+      return (recent ?? []) as { id: string; pair: string; direction: string; opened_at: string; pnl: number | null; status: string }[];
+    })(),
+    isSupabaseConfigured()
+      ? getMotivationMessages(await createServerSupabaseClient())
+      : ([] as Awaited<ReturnType<typeof getMotivationMessages>>),
+    isSupabaseConfigured()
+      ? getLatestCoachInsights(await createServerSupabaseClient(), user.id, 3)
+      : ([] as Awaited<ReturnType<typeof getLatestCoachInsights>>),
+    (async () => {
+      if (!isSupabaseConfigured()) return { level: 0 as const, missedDays: 0, title: "", body: "" };
+      lastJournalDate = await getLastJournalDate(await createServerSupabaseClient(), user.id);
+      return ensureDisciplineReminderLogged(user.id, lastJournalDate, today);
+    })(),
+  ]);
   const summary = summarizeTrades(bundle.trades);
   const psych = psychologySummary(bundle.trades);
   const equity = buildEquityCurve(bundle.trades);
-
-  let recentTrades: { id: string; pair: string; direction: string; opened_at: string; pnl: number | null; status: string }[] = [];
-  if (isSupabaseConfigured()) {
-    const supabase = await createServerSupabaseClient();
-    const { data: recent } = await supabase
-      .from("trades")
-      .select("id, pair, direction, opened_at, pnl, status")
-      .eq("user_id", user.id)
-      .order("opened_at", { ascending: false })
-      .limit(5);
-    recentTrades = (recent ?? []) as typeof recentTrades;
-  }
 
   const bestEmotion = [...psych.byEmotion].sort((a, b) => b.pnl - a.pnl)[0];
   // Real level/XP (Phase 7): multi-dimensional score from the
@@ -132,25 +156,15 @@ export default async function DashboardPage() {
   // Discipline reminder (Phase 6): computed from the last journaled
   // day; logging is idempotent — the same level is never logged
   // twice — and a motivation message is picked for the moment.
-  const today = new Date().toISOString().slice(0, 10);
-  const lastJournalDate = isSupabaseConfigured()
-    ? await getLastJournalDate(await createServerSupabaseClient(), user.id)
-    : null;
-  const reminder = isSupabaseConfigured()
-    ? await ensureDisciplineReminderLogged(user.id, lastJournalDate, today)
-    : { level: 0 as const, missedDays: 0, title: "", body: "" };
+  // (The reminder itself is resolved in the concurrent block
+  // above; the activity read here intentionally stays after
+  // it, preserving the original ordering.)
   const goalNearCompletion = bundle.goals.some(
     (g) => g.percent >= 80 && g.percent < 100,
   );
   const hadLossToday = bundle.trades.some(
     (t) => t.closedAt.slice(0, 10) === today && t.pnl < 0,
   );
-  const motivationMessages = isSupabaseConfigured()
-    ? await getMotivationMessages(await createServerSupabaseClient())
-    : [];
-  const latestInsights = isSupabaseConfigured()
-    ? await getLatestCoachInsights(await createServerSupabaseClient(), user.id, 3)
-    : [];
   const recentActivity = isSupabaseConfigured()
     ? await getNotifications(await createServerSupabaseClient(), user.id, 5)
     : [];

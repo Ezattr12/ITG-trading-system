@@ -62,16 +62,20 @@ export default async function TradesPage({
   let strategies: Awaited<ReturnType<typeof getSystemStrategies>> = [];
   if (isSupabaseConfigured()) {
     const supabase = await createServerSupabaseClient();
-    strategies = await getSystemStrategies(supabase);
-    items = await getTradeListItems(supabase, user.id, {
-      pair: filters.pair,
-      direction: filters.direction,
-      session: filters.session,
-      marketCondition: filters.marketCondition,
-      strategyId: filters.strategyId,
-      from: filters.from,
-      to: toFilter,
-    });
+    // Performance (2026-11-02): the strategy catalogue does not
+    // depend on the filtered list read; they run concurrently.
+    [strategies, items] = await Promise.all([
+      getSystemStrategies(supabase),
+      getTradeListItems(supabase, user.id, {
+        pair: filters.pair,
+        direction: filters.direction,
+        session: filters.session,
+        marketCondition: filters.marketCondition,
+        strategyId: filters.strategyId,
+        from: filters.from,
+        to: toFilter,
+      }),
+    ]);
   }
 
   const filtered = applyTradeFilters(items, effectiveFilters);

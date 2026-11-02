@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { ensureProfileCore } from "@/lib/profile/service";
@@ -48,8 +49,14 @@ export interface SessionUser {
  * Creates the profile row on first login if signup could not
  * (e.g. email confirmation was required at signup time) — the
  * profile is the trader's own row, so RLS allows the insert.
+ *
+ * Performance (2026-11-02): wrapped in React cache() so the
+ * chain (auth validation + profile + onboarding reads) runs
+ * ONCE per request even though every page and the AppShell
+ * both call it. cache() is scoped to a single request — no
+ * data is ever shared across requests or users.
  */
-export async function getCurrentUser(): Promise<SessionUser | null> {
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   if (!isSupabaseConfigured()) return null;
   const supabase = await createServerSupabaseClient();
   const {
@@ -80,7 +87,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     profile,
     onboarding: (onboarding as OnboardingRow | null) ?? null,
   };
-}
+});
 
 /** Require a signed-in user; returns null (caller redirects to /login). */
 export async function requireUser(): Promise<SessionUser | null> {

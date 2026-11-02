@@ -63,9 +63,43 @@ export async function getAnalyticsBundle(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<AnalyticsBundle> {
+  // Performance (2026-11-02): the goals/XP/levels/activity block
+  // below does not depend on the trades read, so it is fired
+  // concurrently instead of after it; and the trades read now
+  // selects only the columns this bundle actually consumes
+  // (the AnalyticTrade mapping reads exactly these fields) —
+  // up to 500 rows of wide text columns no longer cross the
+  // wire on every render. Returned values are unchanged.
+  const metaPromise = Promise.all([
+    supabase
+      .from("goals")
+      .select("id, title, period, target_value, status")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("xp_transactions")
+      .select("amount, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true }),
+    // Configured levels (Phase 7): the trader's level is computed
+    // from their real trades/goals below — never read from the
+    // stored `user_levels` row, which only records the last
+    // calculation and is stale until the next refresh.
+    supabase
+      .from("levels")
+      .select("id, name, slug, min_score, max_score, scoring_config, description")
+      .order("min_score", { ascending: true }),
+    supabase
+      .from("daily_activity")
+      .select("activity_date, journal_completed, study_hours")
+      .eq("user_id", userId)
+      .order("activity_date", { ascending: false })
+      .limit(90),
+  ]);
   const { data: tradeRows } = await supabase
     .from("trades")
-    .select("*")
+    .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
     .eq("user_id", userId)
     .eq("status", "closed")
     .not("pnl", "is", null)
@@ -104,33 +138,7 @@ export async function getAnalyticsBundle(
     );
   }
 
-  const [goalsRes, xpRes, levelRowsRes, activityRes] = await Promise.all([
-    supabase
-      .from("goals")
-      .select("id, title, period, target_value, status")
-      .eq("user_id", userId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("xp_transactions")
-      .select("amount, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true }),
-    // Configured levels (Phase 7): the trader's level is computed
-    // from their real trades/goals below — never read from the
-    // stored `user_levels` row, which only records the last
-    // calculation and is stale until the next refresh.
-    supabase
-      .from("levels")
-      .select("id, name, slug, min_score, max_score, scoring_config, description")
-      .order("min_score", { ascending: true }),
-    supabase
-      .from("daily_activity")
-      .select("activity_date, journal_completed, study_hours")
-      .eq("user_id", userId)
-      .order("activity_date", { ascending: false })
-      .limit(90),
-  ]);
+  const [goalsRes, xpRes, levelRowsRes, activityRes] = await metaPromise;
 
   const goalRows = (goalsRes.data ?? []) as {
     id: string;

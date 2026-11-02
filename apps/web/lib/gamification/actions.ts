@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { calcXpFor, type XpAction } from "@itg/calc";
 import { createServiceRoleSupabaseClient } from "../supabase/server";
 import { isSupabaseConfigured } from "../supabase/config";
-import { getGamificationBundle } from "./queries";
+import { getGamificationBundle, type GamificationBundle } from "./queries";
 import { validatePenalty } from "./xp";
 import type { AchievementRow, LevelRow, XpReason } from "./types";
 
@@ -122,12 +122,13 @@ export async function logXpPenalty(input: {
 export async function checkAndAwardAchievements(
   supabase: SupabaseClient,
   userId: string,
+  getBundle: () => Promise<GamificationBundle> = () => getGamificationBundle(supabase, userId),
 ): Promise<AchievementRow[]> {
   if (!isSupabaseConfigured()) return [];
   const admin = createServiceRoleSupabaseClient();
   if (!admin) return [];
   try {
-    const bundle = await getGamificationBundle(supabase, userId);
+    const bundle = await getBundle();
     if (bundle.pendingUnlocks.length === 0) return [];
     const unlocked: AchievementRow[] = [];
     for (const achievement of bundle.pendingUnlocks) {
@@ -160,13 +161,14 @@ export async function checkAndAwardAchievements(
 export async function ensureLevelStored(
   supabase: SupabaseClient,
   userId: string,
+  getBundle: () => Promise<GamificationBundle> = () => getGamificationBundle(supabase, userId),
 ): Promise<{ previousLevel: string | null; currentLevel: string | null }> {
   const none = { previousLevel: null, currentLevel: null };
   if (!isSupabaseConfigured()) return none;
   const admin = createServiceRoleSupabaseClient();
   if (!admin) return none;
   try {
-    const bundle = await getGamificationBundle(supabase, userId);
+    const bundle = await getBundle();
     if (bundle.score.score === null || bundle.score.levelName === null) return none;
     const levelRow: LevelRow | undefined = bundle.levels.find(
       (l) => l.name === bundle.score.levelName,
@@ -216,9 +218,21 @@ export async function refreshGamification(
   currentLevel: string | null;
 }> {
   try {
+    // Performance (2026-11-02): both branches below computed
+    // the FULL gamification bundle independently (an analytics
+    // bundle + 7 more queries, twice per refresh). They now
+    // share one lazily-created bundle promise. Semantics are
+    // unchanged: the branches already raced on the same
+    // pre-write state — achievement awards depend on
+    // pendingUnlocks from that state, and the level store uses
+    // only score/levels, which achievement writes do not
+    // affect. The promise is created lazily so the early
+    // not-configured / no-admin returns never start it.
+    let shared: Promise<GamificationBundle> | null = null;
+    const getBundle = () => (shared ??= getGamificationBundle(supabase, userId));
     const [unlocked, level] = await Promise.all([
-      checkAndAwardAchievements(supabase, userId),
-      ensureLevelStored(supabase, userId),
+      checkAndAwardAchievements(supabase, userId, getBundle),
+      ensureLevelStored(supabase, userId, getBundle),
     ]);
     return { unlocked, ...level };
   } catch {

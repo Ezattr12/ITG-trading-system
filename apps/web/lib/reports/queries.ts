@@ -18,9 +18,20 @@ export async function getReportSummary(
   userId: string,
   input: { type: ReportType; periodStart: string; periodEnd: string },
 ): Promise<ReportSummary> {
+  // Performance (2026-11-02): the goals read below does not
+  // depend on the trades chain, so it is fired concurrently;
+  // and the trades read selects only the columns the
+  // ReportTrade mapping consumes. Values are unchanged.
+  const goalsPromise = supabase
+    .from("goals")
+    .select("status")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .gte("created_at", `${input.periodStart}T00:00:00Z`)
+    .lte("created_at", `${input.periodEnd}T23:59:59Z`);
   const { data: tradeRows } = await supabase
     .from("trades")
-    .select("*")
+    .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
     .eq("user_id", userId)
     .eq("status", "closed")
     .not("pnl", "is", null)
@@ -73,13 +84,7 @@ export async function getReportSummary(
     lessonTradeIds = new Set(lessons.map((l) => l.tradeId));
   }
 
-  const { data: goalRows } = await supabase
-    .from("goals")
-    .select("status")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .gte("created_at", `${input.periodStart}T00:00:00Z`)
-    .lte("created_at", `${input.periodEnd}T23:59:59Z`);
+  const { data: goalRows } = await goalsPromise;
   const goals = (goalRows ?? []) as { status: string }[];
 
   const reportTrades: ReportTrade[] = trades.map((t) => {

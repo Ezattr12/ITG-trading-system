@@ -72,9 +72,13 @@ export async function getIntelligenceData(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<IntelligenceData> {
+  // Performance (2026-11-02): only the columns the IntelTrade
+  // mapping consumes are selected — the analyzers downstream
+  // read IntelTrade objects, never the raw rows, so the
+  // returned values are unchanged.
   const { data: tradeRows } = await supabase
     .from("trades")
-    .select("*")
+    .select("id, pair, direction, session, strategy_id, setup_id, pnl, r_multiple, closed_at, opened_at, sl, market_condition, trade_reason, leverage, entry_price, position_size")
     .eq("user_id", userId)
     .eq("status", "closed")
     .not("pnl", "is", null)

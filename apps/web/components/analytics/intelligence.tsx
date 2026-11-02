@@ -126,7 +126,7 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
         too small to conclude, the panel says so instead of guessing.
       </p>
 
-      <div className="mt-5 grid gap-[18px] min-[801px]:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-[18px] min-[801px]:grid-cols-2">
         <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown analysis">
           <p className="itg2-eyebrow">Risk</p>
           <h2 className="itg2-section-title mt-1">Drawdown analysis</h2>

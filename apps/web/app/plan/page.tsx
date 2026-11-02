@@ -35,16 +35,21 @@ export default async function PlanPage() {
 
   const configured = isSupabaseConfigured();
   const supabase = await createServerSupabaseClient();
-  const plan = configured ? await getTradingPlan(supabase, user.id) : null;
+  // Performance (2026-11-02): the plan read was awaited on its
+  // own before the parallel block; it is independent of the
+  // other three reads and now joins them.
+  let plan: Awaited<ReturnType<typeof getTradingPlan>> = null;
 
   let setups: { id: string; name: string; strategyName: string | null }[] = [];
   let rows: ReturnType<typeof evaluatePlanVsActual> = [];
   if (configured) {
-    const [{ data: setupRows }, { data: strategyRows }, bundle] = await Promise.all([
+    const [{ data: setupRows }, { data: strategyRows }, bundle, planRow] = await Promise.all([
       supabase.from("setups").select("id, name, strategy_id").order("name"),
       supabase.from("strategies").select("id, name"),
       getAnalyticsBundle(supabase, user.id),
+      getTradingPlan(supabase, user.id),
     ]);
+    plan = planRow;
     const strategyName = new Map(
       ((strategyRows ?? []) as { id: string; name: string }[]).map((s) => [s.id, s.name]),
     );

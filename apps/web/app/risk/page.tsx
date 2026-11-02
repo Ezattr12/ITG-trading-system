@@ -55,15 +55,23 @@ export default async function RiskPage() {
 
   const configured = isSupabaseConfigured();
   const supabase = await createServerSupabaseClient();
-  const rules = configured ? await getRiskRules(supabase, user.id) : null;
-  const events = configured ? await getRiskEvents(supabase, user.id) : [];
   const today = utcDate(new Date().toISOString());
-  const day = configured
-    ? await getRiskDayContext(supabase, user.id, today)
-    : { tradesToday: 0, dayPnl: null, consecutiveLosses: 0 };
-  const recentClosed = configured
-    ? await getRecentClosedTrades(supabase, user.id)
-    : [];
+  // Performance (2026-11-02): these four reads are independent
+  // and were awaited one-by-one; they now run concurrently.
+  // (The two trades reads are deliberately NOT merged — they
+  // use different filters: opened-today vs recent-closed.)
+  const [rules, events, day, recentClosed] = await Promise.all([
+    configured ? getRiskRules(supabase, user.id) : null,
+    configured ? getRiskEvents(supabase, user.id) : ([] as Awaited<ReturnType<typeof getRiskEvents>>),
+    configured
+      ? getRiskDayContext(supabase, user.id, today)
+      : ({ tradesToday: 0, dayPnl: null, consecutiveLosses: 0 } as Awaited<
+          ReturnType<typeof getRiskDayContext>
+        >),
+    configured
+      ? getRecentClosedTrades(supabase, user.id)
+      : ([] as Awaited<ReturnType<typeof getRecentClosedTrades>>),
+  ]);
   const streak = countDisciplinedStreak(recentClosed, rules);
   const checks = rules
     ? evaluateTradeRisk(rules, { leverage: 1, riskPct: null }, day, streak)

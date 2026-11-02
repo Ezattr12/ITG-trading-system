@@ -88,27 +88,42 @@ export default async function TradeDetailPage({
   if (!isSupabaseConfigured()) redirect("/trades");
 
   const supabase = await createServerSupabaseClient();
+  // Performance (2026-11-02): the strategy catalogue and the
+  // all-lessons read do not depend on the trade detail and now
+  // start concurrently with it; the per-screenshot signed URLs
+  // were created one-by-one in a loop and are now created
+  // concurrently, then stored in the original screenshot
+  // order — the resulting map is identical.
+  const strategiesPromise = getSystemStrategies(supabase);
+  const lessonsPromise = supabase
+    .from("lessons")
+    .select("id, trade_id, text, created_at")
+    .eq("user_id", user.id);
   const detail = await getTradeDetail(supabase, user.id, id);
   if (!detail) notFound();
   const { trade } = detail;
-  const strategies = await getSystemStrategies(supabase);
+  const strategies = await strategiesPromise;
 
   const screenshotUrls = new Map<string, string>();
-  for (const shot of detail.screenshots) {
-    const { data } = await supabase.storage
-      .from("trade-screenshots")
-      .createSignedUrl(shot.storage_path, 3600);
-    if (data?.signedUrl) screenshotUrls.set(shot.id, data.signedUrl);
+  const signed = await Promise.all(
+    detail.screenshots.map(async (shot) => ({
+      id: shot.id,
+      url: (
+        await supabase.storage
+          .from("trade-screenshots")
+          .createSignedUrl(shot.storage_path, 3600)
+      ).data?.signedUrl,
+    })),
+  );
+  for (const s of signed) {
+    if (s.url) screenshotUrls.set(s.id, s.url);
   }
 
   const related = (await getTradeListItems(supabase, user.id, { pair: trade.pair }))
     .filter((item) => item.trade.id !== trade.id)
     .slice(0, 5);
 
-  const { data: allLessons } = await supabase
-    .from("lessons")
-    .select("id, trade_id, text, created_at")
-    .eq("user_id", user.id);
+  const { data: allLessons } = await lessonsPromise;
   const repeated = mostRepeatedLesson(
     ((allLessons ?? []) as { id: string; trade_id: string | null; text: string; created_at: string }[]).map(
       (l) => ({ id: l.id, tradeId: l.trade_id, text: l.text, createdAt: l.created_at }),

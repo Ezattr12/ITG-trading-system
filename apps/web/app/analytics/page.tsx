@@ -145,15 +145,23 @@ export default async function AnalyticsPage({
   const params = await searchParams;
   const period = params?.period === "week" || params?.period === "month" ? params.period : "day";
 
-  const bundle = isSupabaseConfigured()
-    ? await getAnalyticsBundle(await createServerSupabaseClient(), user.id)
-    : EMPTY_BUNDLE;
-  // Advanced intelligence (Phase 23): the deeper analyses
-  // over the same real trades, rendered as their own section
-  // below — existing figures above are untouched.
-  const intelligence = isSupabaseConfigured()
-    ? await getIntelligenceOverview(await createServerSupabaseClient(), user.id)
-    : null;
+  // Performance (2026-11-02): the bundle and the intelligence
+  // overview are independent read-only computations over the
+  // same tables and were awaited one after the other (the
+  // intelligence read re-read the same trades/psychology/
+  // strategies/lessons a second time, sequentially). They now
+  // run concurrently; both results are unchanged.
+  const [bundle, intelligence] = await Promise.all([
+    isSupabaseConfigured()
+      ? getAnalyticsBundle(await createServerSupabaseClient(), user.id)
+      : EMPTY_BUNDLE,
+    // Advanced intelligence (Phase 23): the deeper analyses
+    // over the same real trades, rendered as their own section
+    // below — existing figures above are untouched.
+    isSupabaseConfigured()
+      ? getIntelligenceOverview(await createServerSupabaseClient(), user.id)
+      : null,
+  ]);
   const summary = summarizeTrades(bundle.trades);
   const equity = buildEquityCurve(bundle.trades);
   const periods = periodPnl(bundle.trades, period);
@@ -341,7 +349,7 @@ export default async function AnalyticsPage({
           )}
         </section>
 
-        <div className="motion-reveal motion-reveal-3 mt-5 grid gap-[18px] min-[801px]:grid-cols-2">
+        <div className="motion-reveal motion-reveal-3 mt-5 grid grid-cols-1 gap-[18px] min-[801px]:grid-cols-2">
           {/* Win / loss ring (Phase 19): the ring fill comes
               from the real computed win rate via --win-rate
               (never hardcoded); the stat rows beside it are

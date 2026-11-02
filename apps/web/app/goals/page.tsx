@@ -103,14 +103,25 @@ export default async function GoalsPage() {
   const supabase = await createServerSupabaseClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const goals = configured ? await getGoals(supabase, user.id) : [];
-  const manual = configured ? await getLatestGoalProgress(supabase, user.id) : new Map();
-  const measurement = configured
-    ? await getGoalMeasurementContext(supabase, user.id)
-    : { trades: [], activity: [], hasRiskRules: false, maxLeverage: null };
-  const events = configured ? await getDisciplineEvents(supabase, user.id, 10) : [];
-  const lastJournalDate = configured ? await getLastJournalDate(supabase, user.id) : null;
-  const messages = configured ? await getMotivationMessages(supabase) : [];
+  // Performance (2026-11-02): these six reads are independent
+  // and were awaited one-by-one; they now run concurrently.
+  // Same queries, same fallbacks, same values.
+  const [goals, manual, measurement, events, lastJournalDate, messages] = await Promise.all([
+    configured ? getGoals(supabase, user.id) : ([] as Awaited<ReturnType<typeof getGoals>>),
+    configured
+      ? getLatestGoalProgress(supabase, user.id)
+      : (new Map() as Awaited<ReturnType<typeof getLatestGoalProgress>>),
+    configured
+      ? getGoalMeasurementContext(supabase, user.id)
+      : ({ trades: [], activity: [], hasRiskRules: false, maxLeverage: null } as Awaited<
+          ReturnType<typeof getGoalMeasurementContext>
+        >),
+    configured
+      ? getDisciplineEvents(supabase, user.id, 10)
+      : ([] as Awaited<ReturnType<typeof getDisciplineEvents>>),
+    configured ? getLastJournalDate(supabase, user.id) : null,
+    configured ? getMotivationMessages(supabase) : ([] as Awaited<ReturnType<typeof getMotivationMessages>>),
+  ]);
 
   const resolved = goals.map((g) =>
     resolveGoalProgress(g, measurement, manual.get(g.id) ?? null, today),

@@ -108,7 +108,7 @@ export default function NotificationsScreen() {
       ) : items.length === 0 ? (
         <EmptyState
           title="No notifications"
-          body="Goal, level and coach notifications will appear here."
+          body="Goal, level and achievement notifications will appear here."
         />
       ) : (
         items.map((item) => (

@@ -94,22 +94,22 @@ export default async function ReportsPage({
   let catalog = null as Awaited<ReturnType<typeof getCatalogReport>>;
   if (configured) {
     const supabase = await createServerSupabaseClient();
-    summary = await getReportSummary(supabase, user.id, {
-      type,
-      periodStart: bounds.start,
-      periodEnd: bounds.end,
-    });
+    // Performance (2026-11-02): the summary and the catalog
+    // report are independent computations (the catalog takes
+    // kind/period/anchor, not the summary) and now run
+    // concurrently instead of one after the other.
     // A daily Performance view has no catalog grain; its
     // legacy summary + PDF stand alone (docs/phase-24.md).
-    if (!(reportKind === "performance" && type === "daily")) {
-      catalog = await getCatalogReport(
-        supabase,
-        user.id,
-        reportKind,
-        catalogPeriod,
-        anchor,
-      );
-    }
+    [summary, catalog] = await Promise.all([
+      getReportSummary(supabase, user.id, {
+        type,
+        periodStart: bounds.start,
+        periodEnd: bounds.end,
+      }),
+      reportKind === "performance" && type === "daily"
+        ? Promise.resolve(null)
+        : getCatalogReport(supabase, user.id, reportKind, catalogPeriod, anchor),
+    ]);
   }
 
   const pdfHref =

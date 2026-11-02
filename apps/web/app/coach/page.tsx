@@ -112,6 +112,11 @@ export default async function CoachPage() {
   let storedHistory: AiInsightRow[] = [];
   if (isSupabaseConfigured()) {
     const supabase = await createServerSupabaseClient();
+    // Performance (2026-11-02): the stored history read is
+    // independent of the week-evidence chain below and was
+    // awaited only after it; it now runs concurrently and is
+    // awaited at the same point its value is assigned.
+    const historyPromise = getAiInsights(supabase, user.id, 50);
     const evidence = await getCoachWeekData(supabase, user.id, monday);
     if (evidence) {
       const analysis = generateCoachInsights(evidence);
@@ -142,7 +147,7 @@ export default async function CoachPage() {
         }
       }
     }
-    storedHistory = await getAiInsights(supabase, user.id, 50);
+    storedHistory = await historyPromise;
   }
 
   return (
