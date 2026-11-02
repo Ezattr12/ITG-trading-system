@@ -5,7 +5,6 @@ import { countDisciplinedStreak } from "../risk/engine";
 import { buildGamificationStats } from "./achievements";
 import { dimensionInputsFromBundle, scoreTrader } from "./scoring";
 import { newlyUnlockedAchievements } from "./achievements";
-import { totalXp } from "./xp";
 import type {
   AchievementRow,
   GamificationStats,
@@ -96,6 +95,17 @@ export interface GamificationBundle extends AnalyticsBundle {
   /** Achievements earned from current data but not yet stored. */
   pendingUnlocks: AchievementRow[];
   stats: GamificationStats;
+  /**
+   * The most recent page of XP transactions (display data,
+   * capped by getXpTransactions' limit). NOT the source of the
+   * total: `xpTotal` is inherited from the analytics bundle,
+   * which reads every xp_transactions row, so the total stays
+   * complete — and identical to the dashboard's — no matter how
+   * long the trader's XP history grows. (Task 14 fix: this
+   * bundle previously re-summed this capped page, so past 100
+   * transactions /levels and /achievements under-reported the
+   * total versus the dashboard.)
+   */
   xpTransactions: XpTransactionRow[];
 }
 
@@ -145,6 +155,8 @@ export async function getGamificationBundle(
     pendingUnlocks,
     stats,
     xpTransactions,
-    xpTotal: totalXp(xpTransactions),
+    // xpTotal deliberately NOT overridden here: the spread
+    // above carries the analytics bundle's total, computed over
+    // every xp_transactions row (see the interface note).
   };
 }
