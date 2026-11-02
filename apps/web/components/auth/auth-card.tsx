@@ -40,6 +40,22 @@ import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabas
  * The form, validation and behaviour are untouched; the
  * depth is in the surface and the background, not the
  * interaction.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION
+ * ONLY: the surface moves to the v2 system. The card is
+ * L2 v2 glass (.itg2-card .itg2-card-elevated) held flat
+ * (.itg2-card-flat — a form must never move while it is
+ * being filled in), the brand tile is the blue -> cyan
+ * .itg2-brand-tile, the eyebrow and wordmark use
+ * .itg2-eyebrow / .itg2-page-title, the card title is
+ * .itg2-section-title, the top hairline is cyan, the
+ * not-configured alert is .itg2-notice-warning, and this
+ * shell's own aurora washes, grid and light streaks move
+ * from the Phase 18 violet/magenta family into the v2
+ * deep-blue / royal-blue / cyan family — violet is the
+ * AI Coach identity and appears nowhere in the auth
+ * forms. The shared AmbientBackground layer, the form,
+ * validation and behaviour are untouched.
  */
 export function AuthCard({
   title,
@@ -61,80 +77,81 @@ export function AuthCard({
         className="motion-login-grid pointer-events-none absolute inset-0 opacity-40"
         style={{
           backgroundImage:
-            "linear-gradient(to right, hsl(272 40% 20% / 0.35) 1px, transparent 1px), linear-gradient(to bottom, hsl(272 40% 20% / 0.35) 1px, transparent 1px)",
+            "linear-gradient(to right, hsl(217 45% 22% / 0.35) 1px, transparent 1px), linear-gradient(to bottom, hsl(217 45% 22% / 0.35) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
-      {/* Soft aurora glow: a slow-drifting radial wash of violet
-          with a faint magenta hint of the aurora. Large,
+      {/* Soft aurora glow: a slow-drifting radial wash of royal
+          blue with a faint cyan hint (v2 palette — the Phase 18
+          violet/magenta wash retired with the redesign). Large,
           blurred, low opacity — depth, not decoration. */}
       <div
         aria-hidden="true"
         className="motion-login-glow pointer-events-none absolute -top-32 left-[calc(50%-21rem)] h-96 w-[42rem] max-w-none rounded-full opacity-25 blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side, hsl(265 48% 58% / 0.55), hsl(293 58% 35% / 0.18) 55%, transparent 75%)",
+            "radial-gradient(closest-side, hsl(217 85% 55% / 0.5), hsl(199 100% 50% / 0.16) 55%, transparent 75%)",
         }}
       />
-      {/* Larger soft orbs (Phase 18 Aurora): an aurora-blue wash
-          low on the left and a violet wash low on the right,
-          drifting on the same slow transform-only animation,
-          out of phase with the main glow so the backdrop never
-          sits still, plus a small magenta wisp top-right —
-          the pink/magenta accent stays atmospheric only.
-          Accents only — purple-black stays the base. */}
+      {/* Larger soft orbs: a royal-blue wash low on the left
+          and a bright-blue wash low on the right, drifting on
+          the same slow transform-only animation, out of phase
+          with the main glow so the backdrop never sits still,
+          plus a small cyan wisp top-right — the cyan accent
+          stays atmospheric only. Accents only — deep black
+          and deep blue stay the base. */}
       <div
         aria-hidden="true"
-        className="motion-login-glow pointer-events-none absolute -bottom-40 -left-32 h-80 w-80 rounded-full bg-[#2971A4]/30 blur-3xl"
+        className="motion-login-glow pointer-events-none absolute -bottom-40 -left-32 h-80 w-80 rounded-full bg-[#1268D8]/30 blur-3xl"
         style={{ animationDelay: "-14s" }}
       />
       <div
         aria-hidden="true"
-        className="motion-login-glow pointer-events-none absolute -bottom-24 -right-32 h-96 w-96 rounded-full bg-[#8B60C7]/25 blur-3xl"
+        className="motion-login-glow pointer-events-none absolute -bottom-24 -right-32 h-96 w-96 rounded-full bg-[#2E7CF6]/25 blur-3xl"
         style={{ animationDelay: "-7s" }}
       />
       <div
         aria-hidden="true"
-        className="motion-login-glow pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-[#81268E]/20 blur-3xl"
+        className="motion-login-glow pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-[#00CFFF]/15 blur-3xl"
         style={{ animationDelay: "-18s" }}
       />
-      {/* Faint light streaks (Phase 18 Aurora): two thin, softly
-          blurred diagonal beams rising past the card — violet
-          and magenta on the right, aurora blue on the left.
-          Transform-only drift, like the glow. */}
+      {/* Faint light streaks: two thin, softly blurred
+          diagonal beams rising past the card — pale blue into
+          royal blue on the right, royal into bright blue on
+          the left. Transform-only drift, like the glow. */}
       <div
         aria-hidden="true"
-        className="motion-login-glow pointer-events-none absolute -right-10 top-20 h-64 w-1.5 rotate-[28deg] rounded-full bg-gradient-to-b from-violet-300/25 via-[#81268E]/20 to-transparent blur-[1px]"
+        className="motion-login-glow pointer-events-none absolute -right-10 top-20 h-64 w-1.5 rotate-[28deg] rounded-full bg-gradient-to-b from-[#9CC2FF]/25 via-[#1268D8]/20 to-transparent blur-[1px]"
         style={{ animationDelay: "-21s" }}
       />
       <div
         aria-hidden="true"
-        className="motion-login-glow pointer-events-none absolute -left-8 bottom-24 h-56 w-1 rotate-[28deg] rounded-full bg-gradient-to-b from-transparent via-[#2971A4]/20 to-[#346CE6]/25 blur-[1px]"
+        className="motion-login-glow pointer-events-none absolute -left-8 bottom-24 h-56 w-1 rotate-[28deg] rounded-full bg-gradient-to-b from-transparent via-[#1268D8]/20 to-[#2E7CF6]/25 blur-[1px]"
         style={{ animationDelay: "-3s" }}
       />
       <div className="motion-fade-in relative w-full max-w-md">
         <header className="mb-6 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-ai text-lg font-bold text-white shadow-elevation-2 ring-1 ring-white/15" aria-hidden="true">
+          <span className="itg2-brand-tile mx-auto flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white" aria-hidden="true">
             ITG
           </span>
-          <p className="eyebrow mt-4 text-muted-foreground">
+          <p className="itg2-eyebrow mt-4">
             ITG — Institutional Trading Group
           </p>
-          <h1 className="page-title mt-2">ITG <span className="text-gradient-blue">TraderOS</span></h1>
+          <h1 className="itg2-page-title mt-2">ITG <span className="text-gradient-blue">TraderOS</span></h1>
         </header>
-        <section className="card-surface-glass relative p-6 sm:p-8">
-          {/* Gradient hairline along the card's top edge
-              (Phase 18 Aurora): the bright edge that makes the
-              glass read as a raised plane, strongest at the
-              centre — violet now, the primary accent. */}
+        <section className="itg2-card itg2-card-elevated itg2-card-flat relative p-6 sm:p-8">
+          {/* Gradient hairline along the card's top edge:
+              the bright edge that makes the glass read as a
+              raised plane, strongest at the centre — cyan
+              in the v2 system. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-violet-300/70 to-transparent"
+            className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-[#00CFFF]/70 to-transparent"
           />
-          <h2 className="text-xl font-semibold">{title}</h2>
+          <h2 className="itg2-section-title">{title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           {!configured && (
-            <p role="alert" className="motion-fade-in mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <p role="alert" className="itg2-notice itg2-notice-warning motion-fade-in mt-4">
               {supabaseNotConnectedMessage()}
             </p>
           )}

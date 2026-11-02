@@ -1841,6 +1841,16 @@ textarea.itg2-textarea {
     border-color var(--motion-duration-fast) var(--motion-ease-standard),
     box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
+/* Password field with an in-field visibility toggle
+   (auth forms): the toggle sits inside the field's right
+   edge, so the input needs clearance on that side. The
+   layered pr-16 utility the field used to carry loses to
+   the unlayered padding shorthand above, so the
+   clearance lives here at (0,2,1), mirroring the select
+   chevron clearance in this same block. */
+input.itg2-input.itg2-input-toggle {
+  padding-right: 4rem;
+}
 textarea.itg2-textarea {
   min-height: 96px;
   resize: vertical;

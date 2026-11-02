@@ -11,15 +11,15 @@ export const metadata = { title: "Log in — ITG TraderOS" };
 export default function LoginPage() {
   return (
     <AuthCard title="Welcome back" subtitle="Log in to your trading journal.">
-      <ActionForm action={signInAction} submitLabel="Log in">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+      <ActionForm action={signInAction} submitLabel="Log in" submitClassName="itg2-btn-primary itg2-btn-save">
+        <div className="itg2-field space-y-2">
+          <Label htmlFor="email" className="itg2-label">Email</Label>
+          <Input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" className="itg2-input" />
         </div>
-        <div className="space-y-2">
+        <div className="itg2-field space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline">
+            <Label htmlFor="password" className="itg2-label">Password</Label>
+            <Link href="/forgot-password" className="itg2-link">
               Forgot password?
             </Link>
           </div>
@@ -28,7 +28,7 @@ export default function LoginPage() {
       </ActionForm>
       <p className="mt-4 text-center text-sm text-muted-foreground">
         New to ITG TraderOS?{" "}
-        <Link href="/register" className="font-medium text-foreground underline">
+        <Link href="/register" className="itg2-link">
           Create an account
         </Link>
       </p>

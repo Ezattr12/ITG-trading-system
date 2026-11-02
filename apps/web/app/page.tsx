@@ -23,6 +23,17 @@ import { Button } from "@/components/ui/button";
  * The "not connected" alert itself lives in the auth card
  * and only appears when Supabase is unconfigured; that
  * logic is unchanged.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — CONSISTENCY
+ * ONLY: the header rides the v2 L3 hero (.itg2-hero with
+ * its rings and inner layer, .itg2-eyebrow,
+ * .itg2-page-title; the blue-gradient wordmark span is
+ * kept) and the three feature cards ride .itg2-card,
+ * with the Journal and Dashboard icon tiles aligned to
+ * the v2 blue / cyan hex family. The AI Coach tile keeps
+ * its violet gradient — the one legitimate violet
+ * surface. Copy, links, the signed-in redirect and the
+ * CTA buttons are exactly as before.
  */
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -34,16 +45,19 @@ export default async function HomePage() {
           under the whole page. */}
       <AmbientBackground />
 
-      <header className="hero-card motion-reveal relative p-6 sm:p-8">
-        <p className="eyebrow text-muted-foreground">
-          ITG — Institutional Trading Group
-        </p>
-        <h1 className="page-title mt-2">ITG <span className="text-gradient-blue">TraderOS</span></h1>
-        <p className="page-lede mt-3 text-lg">
-          A professional trading operating system: journal, performance,
-          risk, psychology, goals and coaching — built around one rule:
-          the database works for the trader, not the other way round.
-        </p>
+      <header className="itg2-hero motion-reveal relative">
+        <div className="itg2-hero-rings" aria-hidden="true" />
+        <div className="itg2-hero-inner p-6 sm:p-8">
+          <p className="itg2-eyebrow">
+            ITG — Institutional Trading Group
+          </p>
+          <h1 className="itg2-page-title mt-2">ITG <span className="text-gradient-blue">TraderOS</span></h1>
+          <p className="page-lede mt-3 text-lg">
+            A professional trading operating system: journal, performance,
+            risk, psychology, goals and coaching — built around one rule:
+            the database works for the trader, not the other way round.
+          </p>
+        </div>
       </header>
 
       <div className="motion-reveal motion-reveal-1 relative flex flex-wrap gap-3">
@@ -60,13 +74,13 @@ export default async function HomePage() {
           {
             title: "Journal",
             body: "Phase 3 — 30–60 second trade entry.",
-            tile: "bg-gradient-to-br from-blue-500 to-indigo-600",
+            tile: "bg-gradient-to-br from-[#1268D8] to-[#08245A]",
             icon: BookOpenText,
           },
           {
             title: "Dashboard",
             body: "Phase 4 — shows only your real data.",
-            tile: "bg-gradient-to-br from-cyan-500 to-blue-600",
+            tile: "bg-gradient-to-br from-[#00CFFF] to-[#1268D8]",
             icon: LayoutDashboard,
           },
           {
@@ -80,7 +94,7 @@ export default async function HomePage() {
           return (
             <article
               key={card.title}
-              className="motion-reveal card-surface p-4"
+              className="motion-reveal itg2-card p-4"
               style={{ animationDelay: `${(i + 2) * 60}ms` }}
             >
               <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${card.tile} text-white shadow-elevation-1`} aria-hidden="true">
