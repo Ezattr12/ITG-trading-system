@@ -19,6 +19,12 @@ export const metadata = { title: "Notifications — ITG TraderOS" };
  * escalates, a goal is reached or completed, or a risk event
  * occurs — in-app only, no email / SMS yet. A trader only ever
  * sees their own notifications (RLS).
+ *
+ * Task 9: the page moved onto the v2 system (flat header band
+ * with eyebrow + .itg2-page-title, entries as .itg2-card rows
+ * with unread rows elevated instead of the retired v1 glow,
+ * type pills as .itg2-chip variants keeping their tones). All
+ * data, copy, ordering and empty states are exactly as before.
  */
 
 const TYPE_LABEL: Record<string, string> = {
@@ -45,20 +51,23 @@ export default async function NotificationsPage() {
 
   return (
     <AppShell email={user.email}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="page-title">Notifications</h1>
-            <p className="page-lede">
-              {items.length === 0
-                ? "No notifications yet."
-                : `${unread} unread of ${items.length} total.`}
-            </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="itg2-eyebrow">Notifications</p>
+              <h1 className="itg2-page-title mt-1">Notifications</h1>
+              <p className="mt-2 text-muted-foreground">
+                {items.length === 0
+                  ? "No notifications yet."
+                  : `${unread} unread of ${items.length} total.`}
+              </p>
+            </div>
+            {unread > 0 ? <MarkAllNotificationsReadForm /> : null}
           </div>
-          {unread > 0 ? <MarkAllNotificationsReadForm /> : null}
-        </div>
+        </header>
 
         {items.length === 0 ? (
-          <p className="hero-card mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6 text-muted-foreground">
+          <p className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6 text-muted-foreground">
             Nothing here yet. Goal completions, discipline reminders
             and risk warnings will appear here when they happen.
           </p>
@@ -67,19 +76,19 @@ export default async function NotificationsPage() {
             {items.map((n, i) => (
               <li
                 key={n.id}
-                className={`motion-reveal list-row-premium card-surface p-4 sm:p-5 transition-opacity duration-base ease-standard ${n.is_read ? "opacity-70" : "card-glow-blue"}`}
+                className={`motion-reveal itg2-card p-4 sm:p-5 transition-opacity duration-base ease-standard ${n.is_read ? "opacity-70" : "itg2-card-elevated"}`}
                 style={{ animationDelay: `${Math.min(i, 7) * 50}ms` }}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${
+                        className={`itg2-chip ${
                           n.type === "risk_warning" || n.type === "discipline_warning"
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                            ? "itg2-chip-warning"
                             : n.type === "achievement" || n.type === "level_up"
-                              ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                              : "border-border bg-muted/60 text-muted-foreground"
+                              ? "itg2-chip-gold"
+                              : "itg2-chip-muted"
                         }`}
                       >
                         {TYPE_LABEL[n.type] ?? n.type}

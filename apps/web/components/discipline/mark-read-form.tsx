@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
@@ -13,6 +12,10 @@ import type { ActionResult } from "@/lib/auth/actions";
  * Compact client wrappers (same pattern as Phase 5's
  * ResolveEventForm): a plain form cannot take a
  * (prev, formData) Server Action.
+ *
+ * Task 9: the submit buttons moved onto the v2 ghost button
+ * (the ResolveEventForm precedent), which also restores a
+ * ≥44px touch target. Bindings, fields and copy are unchanged.
  */
 export function MarkNotificationReadForm({ notificationId }: { notificationId: string }) {
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(
@@ -22,11 +25,11 @@ export function MarkNotificationReadForm({ notificationId }: { notificationId: s
   return (
     <form action={formAction}>
       <input type="hidden" name="notificationId" value={notificationId} />
-      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <button type="submit" className="itg2-btn-ghost" disabled={pending}>
         {pending ? "Saving…" : "Mark read"}
-      </Button>
+      </button>
       {state.error && (
-        <p role="alert" className="mt-1 text-xs text-red-300">
+        <p role="alert" className="mt-1 text-xs itg2-text-loss">
           {state.error}
         </p>
       )}
@@ -41,16 +44,16 @@ export function MarkAllNotificationsReadForm() {
   );
   return (
     <form action={formAction}>
-      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <button type="submit" className="itg2-btn-ghost" disabled={pending}>
         {pending ? "Saving…" : "Mark all as read"}
-      </Button>
+      </button>
       {state.error && (
-        <p role="alert" className="mt-1 text-xs text-red-300">
+        <p role="alert" className="mt-1 text-xs itg2-text-loss">
           {state.error}
         </p>
       )}
       {state.ok && state.message && (
-        <p role="status" className="mt-1 text-xs text-emerald-300">
+        <p role="status" className="mt-1 text-xs itg2-text-profit">
           {state.message}
         </p>
       )}
