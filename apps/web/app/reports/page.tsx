@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
-import { Money, Pct, StatCard } from "@/components/analytics/stat-card";
+import { Money, Pct } from "@/components/analytics/stat-card";
 import { PrintButton } from "@/components/reports/print-button";
 import { getReportSummary } from "@/lib/reports/queries";
 import { periodBounds } from "@/lib/reports/reports";
@@ -35,6 +35,18 @@ export const metadata = { title: "Reports — ITG TraderOS" };
  * recommendations from the trader's own data. Viewable
  * in-app, printable, and downloadable as a PDF (generated on
  * demand — not stored in Supabase Storage in this phase).
+ *
+ * Master Web UI Redesign (Task 6) — PRESENTATION ONLY: the
+ * header moved into a flat glass band (.itg2-card
+ * .itg2-card-flat) with eyebrow + .itg2-page-title, the
+ * period / report-kind navigation and the date form onto
+ * the v2 button + form system, the stat grids onto local
+ * .itg2-kpi cards (the shared StatCard is no longer used
+ * here), the breakdown tables onto .itg2-table, the empty
+ * states onto v2 cards and the recommendations panel onto
+ * an elevated v2 card. All data, copy, value expressions,
+ * gating and the PDF link are exactly as before. Reports
+ * are not AI, so no violet anywhere.
  */
 export default async function ReportsPage({
   searchParams,
@@ -109,10 +121,11 @@ export default async function ReportsPage({
 
   return (
     <AppShell email={user.email}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="itg2-card itg2-card-flat motion-reveal flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6">
           <div>
-            <h1 className="page-title">Reports</h1>
-            <p className="page-lede">
+            <p className="itg2-eyebrow">Reports</p>
+            <h1 className="itg2-page-title mt-1">Reports</h1>
+            <p className="mt-2 text-muted-foreground">
               {reportKind === "performance" ? (
                 <>
                   {REPORT_TYPE_LABELS[type]} report · {bounds.start} to {bounds.end} ·
@@ -132,7 +145,7 @@ export default async function ReportsPage({
             {summary ? (
               <Link
                 href={pdfHref}
-                className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2"
+                className="itg2-btn-primary"
               >
                 Download PDF
               </Link>
@@ -140,41 +153,43 @@ export default async function ReportsPage({
           </div>
         </div>
 
-        <nav className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="Report period">
+        <nav className="mt-6 flex flex-wrap items-center gap-2" aria-label="Report period">
           {(["daily", "weekly", "monthly"] as ReportType[]).map((t) => (
             <Link
               key={t}
               href={`/reports?type=${t}&date=${anchor}&report=${reportKind}`}
-              className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 shadow-elevation-1 transition-all duration-fast ease-standard hover:shadow-elevation-2 ${t === type ? "bg-primary font-medium text-primary-foreground" : "bg-card hover:bg-accent"}`}
+              className={t === type ? "itg2-btn-primary" : "itg2-btn-ghost"}
             >
               {REPORT_TYPE_LABELS[t]}
             </Link>
           ))}
-          <form method="get" action="/reports" className="flex items-center gap-2">
+          <form method="get" action="/reports" className="flex items-end gap-2">
             <input type="hidden" name="type" value={type} />
             <input type="hidden" name="report" value={reportKind} />
-            <label htmlFor="report-date" className="text-muted-foreground">
-              Date
-            </label>
-            <input
-              id="report-date"
-              type="date"
-              name="date"
-              defaultValue={anchor}
-              className="h-11 rounded-md border border-input bg-background px-2 py-1.5 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <button type="submit" className="inline-flex min-h-11 items-center rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-elevation-1 transition-all duration-fast ease-standard hover:bg-accent hover:shadow-elevation-2">
+            <div className="itg2-field">
+              <label htmlFor="report-date" className="itg2-label">
+                Date
+              </label>
+              <input
+                id="report-date"
+                type="date"
+                name="date"
+                defaultValue={anchor}
+                className="itg2-input"
+              />
+            </div>
+            <button type="submit" className="itg2-btn-primary">
               Show
             </button>
           </form>
         </nav>
 
-        <nav className="mt-3 flex flex-wrap gap-2 text-sm" aria-label="Report type">
+        <nav className="mt-3 flex flex-wrap gap-2" aria-label="Report type">
           {(Object.keys(CATALOG_REPORT_LABELS) as CatalogReportKind[]).map((k) => (
             <Link
               key={k}
               href={`/reports?type=${type}&date=${anchor}&report=${k}`}
-              className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 shadow-elevation-1 transition-all duration-fast ease-standard hover:shadow-elevation-2 ${k === reportKind ? "bg-primary font-medium text-primary-foreground" : "bg-card hover:bg-accent"}`}
+              className={k === reportKind ? "itg2-btn-primary" : "itg2-btn-ghost"}
             >
               {CATALOG_REPORT_LABELS[k]}
             </Link>
@@ -183,29 +198,54 @@ export default async function ReportsPage({
 
         {reportKind !== "performance" ? (
           !configured || !catalog ? (
-            <p className="mt-6 sm:mt-8 text-muted-foreground">
-              Supabase is not connected yet — reports will be generated from your
-              real trades once the database is connected. Nothing here is estimated.
-            </p>
+            <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+              <p className="text-muted-foreground">
+                Supabase is not connected yet — reports will be generated from your
+                real trades once the database is connected. Nothing here is estimated.
+              </p>
+            </section>
           ) : !catalog.hasData ? (
-            <p className="mt-6 sm:mt-8 text-muted-foreground">
-              No closed trades in this period — there is nothing to report yet.
-              Journal your next trades and this report will fill in.
-            </p>
+            <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+              <p className="text-muted-foreground">
+                No closed trades in this period — there is nothing to report yet.
+                Journal your next trades and this report will fill in.
+              </p>
+            </section>
           ) : (
             <>
               <section className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                <StatCard label="Trades" value={catalog.summary.tradesCount} />
-                <StatCard label="Total P&L" value={<Money value={catalog.summary.totalPnl} />} raised />
-                <StatCard label="Win rate" value={<Pct value={catalog.summary.winRate} />} />
-                <StatCard label="Profit factor" value={catalog.summary.profitFactor === null ? "—" : catalog.summary.profitFactor.toFixed(2)} />
-                <StatCard label="Expectancy" value={<Money value={catalog.summary.expectancy} />} />
-                <StatCard label="Average R" value={catalog.summary.avgR === null ? "—" : catalog.summary.avgR.toFixed(2)} />
-                <StatCard label="Journal completion" value={<Pct value={catalog.summary.journalCompletionPct} />} />
-                <StatCard
-                  label="Goals completed"
-                  value={`${catalog.summary.goalsCompleted} of ${catalog.summary.goalsTotal}`}
-                />
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Trades</h2>
+                  <p className="itg2-kpi-value">{catalog.summary.tradesCount}</p>
+                </article>
+                <article className="itg2-card itg2-card-elevated itg2-kpi">
+                  <h2 className="itg2-kpi-label">Total P&amp;L</h2>
+                  <p className="itg2-kpi-value"><Money value={catalog.summary.totalPnl} /></p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Win rate</h2>
+                  <p className="itg2-kpi-value"><Pct value={catalog.summary.winRate} /></p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Profit factor</h2>
+                  <p className="itg2-kpi-value">{catalog.summary.profitFactor === null ? "—" : catalog.summary.profitFactor.toFixed(2)}</p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Expectancy</h2>
+                  <p className="itg2-kpi-value"><Money value={catalog.summary.expectancy} /></p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Average R</h2>
+                  <p className="itg2-kpi-value">{catalog.summary.avgR === null ? "—" : catalog.summary.avgR.toFixed(2)}</p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Journal completion</h2>
+                  <p className="itg2-kpi-value"><Pct value={catalog.summary.journalCompletionPct} /></p>
+                </article>
+                <article className="itg2-card itg2-kpi">
+                  <h2 className="itg2-kpi-label">Goals completed</h2>
+                  <p className="itg2-kpi-value">{`${catalog.summary.goalsCompleted} of ${catalog.summary.goalsTotal}`}</p>
+                </article>
               </section>
               {catalog.kind === "psychology" ? (
                 <>
@@ -224,51 +264,76 @@ export default async function ReportsPage({
             </>
           )
         ) : !configured || !summary ? (
-          <p className="mt-6 sm:mt-8 text-muted-foreground">
-            Supabase is not connected yet — reports will be generated from your
-            real trades once the database is connected. Nothing here is estimated.
-          </p>
+          <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+            <p className="text-muted-foreground">
+              Supabase is not connected yet — reports will be generated from your
+              real trades once the database is connected. Nothing here is estimated.
+            </p>
+          </section>
         ) : summary.tradesCount === 0 ? (
-          <p className="mt-6 sm:mt-8 text-muted-foreground">
-            No closed trades in this period — there is nothing to report yet.
-            Journal your next trades and this report will fill in.
-          </p>
+          <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+            <p className="text-muted-foreground">
+              No closed trades in this period — there is nothing to report yet.
+              Journal your next trades and this report will fill in.
+            </p>
+          </section>
         ) : (
           <>
             <section className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              <StatCard label="Trades" value={summary.tradesCount} />
-              <StatCard label="Total P&L" value={<Money value={summary.totalPnl} />} raised />
-              <StatCard label="Win rate" value={<Pct value={summary.winRate} />} />
-              <StatCard label="Profit factor" value={summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)} />
-              <StatCard label="Expectancy" value={<Money value={summary.expectancy} />} />
-              <StatCard label="Average R" value={summary.avgR === null ? "—" : summary.avgR.toFixed(2)} />
-              <StatCard label="Journal completion" value={<Pct value={summary.journalCompletionPct} />} />
-              <StatCard
-                label="Goals completed"
-                value={`${summary.goalsCompleted} of ${summary.goalsTotal}`}
-              />
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Trades</h2>
+                <p className="itg2-kpi-value">{summary.tradesCount}</p>
+              </article>
+              <article className="itg2-card itg2-card-elevated itg2-kpi">
+                <h2 className="itg2-kpi-label">Total P&amp;L</h2>
+                <p className="itg2-kpi-value"><Money value={summary.totalPnl} /></p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Win rate</h2>
+                <p className="itg2-kpi-value"><Pct value={summary.winRate} /></p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Profit factor</h2>
+                <p className="itg2-kpi-value">{summary.profitFactor === null ? "—" : summary.profitFactor.toFixed(2)}</p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Expectancy</h2>
+                <p className="itg2-kpi-value"><Money value={summary.expectancy} /></p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Average R</h2>
+                <p className="itg2-kpi-value">{summary.avgR === null ? "—" : summary.avgR.toFixed(2)}</p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Journal completion</h2>
+                <p className="itg2-kpi-value"><Pct value={summary.journalCompletionPct} /></p>
+              </article>
+              <article className="itg2-card itg2-kpi">
+                <h2 className="itg2-kpi-label">Goals completed</h2>
+                <p className="itg2-kpi-value">{`${summary.goalsCompleted} of ${summary.goalsTotal}`}</p>
+              </article>
             </section>
 
             {summary.byStrategy.length > 0 && (
-              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-                <h2 className="section-title">By strategy</h2>
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full text-sm">
+              <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+                <h2 className="itg2-section-title">By strategy</h2>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="itg2-table itg2-table-fit">
                     <thead>
-                      <tr className="border-b text-left text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">Strategy</th>
-                        <th className="py-2 pr-3 font-medium">Trades</th>
-                        <th className="py-2 pr-3 font-medium">Wins</th>
-                        <th className="py-2 font-medium">P&amp;L</th>
+                      <tr>
+                        <th>Strategy</th>
+                        <th>Trades</th>
+                        <th>Wins</th>
+                        <th>P&amp;L</th>
                       </tr>
                     </thead>
-                    <tbody className="list-divider">
+                    <tbody>
                       {summary.byStrategy.map((r) => (
-                        <tr key={r.name} className="list-row-premium">
-                          <td className="py-2 pr-3">{r.name}</td>
-                          <td className="py-2 pr-3 tnum">{r.trades}</td>
-                          <td className="py-2 pr-3 tnum">{r.wins}</td>
-                          <td className="py-2 tnum"><Money value={r.totalPnl} /></td>
+                        <tr key={r.name}>
+                          <td>{r.name}</td>
+                          <td className="tabular-nums">{r.trades}</td>
+                          <td className="tabular-nums">{r.wins}</td>
+                          <td><Money value={r.totalPnl} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -278,25 +343,25 @@ export default async function ReportsPage({
             )}
 
             {summary.byEmotion.length > 0 && (
-              <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-                <h2 className="section-title">Psychology vs performance</h2>
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full text-sm">
+              <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+                <h2 className="itg2-section-title">Psychology vs performance</h2>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="itg2-table itg2-table-fit">
                     <thead>
-                      <tr className="border-b text-left text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">Emotion</th>
-                        <th className="py-2 pr-3 font-medium">Trades</th>
-                        <th className="py-2 pr-3 font-medium">Win rate</th>
-                        <th className="py-2 font-medium">P&amp;L</th>
+                      <tr>
+                        <th>Emotion</th>
+                        <th>Trades</th>
+                        <th>Win rate</th>
+                        <th>P&amp;L</th>
                       </tr>
                     </thead>
-                    <tbody className="list-divider">
+                    <tbody>
                       {summary.byEmotion.map((r) => (
-                        <tr key={r.name} className="list-row-premium">
-                          <td className="py-2 pr-3 capitalize">{r.name}</td>
-                          <td className="py-2 pr-3 tnum">{r.trades}</td>
-                          <td className="py-2 pr-3 tnum"><Pct value={r.winRate} /></td>
-                          <td className="py-2 tnum"><Money value={r.totalPnl} /></td>
+                        <tr key={r.name}>
+                          <td className="capitalize">{r.name}</td>
+                          <td className="tabular-nums">{r.trades}</td>
+                          <td><Pct value={r.winRate} /></td>
+                          <td><Money value={r.totalPnl} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -305,8 +370,8 @@ export default async function ReportsPage({
               </section>
             )}
 
-            <section className="mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6">
-              <h2 className="section-title">Recommendations</h2>
+            <section className="itg2-card itg2-card-elevated mt-6 sm:mt-8 p-4 sm:p-6">
+              <h2 className="itg2-section-title">Recommendations</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Rule-based observations from this period&apos;s own data — not
                 generic advice.

@@ -16,13 +16,21 @@ import { Money, Pct } from "@/components/analytics/stat-card";
  * analyses' honest insufficient states verbatim rather than
  * drawing anything from invented data. Charts (the existing
  * DrawdownChart only) are always paired with their figures.
+ *
+ * Master Web UI Redesign (Task 6) — PRESENTATION ONLY:
+ * sections moved onto .itg2-card (the recommendations
+ * panel onto the elevated variant), titles onto
+ * .itg2-section-title, the label/value rows onto .itg2-row,
+ * the tables onto .itg2-table and the drawdown chart into
+ * .itg2-chart-pool. Every string and value expression is
+ * exactly as before.
  */
 
 function StatRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="itg-stat-row">
-      <span className="itg-stat-row-label">{label}</span>
-      <span className="itg-stat-row-value tabular-nums">{children}</span>
+    <div className="itg2-row">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-medium tabular-nums">{children}</span>
     </div>
   );
 }
@@ -36,27 +44,27 @@ export function BreakdownTable({
 }) {
   if (rows.length === 0) return null;
   return (
-    <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-      <h2 className="section-title">{title}</h2>
-      <div className="mt-2 overflow-x-auto">
-        <table className="w-full text-sm">
+    <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+      <h2 className="itg2-section-title">{title}</h2>
+      <div className="mt-4 overflow-x-auto">
+        <table className="itg2-table itg2-table-fit">
           <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2 pr-3 font-medium">Name</th>
-              <th className="py-2 pr-3 font-medium">Trades</th>
-              <th className="py-2 pr-3 font-medium">Wins</th>
-              <th className="py-2 pr-3 font-medium">Win rate</th>
-              <th className="py-2 font-medium">P&amp;L</th>
+            <tr>
+              <th>Name</th>
+              <th>Trades</th>
+              <th>Wins</th>
+              <th>Win rate</th>
+              <th>P&amp;L</th>
             </tr>
           </thead>
-          <tbody className="list-divider">
+          <tbody>
             {rows.map((r) => (
-              <tr key={r.name} className="list-row-premium">
-                <td className="py-2 pr-3 capitalize">{r.name}</td>
-                <td className="py-2 pr-3 tnum">{r.trades}</td>
-                <td className="py-2 pr-3 tnum">{r.wins}</td>
-                <td className="py-2 pr-3 tnum"><Pct value={r.winRate} /></td>
-                <td className="py-2 tnum"><Money value={r.totalPnl} /></td>
+              <tr key={r.name}>
+                <td className="capitalize">{r.name}</td>
+                <td className="tabular-nums">{r.trades}</td>
+                <td className="tabular-nums">{r.wins}</td>
+                <td><Pct value={r.winRate} /></td>
+                <td><Money value={r.totalPnl} /></td>
               </tr>
             ))}
           </tbody>
@@ -71,8 +79,8 @@ export function PerformanceSections({ report }: { report: PerformanceReport }) {
   return (
     <>
       <BreakdownTable title="By session" rows={report.summary.bySession} />
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Drawdown (this period)</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Drawdown (this period)</h2>
         {dd.status !== "ok" ? (
           <p className="mt-2 text-muted-foreground">
             Not enough closed trades in this period for a drawdown analysis ({dd.tradesCount}{" "}
@@ -93,7 +101,7 @@ export function PerformanceSections({ report }: { report: PerformanceReport }) {
               </StatRow>
             ) : null}
             {dd.series.length > 1 ? (
-              <div className="mt-4">
+              <div className="itg2-chart-pool mt-4">
                 <DrawdownChart data={dd.series} />
               </div>
             ) : null}
@@ -108,8 +116,8 @@ export function PsychologySections({ report }: { report: PsychologyReport }) {
   const { psychology: p, discipline: d } = report;
   return (
     <>
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Psychology analysis</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Psychology analysis</h2>
         {p.status !== "ok" ? (
           <p className="mt-2 text-muted-foreground">
             No psychology records in this period — record an emotion or confidence rating when
@@ -146,8 +154,8 @@ export function PsychologySections({ report }: { report: PsychologyReport }) {
           totalPnl: g.totalPnl,
         }))}
       />
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Discipline</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Discipline</h2>
         <div className="mt-3">
           <StatRow label="Trades with a stop-loss">{d.stopLossPct.toFixed(1)}%</StatRow>
           <StatRow label="Journal completion">{d.journalCompletionPct.toFixed(1)}%</StatRow>
@@ -180,8 +188,8 @@ export function RiskSections({ report }: { report: RiskReport }) {
   const r = report.risk;
   return (
     <>
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Risk behaviour (this period)</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Risk behaviour (this period)</h2>
         {r.status !== "ok" ? (
           <p className="mt-2 text-muted-foreground">
             No closed trades in this period — there is nothing to analyse yet.
@@ -233,8 +241,8 @@ export function RiskSections({ report }: { report: RiskReport }) {
         )}
       </section>
 
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Configured limits</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Configured limits</h2>
         <div className="mt-3">
           <StatRow label="Risk rules">
             {report.rules
@@ -249,20 +257,20 @@ export function RiskSections({ report }: { report: RiskReport }) {
         </div>
         {report.periodRiskEvents.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="itg2-table itg2-table-fit">
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-3 font-medium">Date</th>
-                  <th className="py-2 pr-3 font-medium">Severity</th>
-                  <th className="py-2 font-medium">Event</th>
+                <tr>
+                  <th>Date</th>
+                  <th>Severity</th>
+                  <th>Event</th>
                 </tr>
               </thead>
-              <tbody className="list-divider">
+              <tbody>
                 {report.periodRiskEvents.map((e) => (
-                  <tr key={e.id} className="list-row-premium">
-                    <td className="py-2 pr-3 tnum">{e.created_at.slice(0, 10)}</td>
-                    <td className="py-2 pr-3 capitalize">{e.severity}</td>
-                    <td className="py-2">{e.message}</td>
+                  <tr key={e.id}>
+                    <td className="tabular-nums">{e.created_at.slice(0, 10)}</td>
+                    <td className="capitalize">{e.severity}</td>
+                    <td>{e.message}</td>
                   </tr>
                 ))}
               </tbody>
@@ -275,8 +283,8 @@ export function RiskSections({ report }: { report: RiskReport }) {
         )}
       </section>
 
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Drawdown (this period)</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Drawdown (this period)</h2>
         {report.drawdown.status !== "ok" ? (
           <p className="mt-2 text-muted-foreground">
             Not enough closed trades in this period for a drawdown analysis (
@@ -296,8 +304,8 @@ export function RiskSections({ report }: { report: RiskReport }) {
 export function StrategySections({ report }: { report: StrategyReport }) {
   return (
     <>
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Most / least profitable strategy</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Most / least profitable strategy</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Only strategies with at least 3 trades in this period are ranked — below that the
           sample cannot support a ranking.
@@ -351,8 +359,8 @@ export function CoachSections({ report }: { report: CoachReport }) {
   const digest = report.digest;
   return (
     <>
-      <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-        <h2 className="section-title">Coach findings for this period</h2>
+      <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Coach findings for this period</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           From the deterministic Coach Engine and your stored coach insights — no AI-generated
           text is added here.
@@ -381,8 +389,8 @@ export function CoachSections({ report }: { report: CoachReport }) {
       </section>
 
       {report.storedInsights.length > 0 ? (
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-          <h2 className="section-title">Stored coach insights in this period</h2>
+        <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+          <h2 className="itg2-section-title">Stored coach insights in this period</h2>
           <ul className="mt-3 space-y-3 text-sm">
             {report.storedInsights.map((row) => (
               <li key={row.id}>
@@ -402,8 +410,8 @@ export function CoachSections({ report }: { report: CoachReport }) {
       ) : null}
 
       {digest && digest.focus.length > 0 ? (
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-          <h2 className="section-title">Focus for the next period</h2>
+        <section className="itg2-card mt-6 sm:mt-8 p-4 sm:p-6">
+          <h2 className="itg2-section-title">Focus for the next period</h2>
           <ul className="mt-3 space-y-3 text-sm">
             {digest.focus.map((a) => (
               <li key={a.title}>
@@ -415,8 +423,8 @@ export function CoachSections({ report }: { report: CoachReport }) {
         </section>
       ) : null}
 
-      <section className="mt-6 sm:mt-8 card-surface-raised p-4 sm:p-6">
-        <h2 className="section-title">Recommendations</h2>
+      <section className="itg2-card itg2-card-elevated mt-6 sm:mt-8 p-4 sm:p-6">
+        <h2 className="itg2-section-title">Recommendations</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Rule-based observations from this period&apos;s own data — not generic advice.
         </p>
