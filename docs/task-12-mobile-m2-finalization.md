@@ -69,10 +69,21 @@ function survives.
 ## Which APK Ezat should test
 
 The Delete-era build (GitHub Actions run 41326396226, commit 2460f370)
-predates the notifications copy fix. A fresh build from current HEAD
-(574be13b, the PERF commit — the mobile tree's only change since 2460f370 is
-that copy fix) is the correct M2 test target. It is dispatched via
-`workflow_dispatch` on `.github/workflows/mobile-apk.yml`.
+predates the notifications copy fix. A fresh build from current HEAD is the
+correct M2 test target. It was dispatched via `workflow_dispatch` on
+`.github/workflows/mobile-apk.yml`:
+
+- First attempt, run 41519874403: FAILED in CI at the Gradle step — the
+  runner failed to install the Android NDK component (ndk;27.1.12297006),
+  a runner-side SDK install failure, not a code failure (identical project
+  built successfully on 2026-11-01).
+- Retry, run **41522183387**: **SUCCESS** on commit
+  25eab1d80ede85b645951d09c448220338b71848. Artifact
+  `itg-traderos-android-test-apk` (zip 39,172,222 B) contains
+  `itg-traderos-test.apk` (100,477,076 B), SHA-256
+  `2fa2d0e8e1043327468e303e207bd6871111023e38201ec09ebfe236a10344db`,
+  downloaded and hash-verified by the parent agent. This build supersedes
+  run 41326396226 as the M2 device-test target.
 
 ## Device checklist (Ezat)
 
