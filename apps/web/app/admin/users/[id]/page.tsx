@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -23,6 +23,13 @@ function display(v: string | number | null | undefined): string {
  * appear ONLY after the admin submitted the financial-view form
  * with a reason (audit-logged, valid 15 minutes); otherwise the
  * page states plainly that they are hidden.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * flat header band, the three summary tiles as .itg2-kpi
+ * cards, and the financial / role / verification sections as
+ * flat v2 cards (they contain forms) with .itg2-section-title
+ * headings. All data, the financial-view gating and copy are
+ * exactly as before.
  */
 export default async function AdminUserDetailPage({
   params,
@@ -30,7 +37,7 @@ export default async function AdminUserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getCurrentUser();
+  const user = await requireAdmin();
   const configured = isSupabaseConfigured();
   const detail = configured
     ? await getAdminUserDetail(await createServerSupabaseClient(), id)
@@ -42,35 +49,38 @@ export default async function AdminUserDetailPage({
 
   return (
     <>
-        <h1 className="page-title">{display(detail.full_name)}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {display(detail.country)} · {display(detail.trading_experience)} · Verification:{" "}
-          {detail.verification_status} · Role: {detail.role} · Joined{" "}
-          {detail.created_at ? new Date(detail.created_at).toLocaleDateString() : "—"}
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Admin · User</p>
+          <h1 className="itg2-page-title mt-1">{display(detail.full_name)}</h1>
+          <p className="mt-2 text-muted-foreground">
+            {display(detail.country)} · {display(detail.trading_experience)} · Verification:{" "}
+            {detail.verification_status} · Role: {detail.role} · Joined{" "}
+            {detail.created_at ? new Date(detail.created_at).toLocaleDateString() : "—"}
+          </p>
+        </header>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="card-surface-raised p-4 sm:p-5">
-            <p className="text-sm text-muted-foreground">Level</p>
-            <p className="mt-1 font-semibold">
+          <div className="itg2-card itg2-kpi">
+            <p className="itg2-kpi-label">Level</p>
+            <p className="itg2-kpi-value">
               {detail.level_name ?? "Not calculated yet"}
               {detail.level_score !== null ? <span className="tnum"> ({detail.level_score})</span> : ""}
             </p>
           </div>
-          <div className="card-surface p-4 sm:p-5">
-            <p className="text-sm text-muted-foreground">Trades / Certificates</p>
-            <p className="mt-1 font-semibold tnum">
+          <div className="itg2-card itg2-kpi">
+            <p className="itg2-kpi-label">Trades / Certificates</p>
+            <p className="itg2-kpi-value tnum">
               {detail.trade_count} / {detail.certificate_count}
             </p>
           </div>
-          <div className="card-surface p-4 sm:p-5">
-            <p className="text-sm text-muted-foreground">Active goals</p>
-            <p className="mt-1 font-semibold tnum">{detail.active_goal_count}</p>
+          <div className="itg2-card itg2-kpi">
+            <p className="itg2-kpi-label">Active goals</p>
+            <p className="itg2-kpi-value tnum">{detail.active_goal_count}</p>
           </div>
         </div>
 
-        <section className="mt-6 sm:mt-8 card-surface p-4 sm:p-6">
-          <h2 className="section-title">Financial data — private by default</h2>
+        <section className="mt-6 sm:mt-8 itg2-card itg2-card-flat p-4 sm:p-6">
+          <h2 className="itg2-section-title">Financial data — private by default</h2>
           {financials ? (
             <dl className="mt-3 space-y-1 text-sm">
               <div className="flex justify-between">
@@ -107,14 +117,14 @@ export default async function AdminUserDetailPage({
         </section>
 
         <section className="mt-6 sm:mt-8 grid gap-6 md:grid-cols-2">
-          <div className="card-surface p-4 sm:p-6">
-            <h2 className="section-title">Change role</h2>
+          <div className="itg2-card itg2-card-flat p-4 sm:p-6">
+            <h2 className="itg2-section-title">Change role</h2>
             <div className="mt-4">
               <RoleForm userId={id} currentRole={detail.role} />
             </div>
           </div>
-          <div className="card-surface p-4 sm:p-6">
-            <h2 className="section-title">Change verification</h2>
+          <div className="itg2-card itg2-card-flat p-4 sm:p-6">
+            <h2 className="itg2-section-title">Change verification</h2>
             <div className="mt-4">
               <VerificationForm userId={id} currentStatus={detail.verification_status} />
             </div>

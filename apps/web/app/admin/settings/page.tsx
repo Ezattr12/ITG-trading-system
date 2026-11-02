@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -15,6 +15,13 @@ export const metadata = { title: "Admin — Settings — ITG TraderOS" };
  * LLM is connected. There is no toggle that can pretend otherwise:
  * `llm_connected` is not an editable setting, and `ai_coach_mode`
  * only accepts "deterministic" (validated in lib/admin/validation).
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * flat header band, the AI Coach configuration panel as an
+ * elevated v2 card (a display panel, shown WITHOUT any violet
+ * — admin is not an AI surface), and the setting rows as flat
+ * v2 cards (they contain forms). The settings read, the form
+ * wiring and all copy are exactly as before.
  */
 
 const SETTING_META: Record<string, { label: string; hint: string }> = {
@@ -37,7 +44,7 @@ function settingValue(v: unknown): string {
 }
 
 export default async function AdminSettingsPage() {
-  const user = await getCurrentUser();
+  const user = await requireAdmin();
   const configured = isSupabaseConfigured();
   const settings = configured
     ? await listSystemSettings(await createServerSupabaseClient())
@@ -45,10 +52,13 @@ export default async function AdminSettingsPage() {
 
   return (
     <>
-        <h1 className="page-title">Settings</h1>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Admin</p>
+          <h1 className="itg2-page-title mt-1">Settings</h1>
+        </header>
 
-        <section className="mt-6 card-surface-raised p-4 sm:p-6">
-          <h2 className="section-title">AI Coach configuration</h2>
+        <section className="mt-6 itg2-card itg2-card-elevated p-4 sm:p-6">
+          <h2 className="itg2-section-title">AI Coach configuration</h2>
           <dl className="mt-3 space-y-1 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Coach mode</dt>
@@ -70,7 +80,7 @@ export default async function AdminSettingsPage() {
         </section>
 
         <section className="mt-6 sm:mt-8">
-          <h2 className="section-title">System settings</h2>
+          <h2 className="itg2-section-title">System settings</h2>
           {settings.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {configured ? "No settings stored yet." : "Supabase is not connected yet, so no settings are listed."}
@@ -81,7 +91,7 @@ export default async function AdminSettingsPage() {
                 const meta = SETTING_META[s.key];
                 if (!meta) return null;
                 return (
-                  <li key={s.key} className="card-surface p-4 sm:p-5">
+                  <li key={s.key} className="itg2-card itg2-card-flat p-4 sm:p-5">
                     <SettingForm
                       settingKey={s.key}
                       value={settingValue(s.value)}

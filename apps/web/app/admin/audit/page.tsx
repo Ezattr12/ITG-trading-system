@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -11,19 +11,26 @@ export const metadata = { title: "Admin — Audit log — ITG TraderOS" };
  * a row with the admin (actor), the affected trader, the action,
  * the entity and the reason. The log is append-only — no update
  * or delete policies exist (migration 0010).
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * flat header band and entry rows as .itg2-card. The query
+ * and every rendered field are exactly as before.
  */
 export default async function AdminAuditPage() {
-  const user = await getCurrentUser();
+  const user = await requireAdmin();
   const configured = isSupabaseConfigured();
   const logs = configured ? await listAuditLogs(await createServerSupabaseClient()) : [];
 
   return (
     <>
-        <h1 className="page-title">Audit log</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {logs.length} entr{logs.length === 1 ? "y" : "ies"}. Append-only: admin actions are
-          recorded here and cannot be edited or deleted from the app.
-        </p>
+        <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+          <p className="itg2-eyebrow">Admin</p>
+          <h1 className="itg2-page-title mt-1">Audit log</h1>
+          <p className="mt-2 text-muted-foreground">
+            {logs.length} entr{logs.length === 1 ? "y" : "ies"}. Append-only: admin actions are
+            recorded here and cannot be edited or deleted from the app.
+          </p>
+        </header>
         {logs.length === 0 ? (
           <p className="mt-6 text-sm text-muted-foreground">
             {configured ? "No admin actions recorded yet." : "Supabase is not connected yet, so no audit entries are listed."}
@@ -31,7 +38,7 @@ export default async function AdminAuditPage() {
         ) : (
           <ul className="mt-6 space-y-2">
             {logs.map((row) => (
-              <li key={row.id} className="list-row-premium card-surface p-3 sm:p-4 text-sm">
+              <li key={row.id} className="itg2-card p-3 sm:p-4 text-sm">
                 <p className="font-medium">{row.action}</p>
                 <p className="text-muted-foreground">
                   {row.entity_type}

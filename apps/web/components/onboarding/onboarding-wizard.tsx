@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,8 +22,8 @@ const STEP_TITLES = [
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
+    <div className="itg2-field space-y-2">
+      <Label className="itg2-label">{label}</Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
@@ -36,7 +35,7 @@ function YesNoSelect({ name, defaultValue }: { name: string; defaultValue?: bool
     <select
       name={name}
       defaultValue={defaultValue === true ? "true" : defaultValue === false ? "false" : ""}
-      className="input-select"
+      className="itg2-select"
       required
     >
       <option value="" disabled>
@@ -53,6 +52,16 @@ function YesNoSelect({ name, defaultValue }: { name: string; defaultValue?: bool
  * question group at a time. Anything the trader does not have can
  * be left as "Not provided" — the wizard never forces fake data,
  * and each step saves independently so progress is never lost.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * fields ride the v2 form system (.itg2-field / .itg2-label /
+ * .itg2-input / .itg2-select), the progress track takes the
+ * .itg2-progress treatment (aria contract unchanged), the
+ * not-connected warning became an .itg2-notice-warning and the
+ * three shadcn Buttons became native .itg2-btn-primary /
+ * .itg2-btn-ghost buttons, following the certificates/coach
+ * swap pattern. The step logic, the two server actions, every
+ * field name and every string are exactly as before.
  */
 export function OnboardingWizard({
   initialStep,
@@ -91,8 +100,8 @@ export function OnboardingWizard({
 
   if (done) {
     return (
-      <section className="hero-card card-surface-raised card-glow-emerald p-4 sm:p-6 text-center">
-        <h2 className="section-title">Onboarding complete</h2>
+      <section className="p-4 sm:p-6 text-center">
+        <h2 className="itg2-section-title">Onboarding complete</h2>
         <p className="mt-2 text-muted-foreground">
           Your profile is set up. Anything marked “Not Provided” can be added later from your profile — nothing was invented.
         </p>
@@ -103,9 +112,9 @@ export function OnboardingWizard({
           }}
           className="mt-6"
         >
-          <Button type="submit" disabled={!configured}>
+          <button type="submit" disabled={!configured} className="itg2-btn-primary">
             Go to your dashboard
-          </Button>
+          </button>
         </form>
       </section>
     );
@@ -119,8 +128,8 @@ export function OnboardingWizard({
         </span>
         <span>{progress}% complete</span>
       </div>
-      <div className="card-surface-inset mb-6 h-2 overflow-hidden rounded-full" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+      <div className="itg2-progress mb-6" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+        <div className="itg2-progress-fill" style={{ width: `${progress}%` }} />
       </div>
 
       {state.error && (
@@ -129,7 +138,7 @@ export function OnboardingWizard({
         </p>
       )}
       {!configured && (
-        <p role="alert" className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <p role="alert" className="itg2-notice itg2-notice-warning mb-4">
           Supabase is not connected yet, so onboarding cannot be saved. Connect Supabase first — this form will not pretend to save.
         </p>
       )}
@@ -139,38 +148,38 @@ export function OnboardingWizard({
         {step === 1 && (
           <>
             <Field label="Full name">
-              <Input name="fullName" defaultValue={(a.fullName as string) ?? ""} required placeholder="Your full name" />
+              <Input name="fullName" defaultValue={(a.fullName as string) ?? ""} required placeholder="Your full name" className="itg2-input" />
             </Field>
             <Field label="Father's name" hint="Optional — leave blank if you prefer not to share it.">
-              <Input name="fatherName" defaultValue={(a.fatherName as string) ?? ""} placeholder="Not provided" />
+              <Input name="fatherName" defaultValue={(a.fatherName as string) ?? ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field label="Date of birth">
-              <Input name="dateOfBirth" type="date" defaultValue={(a.dateOfBirth as string) ?? ""} />
+              <Input name="dateOfBirth" type="date" defaultValue={(a.dateOfBirth as string) ?? ""} className="itg2-input" />
             </Field>
             <Field label="Country">
-              <Input name="country" defaultValue={(a.country as string) ?? ""} placeholder="Not provided" />
+              <Input name="country" defaultValue={(a.country as string) ?? ""} placeholder="Not provided" className="itg2-input" />
             </Field>
           </>
         )}
         {step === 2 && (
           <>
             <Field label="Trading experience" hint="Optional — e.g. Beginner, 2 years, Professional.">
-              <Input name="tradingExperience" defaultValue={(a.tradingExperience as string) ?? ""} placeholder="Not provided" />
+              <Input name="tradingExperience" defaultValue={(a.tradingExperience as string) ?? ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field label="Trading education">
-              <Input name="tradingEducation" defaultValue={(a.tradingEducation as string) ?? ""} placeholder="Not provided" />
+              <Input name="tradingEducation" defaultValue={(a.tradingEducation as string) ?? ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field label="Have you done backtesting?">
               <YesNoSelect name="backtestingExperience" defaultValue={a.backtestingExperience as boolean | null} />
             </Field>
             <Field label="Number of backtested trades">
-              <Input name="backtestedTrades" type="number" min={0} defaultValue={a.backtestedTrades != null ? String(a.backtestedTrades) : ""} placeholder="0" />
+              <Input name="backtestedTrades" type="number" min={0} defaultValue={a.backtestedTrades != null ? String(a.backtestedTrades) : ""} placeholder="0" className="itg2-input" />
             </Field>
             <Field label="Have you traded with real money?">
               <YesNoSelect name="realTradingExperience" defaultValue={a.realTradingExperience as boolean | null} />
             </Field>
             <Field label="Approximate number of real trades">
-              <Input name="realTradesCount" type="number" min={0} defaultValue={a.realTradesCount != null ? String(a.realTradesCount) : ""} placeholder="0" />
+              <Input name="realTradesCount" type="number" min={0} defaultValue={a.realTradesCount != null ? String(a.realTradesCount) : ""} placeholder="0" className="itg2-input" />
             </Field>
             <Field label="Have you used demo / paper trading?">
               <YesNoSelect name="demoTrading" defaultValue={a.demoTrading as boolean | null} />
@@ -180,10 +189,10 @@ export function OnboardingWizard({
         {step === 3 && (
           <>
             <Field label="Historical profit" hint="Optional. Leave blank if not available — it will show as Not Provided, never as zero.">
-              <Input name="historicalProfit" type="number" min={0} step="0.01" defaultValue={a.historicalProfit != null ? String(a.historicalProfit) : ""} placeholder="Not provided" />
+              <Input name="historicalProfit" type="number" min={0} step="0.01" defaultValue={a.historicalProfit != null ? String(a.historicalProfit) : ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field label="Historical loss">
-              <Input name="historicalLoss" type="number" min={0} step="0.01" defaultValue={a.historicalLoss != null ? String(a.historicalLoss) : ""} placeholder="Not provided" />
+              <Input name="historicalLoss" type="number" min={0} step="0.01" defaultValue={a.historicalLoss != null ? String(a.historicalLoss) : ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field
               label="Exchange payout / statement verification (self-declared)"
@@ -192,7 +201,7 @@ export function OnboardingWizard({
               <select
                 name="verificationStatus"
                 defaultValue={(a.verificationStatus as string) ?? "not_provided"}
-                className="input-select"
+                className="itg2-select"
               >
                 <option value="not_provided">Not provided</option>
                 <option value="partial">Partially verified</option>
@@ -207,7 +216,7 @@ export function OnboardingWizard({
               <select
                 name="employmentStatus"
                 defaultValue={(a.employmentStatus as string) ?? "not_provided"}
-                className="input-select"
+                className="itg2-select"
               >
                 <option value="full_time">I trade full-time</option>
                 <option value="part_time">I trade part-time</option>
@@ -218,14 +227,14 @@ export function OnboardingWizard({
               </select>
             </Field>
             <Field label="Monthly income (if you have another job)" hint="Private — only you can see this. Leave blank if not applicable.">
-              <Input name="monthlyIncome" type="number" min={0} step="0.01" defaultValue={a.monthlyIncome != null ? String(a.monthlyIncome) : ""} placeholder="Not provided" />
+              <Input name="monthlyIncome" type="number" min={0} step="0.01" defaultValue={a.monthlyIncome != null ? String(a.monthlyIncome) : ""} placeholder="Not provided" className="itg2-input" />
             </Field>
           </>
         )}
         {step === 5 && (
           <>
             <Field label="Current trading investment" hint="Optional and private. Leave blank if not applicable.">
-              <Input name="tradingCapital" type="number" min={0} step="0.01" defaultValue={a.tradingCapital != null ? String(a.tradingCapital) : ""} placeholder="Not provided" />
+              <Input name="tradingCapital" type="number" min={0} step="0.01" defaultValue={a.tradingCapital != null ? String(a.tradingCapital) : ""} placeholder="Not provided" className="itg2-input" />
             </Field>
             <Field label="Do you currently trade real money?">
               <YesNoSelect name="tradesRealMoney" defaultValue={a.tradesRealMoney as boolean | null} />
@@ -237,13 +246,13 @@ export function OnboardingWizard({
         )}
         <div className="flex gap-3 pt-2">
           {step > 1 && (
-            <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)}>
+            <button type="button" className="itg2-btn-ghost" onClick={() => setStep((s) => s - 1)}>
               Back
-            </Button>
+            </button>
           )}
-          <Button type="submit" className="flex-1" disabled={pending || !configured}>
+          <button type="submit" className="itg2-btn-primary flex-1" disabled={pending || !configured}>
             {pending ? "Saving…" : step === 5 ? "Finish onboarding" : "Save and continue"}
-          </Button>
+          </button>
         </div>
       </form>
     </div>

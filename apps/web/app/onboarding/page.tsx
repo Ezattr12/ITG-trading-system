@@ -5,6 +5,20 @@ import { supabaseNotConnectedMessage } from "@/lib/supabase/config";
 
 export const metadata = { title: "Onboarding — ITG TraderOS" };
 
+/**
+ * Onboarding page (Phase 2, spec §7). A standalone page (not the
+ * AuthCard shell, not the AppShell): the signed-in trader who has
+ * not finished onboarding is redirected here to complete the
+ * five-step wizard.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * the header moved into the flat glass band (.itg2-card
+ * .itg2-card-flat with .itg2-eyebrow + .itg2-page-title), the
+ * saved notice became an .itg2-notice-success and the wizard
+ * panel an .itg2-card .itg2-card-flat. All redirects, answer
+ * merging and copy are exactly as before.
+ */
+
 export default async function OnboardingPage({
   searchParams,
 }: {
@@ -42,22 +56,22 @@ export default async function OnboardingPage({
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-12">
-      <header>
-        <p className="eyebrow">
+      <header className="itg2-card itg2-card-flat p-5 sm:p-6">
+        <p className="itg2-eyebrow">
           ITG — Institutional Trading Group
         </p>
-        <h1 className="page-title mt-2">Set up your trader profile</h1>
+        <h1 className="itg2-page-title mt-1">Set up your trader profile</h1>
         <p className="mt-2 text-base text-muted-foreground">
           Five short steps. Anything you don&apos;t have, leave as “Not provided” — we never
           ask you to invent experience, profit or capital.
         </p>
       </header>
       {params.done && (
-        <p role="status" className="mt-6 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+        <p role="status" className="itg2-notice itg2-notice-success mt-6">
           Onboarding saved. You can finish it from your dashboard at any time.
         </p>
       )}
-      <section className="hero-card card-surface-raised card-glow-blue mt-6 p-4 sm:mt-8 sm:p-6">
+      <section className="itg2-card itg2-card-flat mt-6 p-4 sm:mt-8 sm:p-6">
         <OnboardingWizard initialStep={initialStep} initialAnswers={merged} />
       </section>
       <p className="mt-4 text-center text-xs text-muted-foreground">

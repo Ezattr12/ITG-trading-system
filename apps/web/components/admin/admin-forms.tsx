@@ -1,5 +1,22 @@
 "use client";
 
+/**
+ * Admin forms (Phase 10) — role / verification / certificate
+ * revocation / financial-view request / achievement / level /
+ * setting editors, all submitting to lib/admin/actions via the
+ * shared ActionForm.
+ *
+ * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
+ * fields moved onto the v2 form system (.itg2-field wrappers,
+ * .itg2-label, .itg2-input / .itg2-select — the auth/profile
+ * pattern of shadcn controls kept + the v2 class) and submits
+ * onto the v2 buttons via ActionForm's submitClassName (blue
+ * primary for saves; .itg2-btn-danger for the destructive
+ * certificate revocation). The shared ActionForm itself is
+ * untouched, exactly as on every converted sibling. All
+ * actions, field names, ids, defaults, option values and copy
+ * are exactly as before.
+ */
 import { ActionForm } from "@/components/auth/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,13 +31,13 @@ import {
 } from "@/lib/admin/actions";
 import type { AdminAchievementRow, AdminLevelRow } from "@/lib/admin/types";
 
-const inputClass = "min-h-[44px]";
-const selectClass = "input-select";
+const inputClass = "itg2-input";
+const selectClass = "itg2-select";
 
 function ReasonField({ id }: { id: string }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>Reason (recorded in the audit log)</Label>
+    <div className="itg2-field space-y-2">
+      <Label htmlFor={id} className="itg2-label">Reason (recorded in the audit log)</Label>
       <Input id={id} name="reason" type="text" placeholder="e.g. Verified payout statement" className={inputClass} />
     </div>
   );
@@ -28,10 +45,10 @@ function ReasonField({ id }: { id: string }) {
 
 export function RoleForm({ userId, currentRole }: { userId: string; currentRole: string }) {
   return (
-    <ActionForm action={changeUserRoleAction} submitLabel="Change role">
+    <ActionForm action={changeUserRoleAction} submitLabel="Change role" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="userId" value={userId} />
-      <div className="space-y-2">
-        <Label htmlFor={`role-${userId}`}>Role</Label>
+      <div className="itg2-field space-y-2">
+        <Label htmlFor={`role-${userId}`} className="itg2-label">Role</Label>
         <select id={`role-${userId}`} name="role" defaultValue={currentRole} className={selectClass}>
           <option value="trader">Trader</option>
           <option value="admin">Admin</option>
@@ -51,10 +68,10 @@ export function VerificationForm({
   currentStatus: string;
 }) {
   return (
-    <ActionForm action={changeVerificationAction} submitLabel="Change verification">
+    <ActionForm action={changeVerificationAction} submitLabel="Change verification" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="userId" value={userId} />
-      <div className="space-y-2">
-        <Label htmlFor={`verification-${userId}`}>Verification status</Label>
+      <div className="itg2-field space-y-2">
+        <Label htmlFor={`verification-${userId}`} className="itg2-label">Verification status</Label>
         <select
           id={`verification-${userId}`}
           name="verificationStatus"
@@ -73,7 +90,7 @@ export function VerificationForm({
 
 export function RevokeCertificateForm({ certificateId }: { certificateId: string }) {
   return (
-    <ActionForm action={revokeCertificateAction} submitLabel="Revoke certificate">
+    <ActionForm action={revokeCertificateAction} submitLabel="Revoke certificate" submitClassName="itg2-btn-danger w-full">
       <input type="hidden" name="certificateId" value={certificateId} />
       <ReasonField id={`revoke-reason-${certificateId}`} />
       <p className="text-xs text-muted-foreground">
@@ -85,7 +102,7 @@ export function RevokeCertificateForm({ certificateId }: { certificateId: string
 
 export function FinancialViewForm({ userId }: { userId: string }) {
   return (
-    <ActionForm action={requestFinancialViewAction} submitLabel="Request financial view">
+    <ActionForm action={requestFinancialViewAction} submitLabel="Request financial view" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="userId" value={userId} />
       <ReasonField id={`financial-reason-${userId}`} />
       <p className="text-xs text-muted-foreground">
@@ -101,11 +118,12 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
     <ActionForm
       action={saveAchievementAction}
       submitLabel={achievement ? "Update achievement" : "Create achievement"}
+      submitClassName="itg2-btn-primary itg2-btn-save"
     >
       <input type="hidden" name="id" value={achievement?.id ?? ""} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`ach-name-${achievement?.id ?? "new"}`}>Name</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`ach-name-${achievement?.id ?? "new"}`} className="itg2-label">Name</Label>
           <Input
             id={`ach-name-${achievement?.id ?? "new"}`}
             name="name"
@@ -114,8 +132,8 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
             className={inputClass}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`ach-slug-${achievement?.id ?? "new"}`}>Slug</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`ach-slug-${achievement?.id ?? "new"}`} className="itg2-label">Slug</Label>
           <Input
             id={`ach-slug-${achievement?.id ?? "new"}`}
             name="slug"
@@ -125,8 +143,8 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
             className={inputClass}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`ach-category-${achievement?.id ?? "new"}`}>Category</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`ach-category-${achievement?.id ?? "new"}`} className="itg2-label">Category</Label>
           <select
             id={`ach-category-${achievement?.id ?? "new"}`}
             name="category"
@@ -142,8 +160,8 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
             )}
           </select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`ach-xp-${achievement?.id ?? "new"}`}>XP reward</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`ach-xp-${achievement?.id ?? "new"}`} className="itg2-label">XP reward</Label>
           <Input
             id={`ach-xp-${achievement?.id ?? "new"}`}
             name="xpReward"
@@ -153,8 +171,8 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
             className={inputClass}
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={`ach-desc-${achievement?.id ?? "new"}`}>Description</Label>
+        <div className="itg2-field space-y-2 sm:col-span-2">
+          <Label htmlFor={`ach-desc-${achievement?.id ?? "new"}`} className="itg2-label">Description</Label>
           <Input
             id={`ach-desc-${achievement?.id ?? "new"}`}
             name="description"
@@ -170,11 +188,11 @@ export function AchievementForm({ achievement }: { achievement?: AdminAchievemen
 
 export function LevelForm({ level }: { level: AdminLevelRow }) {
   return (
-    <ActionForm action={saveLevelThresholdAction} submitLabel="Update thresholds">
+    <ActionForm action={saveLevelThresholdAction} submitLabel="Update thresholds" submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="levelId" value={level.id} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`level-min-${level.id}`}>Min score</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`level-min-${level.id}`} className="itg2-label">Min score</Label>
           <Input
             id={`level-min-${level.id}`}
             name="minScore"
@@ -186,8 +204,8 @@ export function LevelForm({ level }: { level: AdminLevelRow }) {
             className={inputClass}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`level-max-${level.id}`}>Max score (blank = no upper limit)</Label>
+        <div className="itg2-field space-y-2">
+          <Label htmlFor={`level-max-${level.id}`} className="itg2-label">Max score (blank = no upper limit)</Label>
           <Input
             id={`level-max-${level.id}`}
             name="maxScore"
@@ -216,10 +234,10 @@ export function SettingForm({
   hint: string;
 }) {
   return (
-    <ActionForm action={saveSystemSettingAction} submitLabel={`Save ${label}`}>
+    <ActionForm action={saveSystemSettingAction} submitLabel={`Save ${label}`} submitClassName="itg2-btn-primary itg2-btn-save">
       <input type="hidden" name="key" value={settingKey} />
-      <div className="space-y-2">
-        <Label htmlFor={`setting-${settingKey}`}>{label}</Label>
+      <div className="itg2-field space-y-2">
+        <Label htmlFor={`setting-${settingKey}`} className="itg2-label">{label}</Label>
         <Input
           id={`setting-${settingKey}`}
           name="value"
