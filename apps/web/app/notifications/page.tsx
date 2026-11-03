@@ -104,6 +104,11 @@ export default async function NotificationsPage() {
                         <Link href="/risk" className="hover:underline">
                           {n.title}
                         </Link>
+                      ) : n.type === "system" &&
+                        n.related_entity_type === "plan_event" ? (
+                        <Link href="/plan" className="hover:underline">
+                          {n.title}
+                        </Link>
                       ) : (
                         n.title
                       )}

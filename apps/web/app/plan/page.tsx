@@ -8,6 +8,8 @@ import { getAnalyticsBundle } from "@/lib/analytics/queries";
 import { psychologySummary } from "@/lib/analytics/analytics";
 import { evaluatePlanVsActual } from "@/lib/risk/engine";
 import { getTradingPlan } from "@/lib/risk/queries";
+import { getPlanEventSummary, getPlanEvents } from "@/lib/plan/queries";
+import { PLAN_TERM_LABELS, type PlanEvent } from "@/lib/plan/types";
 
 export const metadata = { title: "Trading plan — ITG TraderOS" };
 
@@ -42,14 +44,27 @@ export default async function PlanPage() {
 
   let setups: { id: string; name: string; strategyName: string | null }[] = [];
   let rows: ReturnType<typeof evaluatePlanVsActual> = [];
+  let planEvents: PlanEvent[] = [];
+  let planSummary: Awaited<ReturnType<typeof getPlanEventSummary>> | null = null;
   if (configured) {
-    const [{ data: setupRows }, { data: strategyRows }, bundle, planRow] = await Promise.all([
+    const [
+      { data: setupRows },
+      { data: strategyRows },
+      bundle,
+      planRow,
+      events,
+      summary,
+    ] = await Promise.all([
       supabase.from("setups").select("id, name, strategy_id").order("name"),
       supabase.from("strategies").select("id, name"),
       getAnalyticsBundle(supabase, user.id),
       getTradingPlan(supabase, user.id),
+      getPlanEvents(supabase, user.id),
+      getPlanEventSummary(supabase, user.id),
     ]);
     plan = planRow;
+    planEvents = events;
+    planSummary = summary;
     const strategyName = new Map(
       ((strategyRows ?? []) as { id: string; name: string }[]).map((s) => [s.id, s.name]),
     );
@@ -146,6 +161,61 @@ export default async function PlanPage() {
                 </tbody>
               </table>
             </div>
+          )}
+        </section>
+
+        <section className="mt-6 sm:mt-8" aria-label="Plan adherence">
+          <h2 className="itg2-section-title">Plan adherence</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Automatic monitoring checks every saved trade against
+            your plan and records each breach here — it never
+            blocks a trade. Day-limit breaches are recorded once
+            per day, for the trade that crossed the line.
+          </p>
+          {plan === null ? (
+            <p className="itg2-notice itg2-notice-neutral mt-4">
+              Save a plan first — monitoring starts once a plan exists.
+            </p>
+          ) : planEvents.length === 0 ? (
+            <p className="itg2-notice itg2-notice-neutral mt-4">
+              No plan breaches recorded yet. When a saved trade
+              breaks your plan, it will appear here and in your
+              notifications.
+            </p>
+          ) : (
+            <>
+              {planSummary !== null && planSummary.total > 0 ? (
+                <p className="mt-4 flex flex-wrap items-center gap-1.5 text-sm">
+                  <span className="font-medium">
+                    {planSummary.total}{" "}
+                    {planSummary.total === 1 ? "breach" : "breaches"} in the
+                    last {planSummary.days} days:
+                  </span>
+                  {Object.entries(planSummary.byTerm).map(([term, count]) => (
+                    <span key={term} className="itg2-chip itg2-chip-loss">
+                      {PLAN_TERM_LABELS[term as keyof typeof PLAN_TERM_LABELS] ??
+                        term}{" "}
+                      × {count}
+                    </span>
+                  ))}
+                </p>
+              ) : null}
+              <ul className="mt-4 space-y-3">
+                {planEvents.map((event) => (
+                  <li key={event.id} className="itg2-card p-4 sm:p-5">
+                    <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="itg2-chip itg2-chip-loss">
+                        {PLAN_TERM_LABELS[event.term] ?? event.term}
+                      </span>
+                      <span>
+                        {new Date(event.created_at).toLocaleString()}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm">{event.message}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
     </AppShell>

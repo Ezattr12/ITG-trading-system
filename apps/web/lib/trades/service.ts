@@ -23,6 +23,7 @@ import {
 } from "@/lib/risk/queries";
 import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import { refreshCoachInsightsSafely } from "@/lib/coach/service";
+import { evaluatePlanForTrade } from "@/lib/plan/service";
 import { createNotification } from "@/lib/discipline/service";
 import { computeTradeMetrics } from "./calculations";
 import { normalizeLesson } from "./lessons";
@@ -314,6 +315,14 @@ export async function createTradeCore(
   if (metrics.status === "closed") {
     await refreshCoachAfterClosedTradeChange(supabase, userId, input.closedAt, input.openedAt);
   }
+  // Task 19 hook: trading-plan enforcement. The saved trade
+  // is judged against the trader's active plan; breaches are
+  // logged to plan_events and notified. OBSERVATIONAL only —
+  // a plan breach never blocks or changes a save (the risk
+  // rules above are the only blocking checks). Best-effort:
+  // evaluatePlanForTrade never throws. Corrections, edits
+  // and reviews do not re-evaluate, consistent with risk.
+  await evaluatePlanForTrade(supabase, userId, data.id);
   return {
     ok: true,
     trade: {

@@ -8,6 +8,7 @@ import {
   createNotification,
   ensureDisciplineReminderLoggedCore,
 } from "@/lib/discipline/service";
+import { runPlanEnforcementForUser } from "@/lib/plan/service";
 import { getLastJournalDate } from "@/lib/discipline/queries";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
@@ -34,6 +35,11 @@ import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
  *   reached through the shared escalation core
  *   (`ensureDisciplineReminderLoggedCore`) that the dashboard
  *   render also calls.
+ * - plan breach events are written only by `logPlanEvent`
+ *   (lib/plan/service.ts, Task 19), reached through the same
+ *   `runPlanEnforcementForUser` the trade-save hook's engine
+ *   feeds; plan dedupe is structural per (trade, term) /
+ *   (day, term) in migration 0019.
  *
  * IDEMPOTENCY IS THE CONTRACT: a second run started
  * immediately after the first creates zero new rows of any
@@ -69,6 +75,10 @@ export interface UserBackgroundPassResult {
   riskNotifications: number;
   disciplineEvents: number;
   monthlyNotices: number;
+  /** Plan breach events logged by plan enforcement (Task 19). */
+  planEvents: number;
+  /** Notifications created for those plan breaches. */
+  planNotifications: number;
 }
 
 export interface BackgroundRunSummary {
@@ -78,6 +88,8 @@ export interface BackgroundRunSummary {
   riskNotifications: number;
   disciplineEvents: number;
   monthlyNotices: number;
+  planEvents: number;
+  planNotifications: number;
   /** Users whose pass threw; the run continues past them. */
   errors: number;
 }
@@ -87,6 +99,8 @@ const EMPTY_USER_RESULT: UserBackgroundPassResult = {
   riskNotifications: 0,
   disciplineEvents: 0,
   monthlyNotices: 0,
+  planEvents: 0,
+  planNotifications: 0,
 };
 
 /** Upper bound on risk events notified per user per pass. */
@@ -389,6 +403,14 @@ export async function runBackgroundPassForUser(
     todayString(now),
   );
   result.monthlyNotices = await notifyMonthlyReportIfDue(client, userId, now);
+  // Plan enforcement (Task 19): re-judge stored trades
+  // against the active plan — catches session/setup breaches
+  // recorded by later reviews, and today's day-limit
+  // crossings from any path. Never throws (best-effort like
+  // every writer here) and idempotent by structural dedupe.
+  const plan = await runPlanEnforcementForUser(client, userId, now);
+  result.planEvents = plan.events;
+  result.planNotifications = plan.notifications;
   result.insightsRefreshed = await refreshInsightsIfStale(client, userId);
   return result;
 }
@@ -408,6 +430,8 @@ export async function runBackgroundPassForAllUsers(
     riskNotifications: 0,
     disciplineEvents: 0,
     monthlyNotices: 0,
+    planEvents: 0,
+    planNotifications: 0,
     errors: 0,
   };
   const { data } = await client
@@ -422,6 +446,8 @@ export async function runBackgroundPassForAllUsers(
       summary.riskNotifications += result.riskNotifications;
       summary.disciplineEvents += result.disciplineEvents;
       summary.monthlyNotices += result.monthlyNotices;
+      summary.planEvents += result.planEvents;
+      summary.planNotifications += result.planNotifications;
     } catch {
       summary.errors += 1;
     }
@@ -471,6 +497,8 @@ export function createDefaultIntelligenceRunDeps(): IntelligenceRunDeps {
           riskNotifications: summary.riskNotifications,
           disciplineEvents: summary.disciplineEvents,
           monthlyNotices: summary.monthlyNotices,
+          planEvents: summary.planEvents,
+          planNotifications: summary.planNotifications,
           errors: summary.errors,
         },
       }),
@@ -510,6 +538,8 @@ export async function handleIntelligenceRun(
       riskNotifications: summary.riskNotifications,
       disciplineEvents: summary.disciplineEvents,
       monthlyNotices: summary.monthlyNotices,
+      planEvents: summary.planEvents,
+      planNotifications: summary.planNotifications,
       errors: summary.errors,
     },
   };

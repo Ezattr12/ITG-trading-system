@@ -157,6 +157,8 @@ describe("runBackgroundPassForUser", () => {
       riskNotifications: 0,
       disciplineEvents: 0,
       monthlyNotices: 0,
+      planEvents: 0,
+      planNotifications: 0,
     });
     expect(second).toEqual(first);
     expect(fake.inserts).toHaveLength(0);
@@ -464,6 +466,8 @@ describe("handleIntelligenceRun", () => {
     riskNotifications: 3,
     disciplineEvents: 1,
     monthlyNotices: 2,
+    planEvents: 5,
+    planNotifications: 5,
     errors: 0,
   };
 

@@ -57,9 +57,9 @@ function policies(sql: string): Policy[] {
 const sql = migrationSql();
 
 describe("RLS matrix (from migration files)", () => {
-  it("has 32 tables, all with RLS enabled", () => {
+  it("has 33 tables, all with RLS enabled", () => {
     const found = tables(sql);
-    expect(found).toHaveLength(32);
+    expect(found).toHaveLength(33);
     const enabled = rlsEnabled(sql);
     for (const table of found) {
       expect(enabled).toContain(table);
@@ -81,6 +81,7 @@ describe("RLS matrix (from migration files)", () => {
       "audit_logs",
       "xp_transactions",
       "risk_events",
+      "plan_events",
       "discipline_events",
       "certificates",
       "report_runs",
