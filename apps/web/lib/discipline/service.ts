@@ -358,9 +358,10 @@ export async function updateGoalStatusCore(
  * logged twice (unique key + escalation check), so calling this
  * on a page render is safe. Returns the reminder (level 0 = none).
  *
- * Called from the dashboard render, where the reminder is shown —
- * there is no daily cron yet (Phase 13), so the render is the
- * moment the trader can actually see the reminder.
+ * Called from the dashboard render, where the reminder is shown,
+ * and (since Task 17) from the background intelligence pass via
+ * the extracted core below — the render is no longer the only
+ * moment the escalation can fire.
  *
  * Task 13 (finding F3): moved verbatim from
  * lib/discipline/actions.ts, where as an export of a "use server"
@@ -368,18 +369,40 @@ export async function updateGoalStatusCore(
  * caller-supplied userId. It now lives in this plain server
  * module; the dashboard passes the session-derived user id.
  */
-export async function ensureDisciplineReminderLogged(
+/** The reminder plus whether this call actually logged a new event. */
+export type DisciplineReminderResult = {
+  level: 0 | 1 | 2 | 3;
+  title: string;
+  body: string;
+  missedDays: number;
+  /** True only when a new discipline_events row was inserted. */
+  logged: boolean;
+};
+
+/**
+ * The escalation core (Task 17 extraction): identical logic to
+ * the render path, but the read client is supplied by the
+ * caller — the session client on the dashboard render, the
+ * service-role client in the background intelligence pass,
+ * where no trader session exists. The writes are unchanged:
+ * `logDisciplineEvent` / `createNotification` use their own
+ * service-role client, exactly as they always have. The caller
+ * guarantees a working client; the configured check stays in
+ * the render wrapper below.
+ */
+export async function ensureDisciplineReminderLoggedCore(
+  supabase: SupabaseClient,
   userId: string,
   lastJournalDate: string | null,
   today: string,
-): Promise<{ level: 0 | 1 | 2 | 3; title: string; body: string; missedDays: number }> {
+): Promise<DisciplineReminderResult> {
   const reminder = buildDisciplineReminder(lastJournalDate, today);
-  if (reminder.level === 0) return reminder;
-  if (!isSupabaseConfigured()) return reminder;
-  const supabase = await createServerSupabaseClient();
+  if (reminder.level === 0) return { ...reminder, logged: false };
   const latest = await getLatestDisciplineEvent(supabase, userId, "missed_journal");
   const loggedLevel = currentRunLoggedLevel(latest, lastJournalDate);
-  if (!escalationNeeded(loggedLevel, reminder.level)) return reminder;
+  if (!escalationNeeded(loggedLevel, reminder.level)) {
+    return { ...reminder, logged: false };
+  }
   const logged = await logDisciplineEvent({
     userId,
     eventDate: today,
@@ -396,5 +419,17 @@ export async function ensureDisciplineReminderLogged(
       body: reminder.body,
     });
   }
-  return reminder;
+  return { ...reminder, logged };
+}
+
+export async function ensureDisciplineReminderLogged(
+  userId: string,
+  lastJournalDate: string | null,
+  today: string,
+): Promise<DisciplineReminderResult> {
+  const reminder = buildDisciplineReminder(lastJournalDate, today);
+  if (reminder.level === 0) return { ...reminder, logged: false };
+  if (!isSupabaseConfigured()) return { ...reminder, logged: false };
+  const supabase = await createServerSupabaseClient();
+  return ensureDisciplineReminderLoggedCore(supabase, userId, lastJournalDate, today);
 }

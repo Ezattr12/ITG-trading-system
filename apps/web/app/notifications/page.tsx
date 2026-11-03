@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -98,7 +99,15 @@ export default async function NotificationsPage() {
                         {n.is_read ? "" : " · Unread"}
                       </span>
                     </p>
-                    <h2 className="mt-1 font-semibold">{n.title}</h2>
+                    <h2 className="mt-1 font-semibold">
+                      {n.type === "risk_warning" ? (
+                        <Link href="/risk" className="hover:underline">
+                          {n.title}
+                        </Link>
+                      ) : (
+                        n.title
+                      )}
+                    </h2>
                     {n.body ? (
                       <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
                     ) : null}

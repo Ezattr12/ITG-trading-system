@@ -1,1 +1,1 @@
-{"regions":["hnd1"]}
+{"crons":[{"path":"/api/intelligence/run","schedule":"30 6 * * *"}],"regions":["hnd1"]}
