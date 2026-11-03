@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectAllowedNumbers,
   extractNumericTokens,
+  findBannedContent,
   findForeignNumbers,
   narrateWithGuard,
   resolveCoachLlmProvider,
@@ -254,6 +255,45 @@ describe("narrateWithGuard — fallback contract", () => {
     expect(Date.now() - started).toBeLessThan(2000);
   });
 
+  it("a number-free trade instruction is discarded whole by the banned-content screen", async () => {
+    const result = await narrateWithGuard({
+      provider: providerReturning(
+        [
+          "FACTS",
+          "- Total P&L 100.00 across 3 trades, win rate 66.7%.",
+          "INFERENCES",
+          "- The week was profitable on the recorded data.",
+          "RECOMMENDATIONS",
+          "- Buy gold now while this works.",
+        ].join("\n"),
+      ),
+      systemPrompt: "S",
+      userPrompt: "U",
+      allowedSource,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("descriptive narration about the trader's own positions passes both guards", async () => {
+    const result = await narrateWithGuard({
+      provider: providerReturning(
+        [
+          "FACTS",
+          "- Total P&L 100.00 across 3 trades, win rate 66.7%.",
+          "INFERENCES",
+          "- Your short trades dragged the week; the longs carried it.",
+          "RECOMMENDATIONS",
+          "- Consider reviewing your stop placement before the next session.",
+        ].join("\n"),
+      ),
+      systemPrompt: "S",
+      userPrompt: "U",
+      allowedSource,
+    });
+    expect(result?.provider).toBe("mock");
+    expect(result?.text).toContain("Consider reviewing your stop placement");
+  });
+
   it("the provider receives the caller's prompts verbatim and an abort signal", async () => {
     const receivedInputs: CoachLlmNarrateInput[] = [];
     const provider: CoachLlmProvider = {
@@ -274,5 +314,87 @@ describe("narrateWithGuard — fallback contract", () => {
     expect(receivedInputs[0].systemPrompt).toBe("SYSTEM PROMPT");
     expect(receivedInputs[0].userPrompt).toBe("USER PROMPT");
     expect(receivedInputs[0].signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("findBannedContent — the Task 16 banned-content screen", () => {
+  /**
+   * The line: an instruction to trade a market NOW is
+   * banned; coaching about the trader's process and
+   * recorded past is not. Rejection is the safe failure
+   * (the deterministic answer is shown instead), so the
+   * screen keys on imperative shapes — sentence-initial
+   * execution verbs, modals, advised trade gerunds,
+   * direction + instrument, urgency, prediction and
+   * promise phrasing — never on direction words alone.
+   */
+  const REJECTED: [string, string][] = [
+    ["Buy gold now.", "direction-instrument"],
+    ["You should short EURUSD here.", "modal-trade-instruction"],
+    ["You must close the trade before the news.", "modal-trade-instruction"],
+    ["Short EURUSD at market.", "direction-instrument"],
+    ["Enter a position before the news.", "execution-phrase"],
+    ["Place a trade today.", "execution-phrase"],
+    ["Take this trade — the setup aligns with your best pattern.", "execution-phrase"],
+    ["Go long on gold while momentum is with you.", "execution-phrase"],
+    ["We recommend buying gold at these levels.", "advised-trade-instruction"],
+    ["Consider buying gold here — your London entries work.", "advised-trade-instruction"],
+    ["Gold will reach a new high this month.", "price-prediction"],
+    ["The price is going to hit the level you marked.", "price-prediction"],
+    ["This approach is guaranteed to work if you stay disciplined.", "outcome-promise"],
+    ["You can't lose with this setup.", "outcome-promise"],
+    ["It is risk-free profit when the setup appears.", "outcome-promise"],
+    ["Act now, before it's too late.", "urgency"],
+    ["Hold your position through the announcement.", "hold-instruction"],
+    ["- Sell the position and wait.", "imperative-line-start"],
+  ];
+
+  it.each(REJECTED)("rejects %s (%s)", (text, rule) => {
+    expect(findBannedContent(text)).toContain(rule);
+  });
+
+  const ACCEPTED: string[] = [
+    // Past tense / possessive description of the trader's own record.
+    "You bought gold three times this month; two of those buys lost money.",
+    "Your short gold trades lost 50.00 in October, while your longs carried the month.",
+    "Your shorts underperformed your longs across the month.",
+    "Short trades lost more than long trades this month.",
+    "Most of your profit came from long trades on gold.",
+    "You tend to exit winners early and hold losers too long.",
+    "Your stop was hit on the two losing trades.",
+    // Process advice — including "consider" + a process gerund.
+    "Consider reviewing your stop placement before the next session.",
+    "Consider tightening your stop placement on gold trades.",
+    "Review the three losing trades and note what they shared.",
+    "Keeping position sizes small protected your capital.",
+    "- Keep the routine that produced this week.",
+    "- Closed trades: 8 of your 10 journal entries this month.",
+    "- Open trades averaged a smaller size than the closed ones.",
+    // The shipped clean-narration shape (chat.test.ts GOOD_NARRATION).
+    [
+      "FACTS",
+      "- Profitable week: 100.00 across 3 trades.",
+      "INFERENCES",
+      "- The week was profitable on the recorded data.",
+      "RECOMMENDATIONS",
+      "- Keep the routine that produced this week.",
+    ].join("\n"),
+  ];
+
+  it.each(ACCEPTED)("accepts coaching prose: %s", (text) => {
+    expect(findBannedContent(text)).toEqual([]);
+  });
+
+  it("returns every tripped rule, in rule order, without duplicates", () => {
+    expect(findBannedContent("Buy gold now — guaranteed.")).toEqual([
+      "imperative-line-start",
+      "direction-instrument",
+      "outcome-promise",
+    ]);
+  });
+
+  it("empty and number-only text is clean", () => {
+    expect(findBannedContent("")).toEqual([]);
+    expect(findBannedContent("3702.50 · 87.5% · 8 closed trades")).toEqual([]);
   });
 });

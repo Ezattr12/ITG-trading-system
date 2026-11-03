@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fakeSupabase, type Row } from "@/lib/test-helpers/fake-supabase";
 import type { CoachChatAnswer, CoachChatHistoryTurn } from "./chat";
+import type { CoachLlmProvider } from "./llm";
 import {
   handleCoachChat,
   type CoachChatAuditEntry,
@@ -281,5 +282,113 @@ describe("handleCoachChat — real core wiring", () => {
     expect(JSON.stringify(res.body)).toContain("Profitable week: 100.00 across 3 trades");
     expect(audits).toHaveLength(1);
     expect(audits[0].outcome).toBe("ok");
+  });
+});
+
+describe("handleCoachChat — LLM narration at the handler/audit seam (Task 16)", () => {
+  /**
+   * Step 2 of the Task 15 plan: pin the narration
+   * contract where the transport meets the audit ledger.
+   * The real core runs with a fake provider injected;
+   * createCoachChatDeps writes the captured entry's
+   * { outcome, intent, narration } as the audit row's
+   * details — exactly those three keys, never the
+   * message text, never a figure.
+   */
+  const TABLES: Record<string, Row[]> = {
+    trades: [
+      {
+        id: "r1", user_id: USER_A, pair: "XAUUSD", direction: "long", status: "closed",
+        pnl: 120, r_multiple: 2, sl: 100, tp: null, session: "london", strategy_id: null,
+        opened_at: "2026-10-12T09:00:00Z", closed_at: "2026-10-12T10:00:00Z",
+      },
+      {
+        id: "r2", user_id: USER_A, pair: "EURUSD", direction: "short", status: "closed",
+        pnl: -50, r_multiple: -1, sl: 100, tp: null, session: "new_york", strategy_id: null,
+        opened_at: "2026-10-13T09:00:00Z", closed_at: "2026-10-13T10:00:00Z",
+      },
+      {
+        id: "r3", user_id: USER_A, pair: "GBPUSD", direction: "long", status: "closed",
+        pnl: 30, r_multiple: 0.6, sl: 100, tp: null, session: "london", strategy_id: null,
+        opened_at: "2026-10-14T09:00:00Z", closed_at: "2026-10-14T10:00:00Z",
+      },
+    ],
+    psychology_records: [],
+    strategies: [],
+    lessons: [],
+    goals: [],
+    risk_events: [],
+    ai_insights: [],
+  };
+
+  const CLEAN_NARRATION = [
+    "FACTS",
+    "- Profitable week: 100.00 across 3 trades.",
+    "INFERENCES",
+    "- The week was profitable on the recorded data.",
+    "RECOMMENDATIONS",
+    "- Keep the routine that produced this week.",
+  ].join("\n");
+
+  const BANNED_NARRATION = [
+    "FACTS",
+    "- Profitable week: 100.00 across 3 trades.",
+    "INFERENCES",
+    "- The week was profitable on the recorded data.",
+    "RECOMMENDATIONS",
+    "- Buy gold now — this run is guaranteed.",
+  ].join("\n");
+
+  function narratingDeps(narrationText: string) {
+    const { client } = fakeSupabase(TABLES);
+    const provider: CoachLlmProvider = {
+      name: "mock",
+      model: "mock-1",
+      narrate: async () => narrationText,
+    };
+    return makeDeps({
+      getSession: async () => ({ userId: USER_A, client }),
+      answer: async (args) => {
+        const { answerCoachQuestion } = await import("./chat");
+        return answerCoachQuestion({ ...args, llmProvider: provider });
+      },
+      now: () => new Date("2026-10-14T12:00:00Z"),
+    });
+  }
+
+  it("clean narration → response carries narrationProvider; the audit entry records narration llm with exactly the three detail fields", async () => {
+    const { deps, audits } = narratingDeps(CLEAN_NARRATION);
+    const res = await handleCoachChat({ body: { message: "How am I doing?" } }, deps);
+    expect(res.status).toBe(200);
+    expect(res.body.narration).toBe("llm");
+    expect(res.body.narrationProvider).toBe("mock");
+    expect(res.body.facts).toEqual(["Profitable week: 100.00 across 3 trades."]);
+    expect(audits).toHaveLength(1);
+    expect(audits[0].userId).toBe(USER_A);
+    // The details object written to audit_logs is built from
+    // exactly these three fields of the entry — no more.
+    const details = {
+      outcome: audits[0].outcome,
+      intent: audits[0].intent,
+      narration: audits[0].narration,
+    };
+    expect(Object.keys(details).sort()).toEqual(["intent", "narration", "outcome"]);
+    expect(details).toEqual({ outcome: "ok", intent: "weekly_overview", narration: "llm" });
+  });
+
+  it("banned-content narration → deterministic response, provider text never reaches the body, audit records deterministic", async () => {
+    const { deps, audits } = narratingDeps(BANNED_NARRATION);
+    const res = await handleCoachChat({ body: { message: "How am I doing?" } }, deps);
+    expect(res.status).toBe(200);
+    expect(res.body.narration).toBe("deterministic");
+    expect(res.body.narrationProvider).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain("Buy gold");
+    expect(JSON.stringify(res.body)).not.toContain("guaranteed");
+    expect(res.body.facts).toContainEqual(
+      expect.stringContaining("Profitable week: 100.00 across 3 trades"),
+    );
+    expect(audits).toEqual([
+      { userId: USER_A, outcome: "ok", intent: "weekly_overview", narration: "deterministic" },
+    ]);
   });
 });
