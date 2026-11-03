@@ -3,7 +3,10 @@ import type {
   DisciplineSplit,
   GroupStat,
   IntelligenceOverview,
+  PatternAnalysis,
+  PatternKind,
   PeriodDigest,
+  TradingPattern,
 } from "@/lib/intelligence/types";
 import { DrawdownChart } from "./charts";
 import { Money, Pct } from "./stat-card";
@@ -114,19 +117,124 @@ function DigestCard({ digest }: { digest: PeriodDigest }) {
   );
 }
 
+const PATTERN_KIND_LABELS: Record<PatternKind, string> = {
+  strategy: "Strategy",
+  session: "Session",
+  direction: "Direction",
+  pair: "Pair",
+  setup: "Setup",
+  market_condition: "Market condition",
+  emotion: "Emotion",
+  confidence: "Confidence",
+  session_direction: "Session · direction",
+  strategy_session: "Strategy · session",
+  stop_loss: "Stop-loss",
+  repeated_mistake: "Repeated mistake",
+};
+
+function PatternEvidence({ pattern }: { pattern: TradingPattern }) {
+  if (pattern.kind === "repeated_mistake") {
+    return (
+      <>
+        Recorded {pattern.occurrences}× in your lessons
+        {pattern.trades > 0 ? (
+          <>
+            {" "}· linked to {pattern.trades} closed trade{pattern.trades === 1 ? "" : "s"}{" "}
+            totalling <Money value={pattern.totalPnl} />
+          </>
+        ) : (
+          " · no linked closed trades yet"
+        )}
+        .
+      </>
+    );
+  }
+  return (
+    <>
+      {pattern.trades} trades · win rate <Pct value={pattern.winRate} /> vs your{" "}
+      <Pct value={pattern.baselineWinRate} /> overall · total P&amp;L{" "}
+      <Money value={pattern.totalPnl} />
+      {pattern.basis === "pnl_dominance" && pattern.pnlShare !== null
+        ? ` · ${(pattern.pnlShare * 100).toFixed(1)}% of your total P&L movement`
+        : ""}
+      .
+    </>
+  );
+}
+
+function PatternsCard({ patterns }: { patterns: PatternAnalysis }) {
+  return (
+    <section
+      className="itg2-card p-5 sm:p-6 min-[801px]:col-span-2"
+      aria-label="Your patterns"
+    >
+      <p className="itg2-eyebrow">Patterns</p>
+      <h2 className="itg2-section-title mt-1">Your patterns</h2>
+      <p className="mt-1 max-w-[720px] text-xs leading-relaxed text-muted-foreground">
+        A pattern is shown only when a group of 3 or more closed trades beats or trails
+        your overall win rate by at least 20 points, or accounts for at least half of
+        your total P&amp;L movement. Patterns describe your recorded history — they are
+        not predictions.
+      </p>
+      {patterns.status !== "ok" ? (
+        <p className="mt-3 text-muted-foreground">
+          Patterns appear once you have at least 5 closed trades and a group of 3 or
+          more that stands out — you have {patterns.tradesCount} closed trade
+          {patterns.tradesCount === 1 ? "" : "s"}.
+        </p>
+      ) : patterns.patterns.length === 0 ? (
+        <p className="mt-3 text-muted-foreground">
+          No group of 3 or more trades stands out from your overall results yet — your
+          results are spread evenly across the strategies, sessions and conditions
+          measured so far.
+        </p>
+      ) : (
+        <ul className="mt-2">
+          {patterns.patterns.map((p) => (
+            <li
+              key={`${p.kind}-${p.key}`}
+              className="border-t border-border pt-3 mt-3 first:border-t-0 first:mt-1 first:pt-2"
+            >
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                <span className="capitalize">
+                  {p.kind === "repeated_mistake" ? `“${p.label}”` : p.label}
+                </span>
+                {p.direction === "edge" ? (
+                  <span className="itg2-chip itg2-chip-profit whitespace-nowrap">Edge</span>
+                ) : p.direction === "drag" ? (
+                  <span className="itg2-chip itg2-chip-loss whitespace-nowrap">Drag</span>
+                ) : (
+                  <span className="itg2-chip itg2-chip-warning whitespace-nowrap">Repeats</span>
+                )}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {PATTERN_KIND_LABELS[p.kind]}
+                </span>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                <PatternEvidence pattern={p} />
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
-  const { drawdown, risk, psychology, discipline, recurring, conditions, plan } = data;
+  const { patterns, drawdown, risk, psychology, discipline, recurring, conditions, plan } = data;
   return (
     <div className="mt-10">
       <p className="itg2-eyebrow">Intelligence</p>
       <h2 className="itg2-section-title mt-1">Advanced intelligence</h2>
       <p className="mt-2 max-w-[720px] text-sm leading-relaxed text-muted-foreground">
-        Deeper reads over the same real trades — drawdown, risk behaviour, psychology,
-        discipline, conditions and a personalized improvement plan. Where a sample is
-        too small to conclude, the panel says so instead of guessing.
+        Deeper reads over the same real trades — patterns, drawdown, risk behaviour,
+        psychology, discipline, conditions and a personalized improvement plan. Where
+        a sample is too small to conclude, the panel says so instead of guessing.
       </p>
 
       <div className="mt-5 grid grid-cols-1 gap-[18px] min-[801px]:grid-cols-2">
+        <PatternsCard patterns={patterns} />
         <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown analysis">
           <p className="itg2-eyebrow">Risk</p>
           <h2 className="itg2-section-title mt-1">Drawdown analysis</h2>

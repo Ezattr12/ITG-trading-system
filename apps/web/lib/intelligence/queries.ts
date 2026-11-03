@@ -20,6 +20,7 @@ import {
   buildImprovementPlan,
   type RiskContext,
 } from "./analysis";
+import { analyzePatterns } from "./patterns";
 import type {
   ConditionsAnalysis,
   DisciplineAnalysis,
@@ -28,6 +29,7 @@ import type {
   IntelLesson,
   IntelTrade,
   IntelligenceOverview,
+  PatternAnalysis,
   PeriodDigest,
   PsychologyAnalysis,
   RecurringAnalysis,
@@ -276,6 +278,14 @@ export async function getImprovementPlan(
   return planFromData(data, today);
 }
 
+export async function getPatternAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<PatternAnalysis> {
+  const data = await getIntelligenceData(supabase, userId);
+  return analyzePatterns(data.trades, data.lessons);
+}
+
 /* ---------------------------------------------------------------- digests */
 
 interface DigestAnalyses {
@@ -459,6 +469,7 @@ export async function getIntelligenceOverview(
   ]);
   return {
     tradesCount: data.trades.length,
+    patterns: analyzePatterns(data.trades, data.lessons),
     drawdown,
     risk,
     psychology,

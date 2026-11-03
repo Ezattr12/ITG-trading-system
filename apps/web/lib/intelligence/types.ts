@@ -209,6 +209,8 @@ export interface RecurringMistake {
   /** Any occurrence carries the stored repeated-mistake flag. */
   flaggedRepeated: boolean;
   tradesAffected: number;
+  /** Linked closed trades with a positive stored P&L. */
+  wins: number;
   losingTrades: number;
   /** Summed stored P&L of the distinct linked closed trades. */
   totalPnlImpact: number;
@@ -290,10 +292,88 @@ export interface PeriodDigest {
   coachFindings: DigestCoachFinding[];
 }
 
+/* ------------------------------------------------------------- patterns */
+
+/**
+ * Pattern kinds the pattern engine (`patterns.ts`) can detect
+ * from stored data. All are groupings of the trader's own
+ * closed trades, except `repeated_mistake`, which comes from
+ * the lessons recurrence analysis. Dimensions whose value is
+ * not recorded on a trade never form a group — an unrecorded
+ * strategy/session is a journaling gap (measured by the
+ * discipline analysis), not a trading pattern.
+ */
+export type PatternKind =
+  | "strategy"
+  | "session"
+  | "direction"
+  | "pair"
+  | "setup"
+  | "market_condition"
+  | "emotion"
+  | "confidence"
+  | "session_direction"
+  | "strategy_session"
+  | "stop_loss"
+  | "repeated_mistake";
+
+/** Edge = the group outperforms the baseline; drag = it trails it. */
+export type PatternDirection = "edge" | "drag" | "recurring";
+
+/** Which materiality test the pattern passed. */
+export type PatternBasis = "win_rate_gap" | "pnl_dominance" | "recurrence";
+
+/**
+ * One significant recurring pattern in the trader's own closed
+ * trades, with the evidence it rests on. A pattern is a
+ * statement about recorded history — never a prediction.
+ */
+export interface TradingPattern {
+  kind: PatternKind;
+  key: string;
+  label: string;
+  direction: PatternDirection;
+  basis: PatternBasis;
+  /** Closed trades in the group (linked closed trades for a mistake). */
+  trades: number;
+  wins: number;
+  losses: number;
+  winRate: number | null;
+  /** The trader's overall win rate across all closed trades. */
+  baselineWinRate: number | null;
+  /** Group win rate minus baseline, in points. Null unless gap-based. */
+  winRateGap: number | null;
+  totalPnl: number;
+  avgPnl: number | null;
+  /**
+   * |group total P&L| as a share (0–1) of the gross P&L
+   * movement (Σ|P&L|) across all closed trades. Null when the
+   * gross movement is 0.
+   */
+  pnlShare: number | null;
+  /** Lesson occurrences — repeated_mistake patterns only. */
+  occurrences: number | null;
+}
+
+export interface PatternAnalysis {
+  status: AnalysisStatus;
+  /** All closed trades the patterns were computed over. */
+  tradesCount: number;
+  baseline: {
+    trades: number;
+    wins: number;
+    winRate: number | null;
+    totalPnl: number;
+  };
+  /** Strongest first (display ordering only). */
+  patterns: TradingPattern[];
+}
+
 /* --------------------------------------------------------------- overview */
 
 export interface IntelligenceOverview {
   tradesCount: number;
+  patterns: PatternAnalysis;
   drawdown: DrawdownAnalysis;
   risk: RiskBehaviorAnalysis;
   psychology: PsychologyAnalysis;

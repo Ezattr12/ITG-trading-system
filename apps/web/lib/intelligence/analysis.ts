@@ -75,7 +75,7 @@ function daysBetween(a: string, b: string): number {
   return Math.round(ms / 86_400_000);
 }
 
-function groupStat(key: string, label: string, trades: readonly IntelTrade[]): GroupStat {
+export function groupStat(key: string, label: string, trades: readonly IntelTrade[]): GroupStat {
   const s = summarizeTrades(trades);
   return {
     key,
@@ -91,7 +91,7 @@ function groupStat(key: string, label: string, trades: readonly IntelTrade[]): G
   };
 }
 
-function groupBy(
+export function groupBy(
   trades: readonly IntelTrade[],
   keyOf: (t: IntelTrade) => string | null,
   labelOf: (key: string) => string,
@@ -379,7 +379,7 @@ export function analyzeRiskBehavior(
 
 /* ------------------------------------------------------------ psychology */
 
-const CONFIDENCE_BANDS: { key: string; label: string; test: (c: number) => boolean }[] = [
+export const CONFIDENCE_BANDS: { key: string; label: string; test: (c: number) => boolean }[] = [
   { key: "low", label: "Confidence 1–2", test: (c) => c <= 2 },
   { key: "mid", label: "Confidence 3", test: (c) => c === 3 },
   { key: "high", label: "Confidence 4–5", test: (c) => c >= 4 },
@@ -521,6 +521,7 @@ export function analyzeRecurring(
         count: e.count,
         flaggedRepeated: e.flagged,
         tradesAffected: pnls.length,
+        wins: pnls.filter((p) => p > 0).length,
         losingTrades: pnls.filter((p) => p < 0).length,
         totalPnlImpact: pnls.reduce((s, p) => s + p, 0),
       };
@@ -555,14 +556,14 @@ export function analyzeRecurring(
 
 /* ------------------------------------------------------------ conditions */
 
-const SESSION_LABELS: Record<string, string> = {
+export const SESSION_LABELS: Record<string, string> = {
   asia: "Asia",
   london: "London",
   new_york: "New York",
   other: "Other",
 };
 
-const CONDITION_LABELS: Record<string, string> = {
+export const CONDITION_LABELS: Record<string, string> = {
   trending: "Trending",
   ranging: "Ranging",
   choppy: "Choppy",

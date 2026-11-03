@@ -11,6 +11,7 @@ import {
   getImprovementPlan,
   getIntelligenceData,
   getMonthlyDigest,
+  getPatternAnalysis,
   getRiskBehaviorAnalysis,
   getWeeklyDigest,
 } from "./queries";
@@ -146,5 +147,44 @@ describe("digests", () => {
     expect(digest?.coachFindings).toEqual([]);
     expect(digest?.focus).toEqual([]);
     expect(digest?.drawdown.series).toEqual([]);
+  });
+});
+
+describe("getPatternAnalysis", () => {
+  it("computes patterns over the caller's closed trades only", async () => {
+    const { client, fake } = fakeSupabase(intelligenceTables());
+    const r = await getPatternAnalysis(client as SupabaseClient, USER_A);
+    expect(r.status).toBe("ok");
+    // 7 closed trades (d1..d7); USER_B's +9999 trade never appears.
+    expect(r.tradesCount).toBe(7);
+    expect(r.baseline.totalPnl).toBe(-90);
+    // Alpha Breakout: 3 trades, all wins vs a 42.9% baseline → gap edge.
+    expect(
+      r.patterns.find((p) => p.kind === "strategy" && p.key === "Alpha Breakout"),
+    ).toMatchObject({ direction: "edge", basis: "win_rate_gap", trades: 3, winRate: 100 });
+    // Beta Reversion: 4 trades, no wins → gap drag.
+    expect(
+      r.patterns.find((p) => p.kind === "strategy" && p.key === "Beta Reversion"),
+    ).toMatchObject({ direction: "drag", basis: "win_rate_gap", trades: 4, winRate: 0 });
+    // XAUUSD covers all 7 trades — the baseline itself, never a pattern.
+    expect(r.patterns.some((p) => p.kind === "pair")).toBe(false);
+    // "Entered before confirmation" was recorded twice (d2, d5; impact −220).
+    expect(
+      r.patterns.find((p) => p.kind === "repeated_mistake"),
+    ).toMatchObject({ occurrences: 2, trades: 2, totalPnl: -220 });
+    for (const q of fake.queriesFor("trades")) assertScoped(q, "user_id", USER_A);
+  });
+
+  it("excludes reversed and cancelled trades from the pattern evidence", async () => {
+    const tables = intelligenceTables();
+    const base = tables.trades[0];
+    tables.trades.push(
+      { ...base, id: "d8-reversed", status: "reversed", pnl: 50000, is_win: true },
+      { ...base, id: "d9-cancelled", status: "cancelled", pnl: 50000, is_win: true },
+    );
+    const { client } = fakeSupabase(tables);
+    const r = await getPatternAnalysis(client as SupabaseClient, USER_A);
+    expect(r.tradesCount).toBe(7);
+    expect(r.baseline.totalPnl).toBe(-90);
   });
 });
