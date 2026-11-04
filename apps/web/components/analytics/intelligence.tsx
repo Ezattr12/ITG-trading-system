@@ -3,6 +3,7 @@ import type {
   DisciplineSplit,
   GroupStat,
   IntelligenceOverview,
+  MarketConditionsAnalysis,
   PatternAnalysis,
   PatternKind,
   PeriodDigest,
@@ -270,8 +271,95 @@ function PatternsCard({ patterns }: { patterns: PatternAnalysis }) {
   );
 }
 
+function MarketConditionsCard({ conditions }: { conditions: MarketConditionsAnalysis }) {
+  const hasSmallSample = conditions.rows.some((r) => !r.comparable);
+  return (
+    <section
+      className="itg2-card p-5 sm:p-6 min-[801px]:col-span-2"
+      aria-label="Market conditions"
+    >
+      <p className="itg2-eyebrow">Conditions</p>
+      <h2 className="itg2-section-title mt-1">Market conditions</h2>
+      <p className="mt-1 max-w-[720px] text-xs leading-relaxed text-muted-foreground">
+        Your results grouped by the market condition recorded on each trade. ITG has
+        no live market feed, so a condition here is always the label you recorded in
+        a trade&apos;s review — never a live market reading. Groups of 3 or more
+        trades can be compared with your overall results: a condition stands out in
+        Your patterns when its win rate differs from your overall win rate by at
+        least 20 points, or when it accounts for at least half of your total
+        P&amp;L movement.
+      </p>
+      {conditions.tradesCount < 5 ? (
+        <p className="mt-3 text-muted-foreground">
+          Condition comparisons appear once you have at least 5 closed trades — you
+          have {conditions.tradesCount} closed trade
+          {conditions.tradesCount === 1 ? "" : "s"}.
+        </p>
+      ) : conditions.recordedTrades === 0 ? (
+        <p className="mt-3 max-w-[720px] text-muted-foreground">
+          No market conditions recorded yet — so there is nothing to compare. A
+          condition is recorded when you review a trade: open any trade and choose
+          its Market condition in the advanced review (Trending, Ranging, Choppy,
+          High volatility, Low volatility or Other). Quick entry does not ask for
+          one. Once your closed trades carry conditions, your results are grouped
+          here, condition by condition.
+        </p>
+      ) : (
+        <div className="mt-3">
+          <p className="text-sm text-muted-foreground">
+            Condition recorded on {conditions.recordedTrades} of{" "}
+            {conditions.tradesCount} closed trades.
+            {conditions.unrecordedTrades > 0
+              ? " The rest carry no condition and form no group."
+              : ""}
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="itg2-table itg2-table-fit">
+              <thead>
+                <tr>
+                  <th>Condition</th>
+                  <th>Trades</th>
+                  <th>Win rate</th>
+                  <th>P&amp;L</th>
+                  <th>Share of P&amp;L movement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conditions.rows.map((r) => (
+                  <tr key={r.key}>
+                    <td className="font-medium capitalize">
+                      {r.label}
+                      {!r.comparable ? (
+                        <span className="itg2-chip itg2-chip-muted ml-2 whitespace-nowrap">
+                          Small sample
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="tabular-nums">{r.trades}</td>
+                    <td><Pct value={r.winRate} /></td>
+                    <td><Money value={r.totalPnl} /></td>
+                    <td className="tabular-nums">
+                      {r.pnlShare !== null ? `${(r.pnlShare * 100).toFixed(1)}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hasSmallSample ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Small-sample rows have fewer than 3 trades — they are shown as
+              recorded evidence, but no comparison is drawn from them.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
-  const { patterns, drawdown, risk, psychology, discipline, recurring, conditions, plan } = data;
+  const { patterns, drawdown, risk, psychology, discipline, recurring, conditions, marketConditions, plan } = data;
   return (
     <div className="mt-10">
       <p className="itg2-eyebrow">Intelligence</p>
@@ -284,6 +372,7 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
 
       <div className="mt-5 grid grid-cols-1 gap-[18px] min-[801px]:grid-cols-2">
         <PatternsCard patterns={patterns} />
+        <MarketConditionsCard conditions={marketConditions} />
         <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown analysis">
           <p className="itg2-eyebrow">Risk</p>
           <h2 className="itg2-section-title mt-1">Drawdown analysis</h2>

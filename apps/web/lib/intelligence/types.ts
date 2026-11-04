@@ -247,6 +247,50 @@ export interface ConditionsAnalysis {
   worst: ConditionRow | null;
 }
 
+/* --------------------------------------------------- market conditions */
+
+export interface MarketConditionRow extends GroupStat {
+  /**
+   * |group total P&L| as a share (0–1) of the gross P&L
+   * movement (Σ|P&L|) across ALL closed trades — the same
+   * share the pattern engine's dominance test uses. Null
+   * when the gross movement is 0.
+   */
+  pnlShare: number | null;
+  /**
+   * True when the group meets the ≥3-trade comparison
+   * minimum (GROUP_MIN_TRADES). Smaller groups are shown
+   * as recorded evidence only — no comparison is drawn.
+   */
+  comparable: boolean;
+}
+
+/**
+ * Performance grouped by the market conditions the trader
+ * recorded on their own trades (Task 25 — regime
+ * intelligence, evidence-gated). This is the reporting
+ * layer for the market_condition dimension: every recorded
+ * condition appears, however small its sample. Claims that
+ * a condition stands out live in the pattern engine
+ * (`analyzePatterns`, kind "market_condition") under the
+ * uniform materiality standard — this analysis draws none.
+ * A trade with no condition recorded joins no group:
+ * unrecorded is a coverage gap, never a regime. There is
+ * no market-data feed behind any of this — a "condition"
+ * is always the trader's own recorded label.
+ */
+export interface MarketConditionsAnalysis {
+  status: AnalysisStatus;
+  /** All closed trades the analysis ran over. */
+  tradesCount: number;
+  /** Closed trades carrying a recorded market condition. */
+  recordedTrades: number;
+  /** Closed trades with no condition recorded. */
+  unrecordedTrades: number;
+  /** Every recorded condition (≥1 trade), best P&L first. */
+  rows: MarketConditionRow[];
+}
+
 /* -------------------------------------------------------- improvement plan */
 
 export interface ImprovementAction {
@@ -389,6 +433,7 @@ export interface IntelligenceOverview {
   discipline: DisciplineAnalysis;
   recurring: RecurringAnalysis;
   conditions: ConditionsAnalysis;
+  marketConditions: MarketConditionsAnalysis;
   plan: ImprovementPlan;
   weeklyDigest: PeriodDigest;
   monthlyDigest: PeriodDigest;

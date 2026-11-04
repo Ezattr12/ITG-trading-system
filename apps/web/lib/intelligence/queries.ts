@@ -14,6 +14,7 @@ import {
   analyzeConditions,
   analyzeDiscipline,
   analyzeDrawdown,
+  analyzeMarketConditions,
   analyzePsychology,
   analyzeRecurring,
   analyzeRiskBehavior,
@@ -29,6 +30,7 @@ import type {
   IntelLesson,
   IntelTrade,
   IntelligenceOverview,
+  MarketConditionsAnalysis,
   PatternAnalysis,
   PeriodDigest,
   PsychologyAnalysis,
@@ -284,6 +286,14 @@ export async function getConditionsAnalysis(
   return analyzeConditions(data.trades);
 }
 
+export async function getMarketConditionsAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<MarketConditionsAnalysis> {
+  const data = await getIntelligenceData(supabase, userId);
+  return analyzeMarketConditions(data.trades);
+}
+
 export async function getImprovementPlan(
   supabase: SupabaseClient,
   userId: string,
@@ -472,6 +482,7 @@ export async function getIntelligenceOverview(
   const discipline = analyzeDiscipline(data.trades);
   const recurring = analyzeRecurring(data.trades, data.lessons);
   const conditions = analyzeConditions(data.trades);
+  const marketConditions = analyzeMarketConditions(data.trades);
   const plan = buildImprovementPlan({
     tradesCount: data.trades.length,
     drawdown,
@@ -494,6 +505,7 @@ export async function getIntelligenceOverview(
     discipline,
     recurring,
     conditions,
+    marketConditions,
     plan,
     // `today` is always a valid ISO date here, so the digest
     // builders cannot actually return null on this path.

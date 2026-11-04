@@ -3,6 +3,7 @@ import {
   analyzeConditions,
   analyzeDiscipline,
   analyzeDrawdown,
+  analyzeMarketConditions,
   analyzePsychology,
   analyzeRecurring,
   analyzeRiskBehavior,
@@ -379,6 +380,89 @@ describe("analyzeConditions", () => {
     const c = analyzeConditions(TRADES.slice(0, 2));
     expect(c.status).toBe("insufficient_data");
     expect(c.best).toBeNull();
+  });
+});
+
+describe("analyzeMarketConditions", () => {
+  it("reports every recorded condition with coverage, shares and comparability", () => {
+    // TRADES conditions: Trending 5 trades +750 (all wins);
+    // Ranging 3 trades −370 (no wins); Choppy 2 trades −130;
+    // High volatility 1 trade −200; Low volatility 1 trade
+    // +160. Gross P&L movement = 1610. Every trade recorded.
+    const mc = analyzeMarketConditions(TRADES);
+    expect(mc.status).toBe("ok");
+    expect(mc.tradesCount).toBe(12);
+    expect(mc.recordedTrades).toBe(12);
+    expect(mc.unrecordedTrades).toBe(0);
+    // Best P&L first.
+    expect(mc.rows.map((r) => r.key)).toEqual([
+      "trending",
+      "low_volatility",
+      "choppy",
+      "high_volatility",
+      "ranging",
+    ]);
+    expect(mc.rows[0]).toMatchObject({
+      label: "Trending",
+      trades: 5,
+      wins: 5,
+      winRate: 100,
+      totalPnl: 750,
+      comparable: true,
+    });
+    expect(mc.rows[0].pnlShare).toBeCloseTo(750 / 1610, 4);
+    expect(mc.rows.find((r) => r.key === "ranging")).toMatchObject({
+      trades: 3,
+      wins: 0,
+      winRate: 0,
+      totalPnl: -370,
+      comparable: true,
+    });
+    // Below the 3-trade minimum: reported, flagged, not hidden.
+    expect(mc.rows.find((r) => r.key === "choppy")).toMatchObject({
+      trades: 2,
+      comparable: false,
+    });
+    expect(mc.rows.find((r) => r.key === "high_volatility")).toMatchObject({
+      trades: 1,
+      comparable: false,
+    });
+  });
+
+  it("never groups unrecorded trades — unrecorded is coverage, not a regime", () => {
+    const mc = analyzeMarketConditions([
+      trade({ marketCondition: null, pnl: 900 }),
+      trade({ marketCondition: null, pnl: 900 }),
+      trade({ marketCondition: "trending", pnl: 50 }),
+    ]);
+    expect(mc.status).toBe("ok");
+    expect(mc.recordedTrades).toBe(1);
+    expect(mc.unrecordedTrades).toBe(2);
+    expect(mc.rows).toHaveLength(1);
+    expect(mc.rows[0]).toMatchObject({ key: "trending", trades: 1, totalPnl: 50 });
+    // The share is of ALL closed trades' gross movement,
+    // recorded or not: 50 / 1850.
+    expect(mc.rows[0].pnlShare).toBeCloseTo(50 / 1850, 4);
+  });
+
+  it("is insufficient when no condition is recorded, and handles the empty journal", () => {
+    const none = analyzeMarketConditions([
+      trade({ marketCondition: null }),
+      trade({ marketCondition: null }),
+    ]);
+    expect(none.status).toBe("insufficient_data");
+    expect(none.recordedTrades).toBe(0);
+    expect(none.unrecordedTrades).toBe(2);
+    expect(none.rows).toEqual([]);
+
+    const empty = analyzeMarketConditions([]);
+    expect(empty).toMatchObject({
+      status: "insufficient_data",
+      tradesCount: 0,
+      recordedTrades: 0,
+      unrecordedTrades: 0,
+    });
+    expect(empty.rows).toEqual([]);
   });
 });
 

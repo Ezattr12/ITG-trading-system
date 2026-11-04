@@ -248,6 +248,104 @@ describe("analyzePatterns — stop-loss split is gap-only", () => {
   });
 });
 
+describe("analyzePatterns — market condition dimension (Task 25)", () => {
+  // Other dimensions are neutralised in these fixtures
+  // (strategy/session/setup unrecorded; pair and direction
+  // cover the whole population), so any pattern found is
+  // the condition dimension speaking.
+  const neutral = { strategyName: null, session: null, setupName: null };
+
+  it("surfaces recorded condition groups on the win-rate gap, with condition labels", () => {
+    // Trending: +100/+100/+100/−50 → 75% win rate, +250.
+    // Ranging: +50/−100/−100/−50 → 25% win rate, −200.
+    // Baseline: 8 trades, 50% win rate, total +50, gross 650.
+    const trades = [
+      ...[100, 100, 100, -50].map((pnl) =>
+        trade({ ...neutral, marketCondition: "trending", pnl }),
+      ),
+      ...[50, -100, -100, -50].map((pnl) =>
+        trade({ ...neutral, marketCondition: "ranging", pnl }),
+      ),
+    ];
+    const r = analyzePatterns(trades, []);
+    expect(find(r.patterns, "market_condition", "trending")).toMatchObject({
+      label: "Trending",
+      direction: "edge",
+      basis: "win_rate_gap",
+      trades: 4,
+      winRate: 75,
+      winRateGap: 25,
+      totalPnl: 250,
+    });
+    expect(find(r.patterns, "market_condition", "ranging")).toMatchObject({
+      label: "Ranging",
+      direction: "drag",
+      basis: "win_rate_gap",
+      trades: 4,
+      winRate: 25,
+      winRateGap: -25,
+      totalPnl: -200,
+    });
+  });
+
+  it("surfaces a recorded condition on P&L dominance when the gap is silent", () => {
+    // Trending: 3 trades +600 ×3. Five unrecorded-condition
+    // trades are all small wins, so the baseline win rate is
+    // 100% and the gap is 0 — only dominance can speak.
+    // Gross 1950; trending share 1800/1950 ≈ 92.3%.
+    const trades = [
+      ...[600, 600, 600].map((pnl) =>
+        trade({ ...neutral, marketCondition: "trending", pnl }),
+      ),
+      ...[50, 40, 30, 20, 10].map((pnl) =>
+        trade({ ...neutral, marketCondition: null, pnl }),
+      ),
+    ];
+    const r = analyzePatterns(trades, []);
+    const p = find(r.patterns, "market_condition", "trending");
+    expect(p).toMatchObject({
+      direction: "edge",
+      basis: "pnl_dominance",
+      trades: 3,
+      totalPnl: 1800,
+    });
+    expect(p?.pnlShare).toBeCloseTo(1800 / 1950, 4);
+  });
+
+  it("never surfaces a condition group of 2, even at 100% win rate", () => {
+    const trades = [
+      trade({ ...neutral, marketCondition: "choppy", pnl: 500 }),
+      trade({ ...neutral, marketCondition: "choppy", pnl: 500 }),
+      ...[-100, -100, -100, 50].map((pnl) =>
+        trade({ ...neutral, marketCondition: null, pnl }),
+      ),
+    ];
+    const r = analyzePatterns(trades, []);
+    expect(r.status).toBe("ok");
+    expect(r.patterns.filter((p) => p.kind === "market_condition")).toEqual([]);
+  });
+
+  it("never treats unrecorded conditions as a regime, however the profit concentrates", () => {
+    // Five unrecorded-condition trades hold +2,000 of profit;
+    // three recorded trending trades are small and also win,
+    // so the baseline win rate is 100% (gap 0) and the
+    // trending share is ~1.5% — nothing may be claimed, and
+    // above all the unrecorded concentration is not a
+    // "condition" pattern.
+    const trades = [
+      ...[400, 400, 400, 400, 400].map((pnl) =>
+        trade({ ...neutral, marketCondition: null, pnl }),
+      ),
+      ...[10, 10, 10].map((pnl) =>
+        trade({ ...neutral, marketCondition: "trending", pnl }),
+      ),
+    ];
+    const r = analyzePatterns(trades, []);
+    expect(r.patterns.filter((p) => p.kind === "market_condition")).toEqual([]);
+    expect(r.patterns).toEqual([]);
+  });
+});
+
 describe("analyzePatterns — repeated mistakes", () => {
   const trades = [
     trade({ id: "m1", pnl: -100 }),

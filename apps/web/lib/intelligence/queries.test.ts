@@ -10,6 +10,7 @@ import {
   getDrawdownAnalysis,
   getImprovementPlan,
   getIntelligenceData,
+  getMarketConditionsAnalysis,
   getMonthlyDigest,
   getPatternAnalysis,
   getRiskBehaviorAnalysis,
@@ -186,5 +187,43 @@ describe("getPatternAnalysis", () => {
     const r = await getPatternAnalysis(client as SupabaseClient, USER_A);
     expect(r.tradesCount).toBe(7);
     expect(r.baseline.totalPnl).toBe(-90);
+  });
+});
+
+describe("getMarketConditionsAnalysis", () => {
+  it("reports the caller's recorded conditions with coverage and shares", async () => {
+    const { client, fake } = fakeSupabase(intelligenceTables());
+    const mc = await getMarketConditionsAnalysis(client as SupabaseClient, USER_A);
+    // Fixture conditions (d1..d7): Trending d1 +200, d4 +160,
+    // d6 +50 (3 trades, all wins, +410); Ranging d2 −100,
+    // d5 −120 (2 trades); High volatility d3 −200 (1);
+    // Choppy d7 −80 (1). All 7 recorded; gross movement 910.
+    // USER_B's +9999 trade never appears.
+    expect(mc.status).toBe("ok");
+    expect(mc.tradesCount).toBe(7);
+    expect(mc.recordedTrades).toBe(7);
+    expect(mc.unrecordedTrades).toBe(0);
+    expect(mc.rows.map((r) => r.key)).toEqual([
+      "trending",
+      "choppy",
+      "high_volatility",
+      "ranging",
+    ]);
+    const trending = mc.rows[0];
+    expect(trending).toMatchObject({
+      label: "Trending",
+      trades: 3,
+      wins: 3,
+      winRate: 100,
+      totalPnl: 410,
+      comparable: true,
+    });
+    expect(trending.pnlShare).toBeCloseTo(410 / 910, 4);
+    expect(mc.rows.find((r) => r.key === "ranging")).toMatchObject({
+      trades: 2,
+      totalPnl: -220,
+      comparable: false,
+    });
+    for (const q of fake.queriesFor("trades")) assertScoped(q, "user_id", USER_A);
   });
 });

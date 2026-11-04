@@ -20,6 +20,7 @@ import type {
   ImprovementPlan,
   IntelLesson,
   IntelTrade,
+  MarketConditionsAnalysis,
   PsychologyAnalysis,
   RecurringAnalysis,
   RiskBehaviorAnalysis,
@@ -619,6 +620,49 @@ export function analyzeConditions(trades: readonly IntelTrade[]): ConditionsAnal
     best: rows[0] ?? null,
     /** With a single qualifying row there is no separate worst. */
     worst: rows.length > 1 ? rows[rows.length - 1] : null,
+  };
+}
+
+/**
+ * Market conditions — the regime view (Task 25).
+ *
+ * "Regime" in this product can only ever mean the market
+ * conditions the trader recorded on their own trades: there
+ * is no market-data feed, so nothing here infers a live
+ * market state. This is the reporting layer for that one
+ * dimension — every recorded condition is reported (via the
+ * shared `groupBy`, which skips unrecorded trades: no
+ * condition recorded is a coverage gap, never a group),
+ * with its share of the gross P&L movement and a flag for
+ * whether it meets the ≥3-trade comparison minimum. Whether
+ * a condition actually STANDS OUT is the pattern engine's
+ * claim to make (`analyzePatterns`, kind
+ * "market_condition", the uniform materiality standard) —
+ * this function draws no conclusions.
+ */
+export function analyzeMarketConditions(
+  trades: readonly IntelTrade[],
+): MarketConditionsAnalysis {
+  const grossPnl = trades.reduce((sum, t) => sum + Math.abs(t.pnl), 0);
+  const recordedTrades = trades.reduce(
+    (n, t) => (t.marketCondition !== null ? n + 1 : n),
+    0,
+  );
+  const rows = groupBy(
+    trades,
+    (t) => t.marketCondition,
+    (key) => CONDITION_LABELS[key] ?? key,
+  ).map((g) => ({
+    ...g,
+    pnlShare: grossPnl > 0 ? Math.abs(g.totalPnl) / grossPnl : null,
+    comparable: g.trades >= GROUP_MIN_TRADES,
+  }));
+  return {
+    status: recordedTrades > 0 ? "ok" : "insufficient_data",
+    tradesCount: trades.length,
+    recordedTrades,
+    unrecordedTrades: trades.length - recordedTrades,
+    rows,
   };
 }
 
