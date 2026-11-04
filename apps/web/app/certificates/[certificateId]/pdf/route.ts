@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getCertificateById } from "@/lib/certificates/queries";
-import { buildCertificatePdf } from "@/lib/certificates/pdf";
+import { buildCertificatePdf, buildLevelCertificatePdf } from "@/lib/certificates/pdf";
 import { monthLabel } from "@/lib/certificates/eligibility";
 import type { CriterionResult } from "@/lib/certificates/types";
 import { CERTIFICATE_CRITERION_LABELS } from "@/lib/certificates/types";
@@ -15,8 +15,9 @@ import { CERTIFICATE_CRITERION_LABELS } from "@/lib/certificates/types";
  * record — it is NOT stored in Supabase Storage in this phase
  * (that is the Phase 13 step). Only an issued certificate
  * belonging to the signed-in trader can be downloaded; anything
- * else is a 404. Every value on the PDF comes from the
- * certificate row's `criteria_met` evidence.
+ * else is a 404. Every value on the PDF comes from the stored
+ * certificate row: the monthly `criteria_met` evidence, or the
+ * level certificate's issuance snapshot (Task 24).
  */
 export async function GET(
   _request: Request,
@@ -45,6 +46,34 @@ export async function GET(
     );
   }
 
+  const traderName =
+    user.profile?.full_name?.trim() || user.email || "ITG Trader";
+  const pdfResponse = (pdf: Buffer) =>
+    new NextResponse(new Uint8Array(pdf), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${certificate.certificate_id}.pdf"`,
+        "Content-Length": String(pdf.length),
+      },
+    });
+
+  // Level certificates (Task 24) render from the row's issuance
+  // snapshot — band, assessed date and score were copied onto
+  // the certificate at issuance, so the document can never be
+  // rewritten by a later band rename or threshold edit.
+  if (certificate.kind === "level") {
+    const pdf = await buildLevelCertificatePdf({
+      traderName,
+      certificateId: certificate.certificate_id,
+      levelName: certificate.level_name ?? "Level",
+      assessedAt: certificate.assessed_at ?? certificate.issued_at ?? "",
+      score: Number(certificate.assessment_score ?? 0),
+      issuedAt: certificate.issued_at,
+    });
+    return pdfResponse(pdf);
+  }
+
   const met = (certificate.criteria_met ?? {}) as Record<string, unknown>;
   const num = (key: string): number | null => {
     const v = met[key];
@@ -70,22 +99,13 @@ export async function GET(
     };
   });
 
-  const traderName =
-    user.profile?.full_name?.trim() || user.email || "ITG Trader";
   const pdf = await buildCertificatePdf({
     traderName,
     certificateId: certificate.certificate_id,
-    monthLabel: monthLabel(certificate.month),
+    monthLabel: monthLabel(certificate.month ?? ""),
     criteria,
     issuedAt: certificate.issued_at,
   });
 
-  return new NextResponse(new Uint8Array(pdf), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${certificate.certificate_id}.pdf"`,
-      "Content-Length": String(pdf.length),
-    },
-  });
+  return pdfResponse(pdf);
 }

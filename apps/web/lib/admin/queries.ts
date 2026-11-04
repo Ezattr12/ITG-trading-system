@@ -156,14 +156,16 @@ export async function listAdminCertificates(
 ): Promise<AdminCertificateRow[]> {
   const { data } = await supabase
     .from("certificates")
-    .select("id, certificate_id, user_id, month, status, issued_at, profiles(full_name)")
+    .select("id, certificate_id, user_id, month, kind, level_name, status, issued_at, profiles(full_name)")
     .order("month", { ascending: false })
     .limit(limit);
   return ((data ?? []) as unknown as {
     id: string;
     certificate_id: string;
     user_id: string;
-    month: string;
+    month: string | null;
+    kind: string | null;
+    level_name: string | null;
     status: string;
     issued_at: string | null;
     profiles: { full_name: string | null } | null;
@@ -172,6 +174,8 @@ export async function listAdminCertificates(
     certificate_id: c.certificate_id,
     user_id: c.user_id,
     month: c.month,
+    kind: c.kind ?? "monthly",
+    level_name: c.level_name,
     status: c.status,
     issued_at: c.issued_at,
     trader_name: c.profiles?.full_name ?? null,

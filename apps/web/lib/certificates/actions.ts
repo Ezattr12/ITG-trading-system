@@ -78,24 +78,35 @@ export async function issueCertificateAction(
   // Unique certificate_id, retried on the (rare) collision.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const certificateId = generateCertificateId(start);
-    const { error } = await admin.from("certificates").insert({
-      user_id: user.id,
-      certificate_id: certificateId,
-      month: start,
-      criteria_met: eligibilityToCriteriaMet(eligibility, inputs),
-      status: "issued",
-      issued_at: new Date().toISOString(),
-    });
+    const { data: inserted, error } = await admin
+      .from("certificates")
+      .insert({
+        user_id: user.id,
+        certificate_id: certificateId,
+        month: start,
+        criteria_met: eligibilityToCriteriaMet(eligibility, inputs),
+        status: "issued",
+        issued_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
     if (!error) {
       // Phase 27: issuance is a credential event — the admin
       // revoke path already writes an audit row
       // (admin.certificate_revoke); issuance now does too.
+      // Task 24 fix: audit_logs.entity_id and
+      // notifications.related_entity_id are uuid columns, so
+      // they take the certificate ROW id — passing the human
+      // certificate_id ("ITG-…") made Postgres reject both
+      // writes, silently (both helpers are best-effort). The
+      // human id stays traceable in the audit details.
+      const rowId = (inserted as { id: string } | null)?.id ?? null;
       await writeAuditLog({
         userId: user.id,
         action: "certificate.issued",
         entityType: "certificates",
-        entityId: certificateId,
-        details: { month: start },
+        entityId: rowId,
+        details: { month: start, certificate_id: certificateId },
       });
       await createNotification({
         userId: user.id,
@@ -103,7 +114,7 @@ export async function issueCertificateAction(
         title: "Monthly certificate issued",
         body: `Your ITG Performance Certificate for ${start.slice(0, 7)} is ready to download.`,
         relatedEntityType: "certificate",
-        relatedEntityId: certificateId,
+        relatedEntityId: rowId,
       });
       revalidatePath("/certificates");
       return {

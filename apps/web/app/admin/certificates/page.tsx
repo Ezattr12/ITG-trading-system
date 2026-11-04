@@ -50,7 +50,11 @@ export default async function AdminCertificatesPage() {
                   <span>·</span>
                   <span>{c.trader_name ?? "Name not provided"}</span>
                   <span>·</span>
-                  <span className="tnum">{c.month.slice(0, 7)}</span>
+                  <span className="tnum">
+                    {c.kind === "level"
+                      ? (c.level_name ?? "Level certificate")
+                      : (c.month ?? "").slice(0, 7)}
+                  </span>
                   <span
                     className={`itg2-chip capitalize ${
                       c.status === "issued"

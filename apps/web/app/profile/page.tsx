@@ -120,7 +120,12 @@ export default async function ProfilePage() {
   let bundle: Awaited<ReturnType<typeof getGamificationBundle>> | null = null;
   let plan: Awaited<ReturnType<typeof getTradingPlan>> = null;
   let rules: Awaited<ReturnType<typeof getRiskRules>> = null;
-  let certificates: { certificate_id: string; month: string }[] = [];
+  let certificates: {
+    certificate_id: string;
+    month: string | null;
+    kind: string | null;
+    level_name: string | null;
+  }[] = [];
   if (configured && p) {
     const supabase = await createServerSupabaseClient();
     const [b, pl, r, { data: certs }] = await Promise.all([
@@ -129,14 +134,19 @@ export default async function ProfilePage() {
       getRiskRules(supabase, user.id),
       supabase
         .from("certificates")
-        .select("certificate_id, month")
+        .select("certificate_id, month, kind, level_name")
         .eq("user_id", user.id)
         .order("month", { ascending: false }),
     ]);
     bundle = b;
     plan = pl;
     rules = r;
-    certificates = (certs ?? []) as { certificate_id: string; month: string }[];
+    certificates = (certs ?? []) as {
+      certificate_id: string;
+      month: string | null;
+      kind: string | null;
+      level_name: string | null;
+    }[];
   }
 
   const summary = bundle ? summarizeTrades(bundle.trades) : null;
@@ -598,7 +608,9 @@ export default async function ProfilePage() {
                 {certificates.map((c) => (
                   <li key={c.certificate_id} className="flex items-center justify-between gap-2">
                     <span className="font-medium">{c.certificate_id}</span>
-                    <span className="text-muted-foreground">{c.month}</span>
+                    <span className="text-muted-foreground">
+                      {c.kind === "level" ? (c.level_name ?? "Level certificate") : c.month}
+                    </span>
                   </li>
                 ))}
               </ul>

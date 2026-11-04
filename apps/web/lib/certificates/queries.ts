@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRiskRules } from "@/lib/risk/queries";
 import { fetchAllRows } from "@/lib/trades/queries";
+import type { LevelAssessmentRow } from "@/lib/gamification/assessment";
 import type { CertificateRow } from "./types";
 import {
   evaluateMonthlyEligibility,
@@ -44,6 +45,27 @@ export async function getCertificateById(
     .eq("certificate_id", certificateId)
     .maybeSingle();
   return (data ?? null) as CertificateRow | null;
+}
+
+/**
+ * The trader's PASSED level assessments (Task 24) — the only
+ * evidence a level certificate can be issued against. Read with
+ * the signed-in client, so RLS scopes it to their own rows
+ * (level_assessments is select-own). Newest first. A trader with
+ * no pass — including one whose latest assessment is a hold —
+ * gets an empty list and the page shows the honest state.
+ */
+export async function getPassAssessments(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LevelAssessmentRow[]> {
+  const { data } = await supabase
+    .from("level_assessments")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("verdict", "pass")
+    .order("created_at", { ascending: false });
+  return (data ?? []) as LevelAssessmentRow[];
 }
 
 function isoWeek(date: Date): string {

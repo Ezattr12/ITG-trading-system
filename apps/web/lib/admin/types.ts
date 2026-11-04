@@ -62,7 +62,12 @@ export interface AdminCertificateRow {
   id: string;
   certificate_id: string;
   user_id: string;
-  month: string;
+  /** Monthly certificates only (Task 24) — null for level rows. */
+  month: string | null;
+  /** "monthly" | "level" (Task 24); older rows read as monthly. */
+  kind: string;
+  /** Level certificates: band display-name snapshot. */
+  level_name: string | null;
   status: string;
   issued_at: string | null;
   trader_name: string | null;

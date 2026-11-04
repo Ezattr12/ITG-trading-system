@@ -4,7 +4,10 @@ import { updateSession } from "@/lib/supabase/middleware";
 /**
  * Route protection (Phase 2).
  * - Public: /, /login, /register, /forgot-password, /reset-password,
- *   /auth/callback (and static assets / API auth callbacks).
+ *   /auth/callback, /verify/<certificate-id> (Task 24 — public
+ *   certificate verification is signed-out by design; the page
+ *   itself is rate-limited and reads a whitelisted shape), and
+ *   static assets / API auth callbacks.
  * - Protected: /dashboard, /onboarding, /profile and every future
  *   app route — unauthenticated users are sent to /login.
  * - Authenticated users visiting /login or /register go to /dashboard.
@@ -25,7 +28,9 @@ export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
 
   const isPublic =
-    PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/auth/");
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/verify/");
   if (!user && !isPublic) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

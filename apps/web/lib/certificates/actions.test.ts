@@ -100,11 +100,26 @@ describe("issueCertificateAction", () => {
     expect(certs).toHaveLength(1);
     expect(certs[0]).toMatchObject({ user_id: USER, month: "2026-10-01", status: "issued" });
     const audit = admin.fake.insertsFor("audit_logs");
-    expect(
-      audit.some(
-        (r) => r.action === "certificate.issued" && r.entity_id === result.certificateId,
-      ),
-    ).toBe(true);
+    const issued = audit.find((r) => r.action === "certificate.issued");
+    expect(issued).toBeDefined();
+    // audit_logs.entity_id is a uuid column: it must carry the
+    // certificate ROW id, never the human certificate_id —
+    // Postgres rejects "ITG-…" there and writeAuditLog swallows
+    // the error, which is why production had zero
+    // certificate.issued rows before the Task 24 fix. The human
+    // id stays traceable in details.certificate_id.
+    expect(issued?.entity_id).toBe(certs[0].id);
+    expect(issued?.entity_id).not.toBe(result.certificateId);
+    expect((issued?.details as Record<string, unknown>)?.certificate_id).toBe(
+      result.certificateId,
+    );
+    // Same uuid rule for the notification's related id.
+    expect(harness.notifications).toHaveLength(1);
+    expect(harness.notifications[0]).toMatchObject({
+      type: "achievement",
+      title: "Monthly certificate issued",
+      relatedEntityId: certs[0].id,
+    });
   });
 
   it("an ineligible month issues nothing and writes no audit row", async () => {
