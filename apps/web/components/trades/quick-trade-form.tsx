@@ -18,6 +18,7 @@ import {
 import { ActionForm } from "@/components/auth/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PreTradeGateCheck } from "./pre-trade-gate";
 import { uploadScreenshotAction, type TradeActionResult } from "@/lib/trades/actions";
 import type { TradeRow } from "@/lib/trades/types";
 import {
@@ -135,6 +136,7 @@ export function QuickTradeForm({
   initial,
   strategies,
   attachScreenshot = false,
+  gateCheck = false,
 }: {
   action: (prev: TradeActionResult, formData: FormData) => Promise<TradeActionResult>;
   submitLabel: string;
@@ -142,6 +144,13 @@ export function QuickTradeForm({
   initial?: TradeRow | null;
   strategies?: { id: string; name: string }[];
   attachScreenshot?: boolean;
+  /**
+   * Task 20: render the pre-trade gate check inside the
+   * form. Only the Add Trade page passes this — corrections
+   * re-journal by reversal and are not new trades, so the
+   * gate does not apply to them.
+   */
+  gateCheck?: boolean;
 }) {
   const nowLocal = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -363,6 +372,7 @@ export function QuickTradeForm({
           </div>
         </div>
       </details>
+      {gateCheck ? <PreTradeGateCheck /> : null}
       <p className="text-sm text-muted-foreground">
         P&amp;L, ROI, R multiple, risk/reward, win/loss and duration are calculated automatically — you never enter
         them.{" "}

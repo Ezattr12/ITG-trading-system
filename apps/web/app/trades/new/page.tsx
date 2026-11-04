@@ -60,7 +60,7 @@ export default async function NewTradePage() {
           </span>
         </div>
         <section className="motion-reveal motion-reveal-1 mt-4" aria-label="Quick trade entry">
-          <QuickTradeForm action={createTradeAction} submitLabel="Save Trade" strategies={strategies} attachScreenshot />
+          <QuickTradeForm action={createTradeAction} submitLabel="Save Trade" strategies={strategies} attachScreenshot gateCheck />
         </section>
         <p className="mt-4 text-sm">
           <Link href="/trades" className="itg2-link">
