@@ -93,6 +93,19 @@ describe("parseScoringConfig", () => {
     // discipline was raised from 0.20, so it now outweighs performance
     expect(weights.discipline).toBeGreaterThan(weights.performance);
   });
+
+  it("ignores the Task 23 assessment block — weights are unchanged by it", () => {
+    const withAssessment = parseScoringConfig({
+      ...DEFAULT_DIMENSION_WEIGHTS,
+      assessment: {
+        bands: {
+          foundation: { floor: null, min_measured: 3, confirm_after_days: 7 },
+          "itg-master-trader": { floor: 60, min_measured: 8, confirm_after_days: 28 },
+        },
+      },
+    });
+    expect(withAssessment).toEqual(DEFAULT_DIMENSION_WEIGHTS);
+  });
 });
 
 describe("calcLevelScore", () => {

@@ -9,6 +9,7 @@ import {
   ensureDisciplineReminderLoggedCore,
 } from "@/lib/discipline/service";
 import { runPlanEnforcementForUser } from "@/lib/plan/service";
+import { runLevelAssessment } from "@/lib/gamification/assessment-service";
 import { getLastJournalDate } from "@/lib/discipline/queries";
 import { fetchAllRows } from "@/lib/trades/queries";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -41,6 +42,11 @@ import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
  *   `runPlanEnforcementForUser` the trade-save hook's engine
  *   feeds; plan dedupe is structural per (trade, term) /
  *   (day, term) in migration 0019.
+ * - level assessments are written only by `runLevelAssessment`
+ *   (lib/gamification/assessment-service.ts, Task 23), reached
+ *   through the same entry point `refreshGamification` uses;
+ *   dedupe is the engine's state signature — a row exists only
+ *   for a materially changed evaluated state.
  *
  * IDEMPOTENCY IS THE CONTRACT: a second run started
  * immediately after the first creates zero new rows of any
@@ -80,6 +86,9 @@ export interface UserBackgroundPassResult {
   planEvents: number;
   /** Notifications created for those plan breaches. */
   planNotifications: number;
+  /** Level assessment rows stored by the assessment engine
+   *  (Task 23) — 0 or 1 per user per pass by the dedupe rule. */
+  assessments: number;
 }
 
 export interface BackgroundRunSummary {
@@ -91,6 +100,8 @@ export interface BackgroundRunSummary {
   monthlyNotices: number;
   planEvents: number;
   planNotifications: number;
+  /** Level assessment rows stored across the run (Task 23). */
+  assessments: number;
   /** Users whose pass threw; the run continues past them. */
   errors: number;
 }
@@ -102,6 +113,7 @@ const EMPTY_USER_RESULT: UserBackgroundPassResult = {
   monthlyNotices: 0,
   planEvents: 0,
   planNotifications: 0,
+  assessments: 0,
 };
 
 function todayString(now: Date): string {
@@ -412,6 +424,15 @@ export async function runBackgroundPassForUser(
   const plan = await runPlanEnforcementForUser(client, userId, now);
   result.planEvents = plan.events;
   result.planNotifications = plan.notifications;
+  // Level assessment (Task 23): the same single entry point
+  // refreshGamification uses, so the dedupe rule cannot
+  // diverge. The pass is what gives the confirmation rule its
+  // cadence — a trader whose standard stays met is confirmed
+  // by a later pass even if they never open the Levels page.
+  // Best-effort like every section here; stores at most one
+  // row, and only on a material state change.
+  const assessment = await runLevelAssessment(client, userId, undefined, now);
+  result.assessments = assessment.written ? 1 : 0;
   result.insightsRefreshed = await refreshInsightsIfStale(client, userId);
   return result;
 }
@@ -433,6 +454,7 @@ export async function runBackgroundPassForAllUsers(
     monthlyNotices: 0,
     planEvents: 0,
     planNotifications: 0,
+    assessments: 0,
     errors: 0,
   };
   const { data } = await client
@@ -449,6 +471,7 @@ export async function runBackgroundPassForAllUsers(
       summary.monthlyNotices += result.monthlyNotices;
       summary.planEvents += result.planEvents;
       summary.planNotifications += result.planNotifications;
+      summary.assessments += result.assessments;
     } catch {
       summary.errors += 1;
     }
@@ -500,6 +523,7 @@ export function createDefaultIntelligenceRunDeps(): IntelligenceRunDeps {
           monthlyNotices: summary.monthlyNotices,
           planEvents: summary.planEvents,
           planNotifications: summary.planNotifications,
+          assessments: summary.assessments,
           errors: summary.errors,
         },
       }),
@@ -541,6 +565,7 @@ export async function handleIntelligenceRun(
       monthlyNotices: summary.monthlyNotices,
       planEvents: summary.planEvents,
       planNotifications: summary.planNotifications,
+      assessments: summary.assessments,
       errors: summary.errors,
     },
   };

@@ -6,6 +6,7 @@ import {
   revokeCertificateSchema,
   roleChangeSchema,
   systemSettingSchema,
+  validateAssessmentConfig,
   validateLevelBandSet,
   verificationChangeSchema,
 } from "./validation";
@@ -92,6 +93,44 @@ describe("admin validation", () => {
     const shifted = ten.map((b, i) => (i === 0 ? { minScore: 5, maxScore: 19 } : b));
     expect(validateLevelBandSet(shifted)).toMatch(/start/);
     expect(validateLevelBandSet([])).toMatch(/No levels/);
+  });
+
+  it("assessment config in scoring_config must be well-formed when present (Task 23)", () => {
+    // Absent entirely is valid — the engine's defaults apply.
+    expect(validateAssessmentConfig(null)).toBeNull();
+    expect(validateAssessmentConfig({ discipline: 0.2 })).toBeNull();
+    expect(validateAssessmentConfig({ assessment: {} })).toBeNull();
+    // The seeded shape is valid.
+    expect(
+      validateAssessmentConfig({
+        discipline: 0.2,
+        assessment: {
+          bands: {
+            foundation: { floor: null, min_measured: 3, confirm_after_days: 7 },
+            "itg-master-trader": { floor: 60, min_measured: 8, confirm_after_days: 28 },
+          },
+        },
+      }),
+    ).toBeNull();
+    // Out-of-range fields are rejected with the band named.
+    expect(
+      validateAssessmentConfig({ assessment: { bands: { "risk-manager": { floor: 150 } } } }),
+    ).toMatch(/floor.*risk-manager|risk-manager.*floor/);
+    expect(
+      validateAssessmentConfig({ assessment: { bands: { "risk-manager": { min_measured: 9 } } } }),
+    ).toMatch(/min_measured/);
+    expect(
+      validateAssessmentConfig({ assessment: { bands: { "risk-manager": { min_measured: 2.5 } } } }),
+    ).toMatch(/min_measured/);
+    expect(
+      validateAssessmentConfig({ assessment: { bands: { "risk-manager": { confirm_after_days: 0 } } } }),
+    ).toMatch(/confirm_after_days/);
+    // Malformed shapes are rejected, not coerced.
+    expect(validateAssessmentConfig({ assessment: "strict" })).toMatch(/must be an object/);
+    expect(validateAssessmentConfig({ assessment: { bands: [] } })).toMatch(/keyed by level slug/);
+    expect(
+      validateAssessmentConfig({ assessment: { bands: { "Risk Manager": { floor: 20 } } } }),
+    ).toMatch(/not a valid level slug/);
   });
 
   it("system settings reject any claim that an LLM is connected", () => {

@@ -16,6 +16,7 @@ import {
   firstZodError,
   levelThresholdSchema,
   revokeCertificateSchema,
+  validateAssessmentConfig,
   validateLevelBandSet,
   roleChangeSchema,
   systemSettingSchema,
@@ -274,17 +275,30 @@ export async function saveLevelThresholdAction(
   // edit can never silently open a gap or overlap in the bands.
   const { data: allLevels } = await client
     .from("levels")
-    .select("id, min_score, max_score");
+    .select("id, min_score, max_score, scoring_config");
   if (allLevels) {
-    const candidate = (
-      allLevels as { id: string; min_score: number; max_score: number | null }[]
-    ).map((row) =>
+    const rows = allLevels as {
+      id: string;
+      min_score: number;
+      max_score: number | null;
+      scoring_config: Record<string, unknown> | null;
+    }[];
+    const candidate = rows.map((row) =>
       row.id === parsed.data.levelId
         ? { minScore: parsed.data.minScore, maxScore: parsed.data.maxScore }
         : { minScore: row.min_score, maxScore: row.max_score },
     );
     const bandError = validateLevelBandSet(candidate);
     if (bandError) return { ok: false, error: bandError };
+    // Task 23: the assessment standards live in the same
+    // scoring_config the thresholds sit beside. A threshold
+    // save is the admin write path for this table, so it is
+    // also where a malformed assessment standard is stopped —
+    // fail closed rather than let it flow into assessments.
+    for (const row of rows) {
+      const configError = validateAssessmentConfig(row.scoring_config);
+      if (configError) return { ok: false, error: configError };
+    }
   }
   const { error } = await client
     .from("levels")

@@ -3,6 +3,7 @@ import { getAnalyticsBundle, type AnalyticsBundle } from "../analytics/queries";
 import { getRecentClosedTrades, getRiskRules } from "../risk/queries";
 import { countDisciplinedStreak } from "../risk/engine";
 import { buildGamificationStats } from "./achievements";
+import type { LevelAssessmentRow } from "./assessment";
 import { dimensionInputsFromBundle, scoreTrader } from "./scoring";
 import { newlyUnlockedAchievements } from "./achievements";
 import type {
@@ -36,6 +37,28 @@ export async function getLevels(
     .select("id, name, slug, min_score, max_score, scoring_config, description")
     .order("min_score", { ascending: true });
   return (data ?? []) as LevelRow[];
+}
+
+/**
+ * The trader's latest level assessment (Task 23), read with
+ * the signed-in client so RLS scopes it to their own rows.
+ * Null when no assessment has been recorded yet — including
+ * before migration 0021 lands, when the table does not exist
+ * and the query simply returns no data. The Levels page
+ * renders that as an honest "Not yet assessed" state.
+ */
+export async function getLatestLevelAssessment(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LevelAssessmentRow | null> {
+  const { data } = await supabase
+    .from("level_assessments")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data ?? null) as LevelAssessmentRow | null;
 }
 
 export async function getAchievements(

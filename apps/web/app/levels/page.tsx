@@ -4,7 +4,10 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
-import { getGamificationBundle } from "@/lib/gamification/queries";
+import {
+  getGamificationBundle,
+  getLatestLevelAssessment,
+} from "@/lib/gamification/queries";
 import { isGenuineLevelUp, refreshGamification } from "@/lib/gamification/service";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { createNotification } from "@/lib/discipline/service";
@@ -35,6 +38,15 @@ export const metadata = { title: "Levels — ITG TraderOS" };
  * a gold Current chip). All data, copy, score expressions and
  * empty states are exactly as before, including the
  * null-score "No level yet" state.
+ *
+ * Task 23: the page also shows the trader's latest level
+ * ASSESSMENT (breadth + dimension floors + sustained
+ * confirmation, recorded append-only by the assessment
+ * engine) — the stricter judgement beside the score-driven
+ * level, with the stored conditions naming exactly what is
+ * unmet. Presentation only: the read is one extra query
+ * after the existing refresh, and the displayed score, band
+ * and breakdown are unchanged.
  */
 
 export default async function LevelsPage() {
@@ -44,6 +56,7 @@ export default async function LevelsPage() {
 
   let bundle = null as Awaited<ReturnType<typeof getGamificationBundle>> | null;
   let progress = null as ReturnType<typeof progressToNextLevel>;
+  let assessment = null as Awaited<ReturnType<typeof getLatestLevelAssessment>>;
   if (isSupabaseConfigured()) {
     const supabase = await createServerSupabaseClient();
     const gamification = await refreshGamification(supabase, user.id);
@@ -67,6 +80,13 @@ export default async function LevelsPage() {
     }
     bundle = await getGamificationBundle(supabase, user.id);
     progress = progressToNextLevel(bundle.score.score, bundle.levels);
+    // Task 23: the latest stored assessment (the refresh
+    // above may have just written it). Read AFTER the refresh
+    // so the section shows the current state, never a
+    // pre-refresh snapshot.
+    if (bundle.score.score !== null) {
+      assessment = await getLatestLevelAssessment(supabase, user.id);
+    }
   }
 
   return (
@@ -181,6 +201,56 @@ export default async function LevelsPage() {
                   </tbody>
                 </table>
               </div>
+            </section>
+
+            <section className="motion-reveal motion-reveal-3 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="Level assessment">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="itg2-section-title">Level assessment</h2>
+                {assessment === null ? (
+                  <span className="itg2-chip itg2-chip-muted">Not yet assessed</span>
+                ) : assessment.verdict === "pass" ? (
+                  <span className="itg2-chip itg2-chip-gold">Assessed</span>
+                ) : (
+                  <span className="itg2-chip itg2-chip-warning">Holding</span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your level above follows your score. An assessment is the stricter
+                judgement recorded in your history: it also requires enough measured
+                dimensions, every measured dimension at or above the band&apos;s
+                floor, and the standard still met after a confirmation period — so
+                a first crossing is not yet a sustained level.
+              </p>
+              {assessment === null ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No assessment has been recorded yet. Assessments run automatically
+                  whenever your level is refreshed — journal a trade, update a goal
+                  or complete a review and your first assessment will appear here.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Last assessed {new Date(assessment.created_at).toLocaleDateString()} —{" "}
+                    {assessment.level_name}, score{" "}
+                    <span className="tnum">{Number(assessment.score).toFixed(1)}</span>{" "}
+                    at assessment.
+                  </p>
+                  <ul className="mt-3 text-sm">
+                    {assessment.conditions.map((condition) => (
+                      <li key={condition.key} className="itg2-row flex-wrap gap-2">
+                        <span>
+                          <strong>{condition.label}</strong> — {condition.detail}
+                        </span>
+                        {condition.passed ? (
+                          <span className="itg2-chip itg2-chip-gold">Met</span>
+                        ) : (
+                          <span className="itg2-chip itg2-chip-warning">Not yet</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </section>
 
             <section className="motion-reveal motion-reveal-3 itg2-card mt-6 sm:mt-8 p-4 sm:p-6" aria-label="XP history">

@@ -109,6 +109,75 @@ export function validateLevelBandSet(
   return null;
 }
 
+/**
+ * Validate the `assessment` block of a level's scoring_config
+ * (Task 23). The block is optional — a band without one is
+ * assessed against the engine's band-derived defaults — but
+ * when present it must be well-formed: `bands` an object keyed
+ * by level slug, each entry an object whose fields are in
+ * range (floor null or 0–100, min_measured a whole number
+ * 1–8, confirm_after_days a whole number 1–365). The
+ * assessment parser falls back per-field on invalid values at
+ * read time; this validator is the governance gate on the
+ * admin write path, so a malformed standard is rejected at
+ * save instead of silently flowing into assessments. Returns
+ * an error message, or null when the config is valid/absent.
+ */
+export function validateAssessmentConfig(config: unknown): string | null {
+  if (config === null || config === undefined) return null;
+  if (typeof config !== "object" || Array.isArray(config)) {
+    return "The scoring config must be an object.";
+  }
+  const assessment = (config as Record<string, unknown>).assessment;
+  if (assessment === undefined) return null;
+  if (assessment === null || typeof assessment !== "object" || Array.isArray(assessment)) {
+    return "The assessment config must be an object.";
+  }
+  const bands = (assessment as Record<string, unknown>).bands;
+  if (bands === undefined) return null;
+  if (bands === null || typeof bands !== "object" || Array.isArray(bands)) {
+    return "The assessment bands config must be an object keyed by level slug.";
+  }
+  for (const [slug, entry] of Object.entries(bands as Record<string, unknown>)) {
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return `The assessment band key "${slug}" is not a valid level slug.`;
+    }
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      return `The assessment standard for "${slug}" must be an object.`;
+    }
+    const fields = entry as Record<string, unknown>;
+    if (
+      "floor" in fields &&
+      fields.floor !== null &&
+      (typeof fields.floor !== "number" ||
+        !Number.isFinite(fields.floor) ||
+        fields.floor < 0 ||
+        fields.floor > 100)
+    ) {
+      return `The assessment floor for "${slug}" must be null or a number from 0 to 100.`;
+    }
+    if (
+      "min_measured" in fields &&
+      (typeof fields.min_measured !== "number" ||
+        !Number.isInteger(fields.min_measured) ||
+        fields.min_measured < 1 ||
+        fields.min_measured > 8)
+    ) {
+      return `The assessment min_measured for "${slug}" must be a whole number from 1 to 8.`;
+    }
+    if (
+      "confirm_after_days" in fields &&
+      (typeof fields.confirm_after_days !== "number" ||
+        !Number.isInteger(fields.confirm_after_days) ||
+        fields.confirm_after_days < 1 ||
+        fields.confirm_after_days > 365)
+    ) {
+      return `The assessment confirm_after_days for "${slug}" must be a whole number from 1 to 365.`;
+    }
+  }
+  return null;
+}
+
 /** Only these keys may be changed from the admin settings page. */
 export const SYSTEM_SETTING_KEYS = [
   "registration_open",

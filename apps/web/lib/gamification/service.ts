@@ -3,6 +3,10 @@ import { calcXpFor, type XpAction } from "@itg/calc";
 import { createServiceRoleSupabaseClient } from "../supabase/server";
 import { isSupabaseConfigured } from "../supabase/config";
 import { getGamificationBundle, type GamificationBundle } from "./queries";
+import {
+  runLevelAssessment,
+  type AssessmentOutcome,
+} from "./assessment-service";
 import { validatePenalty } from "./xp";
 import type { AchievementRow, LevelRow, XpReason } from "./types";
 
@@ -276,6 +280,8 @@ export async function refreshGamification(
   currentLevel: string | null;
   previousLevelMinScore: number | null;
   currentLevelMinScore: number | null;
+  /** Task 23: the level assessment outcome of this refresh. */
+  assessment: AssessmentOutcome;
 }> {
   try {
     // Performance (2026-11-02): both branches below computed
@@ -290,11 +296,17 @@ export async function refreshGamification(
     // not-configured / no-admin returns never start it.
     let shared: Promise<GamificationBundle> | null = null;
     const getBundle = () => (shared ??= getGamificationBundle(supabase, userId));
-    const [unlocked, level] = await Promise.all([
+    // Task 23: the assessment is a third branch on the same
+    // shared bundle — it judges the same pre-write snapshot
+    // the level store persists, stores a row only when the
+    // evaluated state materially changed, and is best-effort
+    // like everything else here.
+    const [unlocked, level, assessment] = await Promise.all([
       checkAndAwardAchievements(supabase, userId, getBundle),
       ensureLevelStored(supabase, userId, getBundle),
+      runLevelAssessment(supabase, userId, getBundle),
     ]);
-    return { unlocked, ...level };
+    return { unlocked, ...level, assessment };
   } catch {
     return {
       unlocked: [],
@@ -302,6 +314,7 @@ export async function refreshGamification(
       currentLevel: null,
       previousLevelMinScore: null,
       currentLevelMinScore: null,
+      assessment: { written: false, verdict: null },
     };
   }
 }
