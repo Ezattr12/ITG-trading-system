@@ -53,10 +53,16 @@ export interface LevelThreshold {
 
 /** @itg/calc DEFAULT_LEVELS — used when the levels table read is empty. */
 export const DEFAULT_LEVELS: LevelThreshold[] = [
-  { name: "Bronze", minScore: 0, maxScore: 39 },
-  { name: "Silver", minScore: 40, maxScore: 59 },
-  { name: "Gold", minScore: 60, maxScore: 79 },
-  { name: "Platinum", minScore: 80, maxScore: null },
+  { name: "Foundation", minScore: 0, maxScore: 19 },
+  { name: "Technical Trader", minScore: 20, maxScore: 39 },
+  { name: "Risk Manager", minScore: 40, maxScore: 49 },
+  { name: "Strategy Operator", minScore: 50, maxScore: 59 },
+  { name: "Psychological Discipline", minScore: 60, maxScore: 69 },
+  { name: "Consistency", minScore: 70, maxScore: 79 },
+  { name: "Professional Trader", minScore: 80, maxScore: 86 },
+  { name: "Institutional Trader", minScore: 87, maxScore: 92 },
+  { name: "Trading Researcher", minScore: 93, maxScore: 96 },
+  { name: "ITG Master Trader", minScore: 97, maxScore: null },
 ];
 
 function thresholdsFromLevels(levels: readonly LevelRowLite[]): LevelThreshold[] {
@@ -69,16 +75,17 @@ function thresholdsFromLevels(levels: readonly LevelRowLite[]): LevelThreshold[]
 }
 
 function calcLevelForScore(score: number, levels: LevelThreshold[]): string {
+  // Mirrors @itg/calc (Task 22): membership is decided by the
+  // minScore thresholds alone — the band with the greatest
+  // minScore at or below the (fractional) score — so no score
+  // can fall through a max-edge gap to the top band.
   const clamped = Math.max(0, score);
-  for (const level of levels) {
-    if (
-      clamped >= level.minScore &&
-      (level.maxScore === null || clamped <= level.maxScore)
-    ) {
-      return level.name;
-    }
+  const sorted = [...levels].sort((a, b) => a.minScore - b.minScore);
+  let resolved = sorted[0];
+  for (const level of sorted) {
+    if (clamped >= level.minScore) resolved = level;
   }
-  return levels[levels.length - 1].name;
+  return resolved.name;
 }
 
 export interface NextLevelProgress {
@@ -92,8 +99,8 @@ export interface NextLevelProgress {
 
 /**
  * Progress towards the next level. Null when there is no score
- * yet. At the top level (Platinum) the next level is null and
- * progress is 100.
+ * yet. At the top level (ITG Master Trader) the next level is
+ * null and progress is 100.
  */
 export function progressToNextLevel(
   score: number | null,

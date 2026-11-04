@@ -139,13 +139,41 @@ describe("XP and levels", () => {
     expect(calcXpFor("risk_discipline")).toBe(25);
   });
   it("levels are multi-dimensional thresholds, not profit", () => {
-    expect(calcLevelForScore(0)).toBe("Bronze");
-    expect(calcLevelForScore(39)).toBe("Bronze");
-    expect(calcLevelForScore(40)).toBe("Silver");
-    expect(calcLevelForScore(60)).toBe("Gold");
-    expect(calcLevelForScore(80)).toBe("Platinum");
-    expect(calcLevelForScore(150)).toBe("Platinum");
-    expect(calcLevelForScore(-5)).toBe("Bronze");
+    expect(calcLevelForScore(0)).toBe("Foundation");
+    expect(calcLevelForScore(39)).toBe("Technical Trader");
+    expect(calcLevelForScore(40)).toBe("Risk Manager");
+    expect(calcLevelForScore(60)).toBe("Psychological Discipline");
+    expect(calcLevelForScore(80)).toBe("Professional Trader");
+    expect(calcLevelForScore(150)).toBe("ITG Master Trader");
+    expect(calcLevelForScore(-5)).toBe("Foundation");
+  });
+  it("resolves every score to its anchor-preserving band (Task 22)", () => {
+    // The full subdivision table: the original Bronze/Silver/
+    // Gold/Platinum ranges split in place, anchors at 40/60/80.
+    const bands: Array<[number, string]> = [
+      [0, "Foundation"], [19, "Foundation"],
+      [20, "Technical Trader"], [39, "Technical Trader"],
+      [40, "Risk Manager"], [49, "Risk Manager"],
+      [50, "Strategy Operator"], [59, "Strategy Operator"],
+      [60, "Psychological Discipline"], [69, "Psychological Discipline"],
+      [70, "Consistency"], [79, "Consistency"],
+      [80, "Professional Trader"], [86, "Professional Trader"],
+      [87, "Institutional Trader"], [92, "Institutional Trader"],
+      [93, "Trading Researcher"], [96, "Trading Researcher"],
+      [97, "ITG Master Trader"], [100, "ITG Master Trader"],
+    ];
+    for (const [score, name] of bands) {
+      expect(calcLevelForScore(score)).toBe(name);
+    }
+  });
+  it("fractional scores land in their band, never fall through to the top", () => {
+    // Regression: the weighted score is fractional (59.2 was
+    // stored as the top level in production under max-edge
+    // matching). Min-threshold resolution has no gaps.
+    expect(calcLevelForScore(39.5)).toBe("Technical Trader");
+    expect(calcLevelForScore(59.2)).toBe("Strategy Operator");
+    expect(calcLevelForScore(79.9)).toBe("Consistency");
+    expect(calcLevelForScore(96.5)).toBe("Trading Researcher");
   });
 });
 

@@ -20,10 +20,16 @@ import { getGamificationBundle } from "./queries";
  */
 
 const LEVELS = [
-  { id: "l1", name: "Bronze", slug: "bronze", min_score: 0, max_score: 39, scoring_config: null, description: null },
-  { id: "l2", name: "Silver", slug: "silver", min_score: 40, max_score: 59, scoring_config: null, description: null },
-  { id: "l3", name: "Gold", slug: "gold", min_score: 60, max_score: 79, scoring_config: null, description: null },
-  { id: "l4", name: "Platinum", slug: "platinum", min_score: 80, max_score: null, scoring_config: null, description: null },
+  { id: "l1", name: "Foundation", slug: "foundation", min_score: 0, max_score: 19, scoring_config: null, description: null },
+  { id: "l2", name: "Technical Trader", slug: "technical-trader", min_score: 20, max_score: 39, scoring_config: null, description: null },
+  { id: "l3", name: "Risk Manager", slug: "risk-manager", min_score: 40, max_score: 49, scoring_config: null, description: null },
+  { id: "l4", name: "Strategy Operator", slug: "strategy-operator", min_score: 50, max_score: 59, scoring_config: null, description: null },
+  { id: "l5", name: "Psychological Discipline", slug: "psychological-discipline", min_score: 60, max_score: 69, scoring_config: null, description: null },
+  { id: "l6", name: "Consistency", slug: "consistency", min_score: 70, max_score: 79, scoring_config: null, description: null },
+  { id: "l7", name: "Professional Trader", slug: "professional-trader", min_score: 80, max_score: 86, scoring_config: null, description: null },
+  { id: "l8", name: "Institutional Trader", slug: "institutional-trader", min_score: 87, max_score: 92, scoring_config: null, description: null },
+  { id: "l9", name: "Trading Researcher", slug: "trading-researcher", min_score: 93, max_score: 96, scoring_config: null, description: null },
+  { id: "l10", name: "ITG Master Trader", slug: "itg-master-trader", min_score: 97, max_score: null, scoring_config: null, description: null },
 ];
 
 function xpRow(userId: string, amount: number, i: number) {

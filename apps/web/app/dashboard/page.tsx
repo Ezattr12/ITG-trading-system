@@ -485,8 +485,8 @@ export default async function DashboardPage() {
             Inside .itg2-level-scope their fills render
             blue -> cyan (globals.css); the shared components
             are unchanged everywhere else. Level is the
-            multi-dimensional score (Bronze/Silver/Gold/
-            Platinum), not profit alone. */}
+            multi-dimensional score (ten competency bands,
+            Task 22), not profit alone. */}
         <article className="itg2-card itg2-level-scope p-4 sm:p-6">
           <p className="itg2-eyebrow">Progress</p>
           <h2 className="itg2-section-title mt-1">Level &amp; XP</h2>

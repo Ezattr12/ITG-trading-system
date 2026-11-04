@@ -5,7 +5,7 @@ import {
   createServerSupabaseClient,
   createServiceRoleSupabaseClient,
 } from "@/lib/supabase/server";
-import { awardXp, refreshGamification } from "@/lib/gamification/service";
+import { awardXp, isGenuineLevelUp, refreshGamification } from "@/lib/gamification/service";
 import type { CoreFailure } from "@/lib/trades/service";
 import {
   buildDisciplineReminder,
@@ -333,11 +333,7 @@ export async function updateGoalStatusCore(
         relatedEntityId: achievement.id,
       });
     }
-    if (
-      gamification.currentLevel !== null &&
-      gamification.previousLevel !== null &&
-      gamification.currentLevel !== gamification.previousLevel
-    ) {
+    if (isGenuineLevelUp(gamification)) {
       await createNotification({
         userId,
         type: "level_up",

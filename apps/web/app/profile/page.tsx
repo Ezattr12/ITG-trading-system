@@ -93,7 +93,7 @@ function IdentityRow({ label, value }: { label: string; value: string }) {
  * form as a secondary section. Everything shown comes from
  * real stored data:
  * - Level: the existing multi-dimensional score
- *   (Bronze/Silver/Gold/Platinum, spec §8) — the level of
+ *   (ten competency bands, spec §8 / Task 22) — the level of
  *   record. There is no XP-based "Level 7" ladder in this
  *   product; XP is displayed as accumulated XP, and the bar
  *   shows progress through the current level's score band.

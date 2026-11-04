@@ -6,6 +6,7 @@ import {
   revokeCertificateSchema,
   roleChangeSchema,
   systemSettingSchema,
+  validateLevelBandSet,
   verificationChangeSchema,
 } from "./validation";
 
@@ -65,6 +66,32 @@ describe("admin validation", () => {
     expect(levelThresholdSchema.safeParse({ levelId: id, minScore: 40, maxScore: 59 }).success).toBe(true);
     expect(levelThresholdSchema.safeParse({ levelId: id, minScore: 80, maxScore: "" }).success).toBe(true);
     expect(levelThresholdSchema.safeParse({ levelId: id, minScore: 60, maxScore: 59 }).success).toBe(false);
+  });
+
+  it("level band sets must form a contiguous ladder from 0 (Task 22)", () => {
+    const ten = [
+      { minScore: 0, maxScore: 19 }, { minScore: 20, maxScore: 39 },
+      { minScore: 40, maxScore: 49 }, { minScore: 50, maxScore: 59 },
+      { minScore: 60, maxScore: 69 }, { minScore: 70, maxScore: 79 },
+      { minScore: 80, maxScore: 86 }, { minScore: 87, maxScore: 92 },
+      { minScore: 93, maxScore: 96 }, { minScore: 97, maxScore: null },
+    ];
+    expect(validateLevelBandSet(ten)).toBeNull();
+    // Order of rows does not matter.
+    expect(validateLevelBandSet([...ten].reverse())).toBeNull();
+    // A gap (band 2 raised to start at 25) is rejected.
+    const gap = ten.map((b, i) => (i === 1 ? { minScore: 25, maxScore: 39 } : b));
+    expect(validateLevelBandSet(gap)).toMatch(/contiguous/);
+    // An overlap (band 1 extended into band 2) is rejected.
+    const overlap = ten.map((b, i) => (i === 0 ? { minScore: 0, maxScore: 25 } : b));
+    expect(validateLevelBandSet(overlap)).toMatch(/overlap/);
+    // An open-ended non-top band is rejected.
+    const openMiddle = ten.map((b, i) => (i === 4 ? { minScore: 60, maxScore: null } : b));
+    expect(validateLevelBandSet(openMiddle)).toMatch(/top level/);
+    // A ladder not starting at 0 is rejected.
+    const shifted = ten.map((b, i) => (i === 0 ? { minScore: 5, maxScore: 19 } : b));
+    expect(validateLevelBandSet(shifted)).toMatch(/start/);
+    expect(validateLevelBandSet([])).toMatch(/No levels/);
   });
 
   it("system settings reject any claim that an LLM is connected", () => {

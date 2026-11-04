@@ -21,7 +21,7 @@ import {
   getRiskDayContext,
   getRiskRules,
 } from "@/lib/risk/queries";
-import { awardXp, refreshGamification } from "@/lib/gamification/service";
+import { awardXp, isGenuineLevelUp, refreshGamification } from "@/lib/gamification/service";
 import { refreshCoachInsightsSafely } from "@/lib/coach/service";
 import { evaluatePlanForTrade } from "@/lib/plan/service";
 import { createNotification } from "@/lib/discipline/service";
@@ -290,11 +290,7 @@ export async function createTradeCore(
       relatedEntityId: achievement.id,
     });
   }
-  if (
-    gamification.currentLevel !== null &&
-    gamification.previousLevel !== null &&
-    gamification.currentLevel !== gamification.previousLevel
-  ) {
+  if (isGenuineLevelUp(gamification)) {
     await createNotification({
       userId,
       type: "level_up",

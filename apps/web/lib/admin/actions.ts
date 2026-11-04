@@ -16,6 +16,7 @@ import {
   firstZodError,
   levelThresholdSchema,
   revokeCertificateSchema,
+  validateLevelBandSet,
   roleChangeSchema,
   systemSettingSchema,
   verificationChangeSchema,
@@ -268,6 +269,23 @@ export async function saveLevelThresholdAction(
     .eq("id", parsed.data.levelId)
     .maybeSingle();
   if (!before) return { ok: false, error: "Level not found." };
+  // Task 22: the edited band must keep the whole ladder valid —
+  // contiguous, non-overlapping, starting at 0 — so a threshold
+  // edit can never silently open a gap or overlap in the bands.
+  const { data: allLevels } = await client
+    .from("levels")
+    .select("id, min_score, max_score");
+  if (allLevels) {
+    const candidate = (
+      allLevels as { id: string; min_score: number; max_score: number | null }[]
+    ).map((row) =>
+      row.id === parsed.data.levelId
+        ? { minScore: parsed.data.minScore, maxScore: parsed.data.maxScore }
+        : { minScore: row.min_score, maxScore: row.max_score },
+    );
+    const bandError = validateLevelBandSet(candidate);
+    if (bandError) return { ok: false, error: bandError };
+  }
   const { error } = await client
     .from("levels")
     .update({ min_score: parsed.data.minScore, max_score: parsed.data.maxScore })

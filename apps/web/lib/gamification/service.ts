@@ -162,6 +162,40 @@ export async function checkAndAwardAchievements(
   }
 }
 
+/** A stored-level change, as returned by `ensureLevelStored`. */
+export interface LevelChange {
+  previousLevel: string | null;
+  currentLevel: string | null;
+  /** min_score of the previous / current band, resolved against
+   *  the CURRENT levels table. Null when the name is unknown to
+   *  the current table (e.g. a stored name from retired bands). */
+  previousLevelMinScore: number | null;
+  currentLevelMinScore: number | null;
+}
+
+/**
+ * Should a level change produce a "Level up" notification?
+ * Only a genuine upward crossing counts: both bands known to
+ * the current table and the new band's threshold strictly
+ * higher than the old one's. Name changes alone do not notify —
+ * a re-banding (Task 22's ten-band rename), a downward move, or
+ * a stored name the current table no longer knows must never
+ * produce a "Level up" message. (Before Task 22 the call sites
+ * notified on ANY name change, so a score drop — or a stored
+ * row drifted by the old gap fall-through — would have sent a
+ * false "Level up" notification.)
+ */
+export function isGenuineLevelUp(change: LevelChange): boolean {
+  return (
+    change.previousLevel !== null &&
+    change.currentLevel !== null &&
+    change.previousLevel !== change.currentLevel &&
+    change.previousLevelMinScore !== null &&
+    change.currentLevelMinScore !== null &&
+    change.currentLevelMinScore > change.previousLevelMinScore
+  );
+}
+
 /**
  * Store the trader's current level score (upsert by user) and
  * return the previous and current level names, so the caller
@@ -172,8 +206,13 @@ export async function ensureLevelStored(
   supabase: SupabaseClient,
   userId: string,
   getBundle: () => Promise<GamificationBundle> = () => getGamificationBundle(supabase, userId),
-): Promise<{ previousLevel: string | null; currentLevel: string | null }> {
-  const none = { previousLevel: null, currentLevel: null };
+): Promise<LevelChange> {
+  const none: LevelChange = {
+    previousLevel: null,
+    currentLevel: null,
+    previousLevelMinScore: null,
+    currentLevelMinScore: null,
+  };
   if (!isSupabaseConfigured()) return none;
   const admin = createServiceRoleSupabaseClient();
   if (!admin) return none;
@@ -205,7 +244,16 @@ export async function ensureLevelStored(
       { onConflict: "user_id" },
     );
     if (error) return none;
-    return { previousLevel, currentLevel: bundle.score.levelName };
+    const previousLevelMinScore =
+      previousLevel === null
+        ? null
+        : bundle.levels.find((l) => l.name === previousLevel)?.min_score ?? null;
+    return {
+      previousLevel,
+      currentLevel: bundle.score.levelName,
+      previousLevelMinScore,
+      currentLevelMinScore: levelRow?.min_score ?? null,
+    };
   } catch {
     return none;
   }
@@ -226,6 +274,8 @@ export async function refreshGamification(
   unlocked: AchievementRow[];
   previousLevel: string | null;
   currentLevel: string | null;
+  previousLevelMinScore: number | null;
+  currentLevelMinScore: number | null;
 }> {
   try {
     // Performance (2026-11-02): both branches below computed
@@ -246,6 +296,12 @@ export async function refreshGamification(
     ]);
     return { unlocked, ...level };
   } catch {
-    return { unlocked: [], previousLevel: null, currentLevel: null };
+    return {
+      unlocked: [],
+      previousLevel: null,
+      currentLevel: null,
+      previousLevelMinScore: null,
+      currentLevelMinScore: null,
+    };
   }
 }

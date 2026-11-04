@@ -61,6 +61,54 @@ export const levelThresholdSchema = z.object({
   path: ["maxScore"],
 });
 
+export interface LevelBandSetRow {
+  minScore: number;
+  maxScore: number | null;
+}
+
+/**
+ * Validate a complete level band set (Task 22, from the Task 5
+ * evaluation's config-governance requirement). Band membership
+ * is resolved by minScore thresholds, so the set must be a
+ * clean ladder: it starts at 0, min scores strictly increase,
+ * only the top band may be open-ended, and bands are contiguous
+ * (each band's max reaches to within one point of the next
+ * band's min — no overlaps, no gaps an admin could silently
+ * open in the ladder). Returns an error message, or null when
+ * the set is valid.
+ */
+export function validateLevelBandSet(
+  bands: readonly LevelBandSetRow[],
+): string | null {
+  if (bands.length === 0) return "No levels are configured.";
+  const sorted = [...bands].sort((a, b) => a.minScore - b.minScore);
+  if (sorted[0].minScore !== 0) {
+    return "The lowest level must start at a min score of 0.";
+  }
+  for (let i = 0; i < sorted.length; i++) {
+    const band = sorted[i];
+    const isTop = i === sorted.length - 1;
+    if (band.maxScore !== null && band.maxScore <= band.minScore) {
+      return "Each level's max score must be greater than its min score.";
+    }
+    if (isTop) continue;
+    const next = sorted[i + 1];
+    if (next.minScore <= band.minScore) {
+      return "Level min scores must be strictly increasing.";
+    }
+    if (band.maxScore === null) {
+      return "Only the top level may have no max score.";
+    }
+    if (band.maxScore >= next.minScore) {
+      return "Level bands must not overlap.";
+    }
+    if (next.minScore - band.maxScore > 1) {
+      return "Level bands must be contiguous — leave no gap between bands.";
+    }
+  }
+  return null;
+}
+
 /** Only these keys may be changed from the admin settings page. */
 export const SYSTEM_SETTING_KEYS = [
   "registration_open",

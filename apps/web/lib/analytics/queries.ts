@@ -28,7 +28,7 @@ export interface AnalyticsBundle {
   xpHistory: XpHistoryPoint[];
   levelName: string | null;
   levelScore: number | null;
-  /** Configured levels (Bronze/Silver/Gold/Platinum) with scoring weights. */
+  /** Configured levels (the ten competency bands) with scoring weights. */
   levels: LevelRow[];
   dailyActivity: { activity_date: string; journal_completed: boolean; study_hours: number }[];
 }

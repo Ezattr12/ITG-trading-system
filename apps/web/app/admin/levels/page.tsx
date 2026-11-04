@@ -8,15 +8,16 @@ import { LevelForm } from "@/components/admin/admin-forms";
 export const metadata = { title: "Admin — Levels — ITG TraderOS" };
 
 /**
- * Admin level management (Phase 10). Bronze / Silver / Gold /
- * Platinum score thresholds are editable here; the scoring
+ * Admin level management (Phase 10). The ten competency
+ * levels' score thresholds are editable here; the scoring
  * weights themselves live in each level's `scoring_config`
  * (migration 0008) and are read at calculation time. Every
- * threshold change is audit-logged.
+ * threshold change is audit-logged, and the band set is
+ * validated for contiguity before a change is saved (Task 22).
  *
  * Master Web UI Redesign (Task 4 sweep) — PRESENTATION ONLY:
- * flat header band and level rows as .itg2-card; the Platinum
- * name now uses .itg2-text-gold (the same treatment the
+ * flat header band and level rows as .itg2-card; the top
+ * level's name now uses .itg2-text-gold (the same treatment the
  * Progress page gives a level name) instead of the retired
  * gradient-text utility. The query, threshold forms and copy
  * are exactly as before.
@@ -32,7 +33,7 @@ export default async function AdminLevelsPage() {
           <p className="itg2-eyebrow">Admin</p>
           <h1 className="itg2-page-title mt-1">Levels</h1>
           <p className="mt-2 text-muted-foreground">
-            Score thresholds for Bronze, Silver, Gold and Platinum. Levels are multi-dimensional —
+            Score thresholds for the ten competency levels. Levels are multi-dimensional —
             never profit-only — and the weights are stored per level in the database.
           </p>
         </header>
@@ -45,7 +46,7 @@ export default async function AdminLevelsPage() {
             {levels.map((level) => (
               <li key={level.id} className="itg2-card p-4 sm:p-5">
                 <p className="font-medium">
-                  <span className={level.name === "Platinum" ? "itg2-text-gold" : ""}>{level.name}</span>
+                  <span className={level.name === "ITG Master Trader" ? "itg2-text-gold" : ""}>{level.name}</span>
                   {" · score "}
                   <span className="tnum">
                     {level.min_score}

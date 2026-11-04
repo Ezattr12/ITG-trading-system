@@ -225,7 +225,26 @@ export function calcXpFor(action: XpAction): number {
   return XP_TABLE[action];
 }
 
-export type LevelName = "Bronze" | "Silver" | "Gold" | "Platinum";
+/**
+ * The ten competency bands (Task 22). These are internal ITG
+ * titles for bands of the one multi-dimensional score — they
+ * claim no external accreditation or professional qualification.
+ * The bands are anchor-preserving subdivisions of the original
+ * four (Bronze 0–39, Silver 40–59, Gold 60–79, Platinum 80+):
+ * the 40 / 60 / 80 boundaries survive as band boundaries, so a
+ * trader's broad standing never silently changes meaning.
+ */
+export type LevelName =
+  | "Foundation"
+  | "Technical Trader"
+  | "Risk Manager"
+  | "Strategy Operator"
+  | "Psychological Discipline"
+  | "Consistency"
+  | "Professional Trader"
+  | "Institutional Trader"
+  | "Trading Researcher"
+  | "ITG Master Trader";
 
 export interface LevelThreshold {
   name: LevelName;
@@ -235,20 +254,38 @@ export interface LevelThreshold {
 
 /** Default thresholds (configurable in the levels table, Phase 7). */
 export const DEFAULT_LEVELS: LevelThreshold[] = [
-  { name: "Bronze", minScore: 0, maxScore: 39 },
-  { name: "Silver", minScore: 40, maxScore: 59 },
-  { name: "Gold", minScore: 60, maxScore: 79 },
-  { name: "Platinum", minScore: 80, maxScore: null },
+  { name: "Foundation", minScore: 0, maxScore: 19 },
+  { name: "Technical Trader", minScore: 20, maxScore: 39 },
+  { name: "Risk Manager", minScore: 40, maxScore: 49 },
+  { name: "Strategy Operator", minScore: 50, maxScore: 59 },
+  { name: "Psychological Discipline", minScore: 60, maxScore: 69 },
+  { name: "Consistency", minScore: 70, maxScore: 79 },
+  { name: "Professional Trader", minScore: 80, maxScore: 86 },
+  { name: "Institutional Trader", minScore: 87, maxScore: 92 },
+  { name: "Trading Researcher", minScore: 93, maxScore: 96 },
+  { name: "ITG Master Trader", minScore: 97, maxScore: null },
 ];
 
+/**
+ * Resolve a score to its band. Membership is decided by the
+ * minScore thresholds alone — the band with the greatest
+ * minScore at or below the score — NOT by the maxScore edges.
+ * Scores are fractional (the weighted score is rounded to one
+ * decimal), so max-edge matching leaves gaps (39–40, 59–60,
+ * 79–80) in which a score matches no band at all; the previous
+ * implementation fell through to the TOP band in those gaps
+ * (a stored score of 59.2 was recorded as the top level in
+ * production). maxScore remains display/config metadata.
+ * Bands may be passed in any order; they are sorted here.
+ */
 export function calcLevelForScore(score: number, levels: LevelThreshold[] = DEFAULT_LEVELS): LevelName {
   const clamped = Math.max(0, score);
-  for (const level of levels) {
-    if (clamped >= level.minScore && (level.maxScore === null || clamped <= level.maxScore)) {
-      return level.name;
-    }
+  const sorted = [...levels].sort((a, b) => a.minScore - b.minScore);
+  let resolved = sorted[0];
+  for (const level of sorted) {
+    if (clamped >= level.minScore) resolved = level;
   }
-  return levels[levels.length - 1].name;
+  return resolved.name;
 }
 
 /** Goal progress: returns current, target and percentage (0–100+, uncapped). */

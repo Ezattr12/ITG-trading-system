@@ -8,7 +8,7 @@
 -- This file contains ONLY system configuration data (no user, no trade,
 -- no P&L, no fake performance):
 --   * system strategies (FVG, Order Block, …)
---   * levels (Bronze / Silver / Gold / Platinum) with scoring weights
+--   * levels (the ten competency bands, Task 22) with scoring weights
 --   * achievements catalogue
 --   * motivation messages (spec §23 examples)
 --
@@ -47,22 +47,43 @@ where not exists (
   where s.user_id is null and s.name = v.name
 );
 
--- Levels (spec §8). Score is multi-dimensional, NOT profit-only.
+-- Levels (spec §8, Task 22). Score is multi-dimensional, NOT profit-only.
 -- Weights: discipline .20, risk .20, journal .15, goals .15,
 -- psychology .10, strategy execution .10, consistency .05, performance .05.
+-- Ten competency bands, anchor-preserving subdivisions of the original
+-- four (Bronze 0–39, Silver 40–59, Gold 60–79, Platinum 80+); mirrors
+-- migration 0020, which performs the same change on existing databases.
 insert into public.levels (name, slug, min_score, max_score, scoring_config, description) values
-  ('Bronze', 'bronze', 0, 39,
+  ('Foundation', 'foundation', 0, 19,
    '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
-   'Starting level — building the journaling habit.'),
-  ('Silver', 'silver', 40, 59,
+   'The starting band — building the journaling habit and basic records.'),
+  ('Technical Trader', 'technical-trader', 20, 39,
    '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
-   'Consistent journaling and risk discipline.'),
-  ('Gold', 'gold', 60, 79,
+   'Developing routine — trades recorded with setups and risk notes.'),
+  ('Risk Manager', 'risk-manager', 40, 49,
    '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
-   'Strong process, discipline and consistency.'),
-  ('Platinum', 'platinum', 80, null,
+   'Risk process forming — stop-losses and disciplined sizing becoming routine.'),
+  ('Strategy Operator', 'strategy-operator', 50, 59,
    '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
-   'Institutional standard — process, discipline and performance together.')
+   'Executing a defined strategy with a steady overall process score.'),
+  ('Psychological Discipline', 'psychological-discipline', 60, 69,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'Strong process — discipline and consistency holding across dimensions.'),
+  ('Consistency', 'consistency', 70, 79,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'Consistent execution, week after week, across all measured dimensions.'),
+  ('Professional Trader', 'professional-trader', 80, 86,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'Professional-standard process across every measured dimension.'),
+  ('Institutional Trader', 'institutional-trader', 87, 92,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'Institutional standard — process, discipline and performance together.'),
+  ('Trading Researcher', 'trading-researcher', 93, 96,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'Advanced band — sustained high scores across all eight dimensions.'),
+  ('ITG Master Trader', 'itg-master-trader', 97, null,
+   '{"discipline": 0.20, "risk": 0.20, "journal_consistency": 0.15, "goal_completion": 0.15, "psychology": 0.10, "strategy_execution": 0.10, "consistency": 0.05, "performance": 0.05}'::jsonb,
+   'The highest ITG band — the full process score, mastered inside ITG TraderOS.')
 on conflict (slug) do nothing;
 
 -- Achievements catalogue (spec §25). Unlocking is computed in Phase 7.

@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
 import { getGamificationBundle } from "@/lib/gamification/queries";
-import { refreshGamification } from "@/lib/gamification/service";
+import { isGenuineLevelUp, refreshGamification } from "@/lib/gamification/service";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { createNotification } from "@/lib/discipline/service";
 import { XpHistoryChart } from "@/components/analytics/charts";
@@ -57,11 +57,7 @@ export default async function LevelsPage() {
         relatedEntityId: achievement.id,
       });
     }
-    if (
-      gamification.currentLevel !== null &&
-      gamification.previousLevel !== null &&
-      gamification.currentLevel !== gamification.previousLevel
-    ) {
+    if (isGenuineLevelUp(gamification)) {
       await createNotification({
         userId: user.id,
         type: "level_up",

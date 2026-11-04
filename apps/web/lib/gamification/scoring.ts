@@ -27,7 +27,7 @@ import { DIMENSION_KEYS, DIMENSION_LABELS } from "./types";
  * from the `levels` table's `scoring_config` (admin-configurable;
  * the seed's defaults are below). Performance is only 5% of the
  * score: a trader who wins every trade but journals nothing and
- * follows no risk plan stays Bronze.
+ * follows no risk plan stays at Foundation.
  *
  * A dimension with no data is NOT scored as 0 — it is excluded
  * and the remaining weights are renormalised, so a new trader is
@@ -185,8 +185,8 @@ export interface NextLevelProgress {
 
 /**
  * Progress towards the next level. Null when there is no score
- * yet. At the top level (Platinum) the next level is null and
- * progress is 100.
+ * yet. At the top level (ITG Master Trader) the next level is
+ * null and progress is 100.
  */
 export function progressToNextLevel(
   score: number | null,
