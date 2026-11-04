@@ -1,5 +1,6 @@
 import { formatMoney } from "@/lib/trades/calculations";
 import type {
+  BacktestingResearchAnalysis,
   DisciplineSplit,
   GroupStat,
   IntelligenceOverview,
@@ -358,8 +359,108 @@ function MarketConditionsCard({ conditions }: { conditions: MarketConditionsAnal
   );
 }
 
+function BacktestingResearchCard({ research }: { research: BacktestingResearchAnalysis }) {
+  const recentWeeks = research.weeks.slice(-8);
+  return (
+    <section
+      className="itg2-card p-5 sm:p-6 min-[801px]:col-span-2"
+      aria-label="Backtesting research"
+    >
+      <p className="itg2-eyebrow">Research</p>
+      <h2 className="itg2-section-title mt-1">Backtesting research</h2>
+      <p className="mt-1 max-w-[720px] text-xs leading-relaxed text-muted-foreground">
+        What your recorded research activity shows — and what it cannot. ITG logs
+        backtesting as a daily session count: that you backtested, not what you
+        tested or what it showed. No strategy, pair or result is stored for a
+        session, so backtest performance cannot be compared with live performance
+        here, and no result is ever invented. What the record does support is the
+        activity itself, and how it lines up with your live trading.
+      </p>
+      {research.status !== "ok" ? (
+        <p className="mt-3 max-w-[720px] text-muted-foreground">
+          No backtesting sessions recorded yet — so there is no research record to
+          analyse. Sessions are logged on the Coach page: just a date and how many
+          sessions you completed that day, at +15 XP each. Once you log them, this
+          panel tracks the activity and how it lines up with your live trades.
+        </p>
+      ) : (
+        <div className="mt-3">
+          <StatRow label="Sessions recorded">
+            {research.totalSessions} over {research.activeDays} day
+            {research.activeDays === 1 ? "" : "s"}
+            {research.firstSessionDate && research.lastSessionDate
+              ? research.firstSessionDate === research.lastSessionDate
+                ? ` — ${research.firstSessionDate}`
+                : ` — ${research.firstSessionDate} to ${research.lastSessionDate}`
+              : ""}
+          </StatRow>
+          <StatRow label="Sessions in the last 28 days">{research.recentSessions}</StatRow>
+          <StatRow label="Weeks with recorded research">{research.activeWeeks}</StatRow>
+
+          <h3 className="mt-4 text-sm font-semibold">Preparation and live trading</h3>
+          {research.liveTradesCount === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              No closed live trades yet — nothing to line the research record up
+              against.
+            </p>
+          ) : (
+            <>
+              <StatRow label="Closed trades within 7 days of a recorded session">
+                {research.preparedTrades} of {research.liveTradesCount}
+                {research.preparationPct !== null
+                  ? ` (${research.preparationPct.toFixed(0)}%)`
+                  : ""}
+              </StatRow>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                A trade counts when a backtesting session was recorded in the
+                7 days up to and including the day it closed; sessions recorded
+                after a trade closed never count towards it. This describes your
+                recorded routine only — it is not evidence that backtesting
+                caused any result.
+              </p>
+            </>
+          )}
+
+          {recentWeeks.length > 0 ? (
+            <>
+              <h3 className="mt-4 text-sm font-semibold">Week by week</h3>
+              <div className="mt-2 overflow-x-auto">
+                <table className="itg2-table itg2-table-fit">
+                  <thead>
+                    <tr>
+                      <th>Week starting</th>
+                      <th>Sessions</th>
+                      <th>Live trades closed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentWeeks.map((w) => (
+                      <tr key={w.weekStart}>
+                        <td className="font-medium tabular-nums">{w.weekStart}</td>
+                        <td className="tabular-nums">{w.sessions}</td>
+                        <td className="tabular-nums">{w.liveTrades}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {research.weeks.length > recentWeeks.length ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Showing the most recent {recentWeeks.length} of{" "}
+                  {research.weeks.length} weeks with recorded research or closed
+                  trades.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
-  const { patterns, drawdown, risk, psychology, discipline, recurring, conditions, marketConditions, plan } = data;
+  const { patterns, drawdown, risk, psychology, discipline, recurring, conditions, marketConditions, backtestingResearch, plan } = data;
   return (
     <div className="mt-10">
       <p className="itg2-eyebrow">Intelligence</p>
@@ -373,6 +474,7 @@ export function IntelligenceSection({ data }: { data: IntelligenceOverview }) {
       <div className="mt-5 grid grid-cols-1 gap-[18px] min-[801px]:grid-cols-2">
         <PatternsCard patterns={patterns} />
         <MarketConditionsCard conditions={marketConditions} />
+        <BacktestingResearchCard research={backtestingResearch} />
         <section className="itg2-card p-5 sm:p-6" aria-label="Drawdown analysis">
           <p className="itg2-eyebrow">Risk</p>
           <h2 className="itg2-section-title mt-1">Drawdown analysis</h2>

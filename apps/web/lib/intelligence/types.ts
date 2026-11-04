@@ -291,6 +291,69 @@ export interface MarketConditionsAnalysis {
   rows: MarketConditionRow[];
 }
 
+/* ------------------------------------------------------ backtesting research */
+
+/** One `daily_activity` row, reduced to the backtesting count. */
+export interface BacktestActivityDay {
+  /** Activity date (YYYY-MM-DD). */
+  date: string;
+  /** Sessions the trader logged for that day (the day's total). */
+  sessions: number;
+}
+
+/** One Monday-start week of research activity vs live execution. */
+export interface ResearchWeek {
+  /** Monday of the week (YYYY-MM-DD). */
+  weekStart: string;
+  /** Backtesting sessions recorded in the week. */
+  sessions: number;
+  /** Closed live trades in the week. */
+  liveTrades: number;
+}
+
+/**
+ * Backtesting research (Task 26 — evidence-gated). A
+ * backtesting "session" in this product is a daily count in
+ * `daily_activity`: the trader records THAT they backtested,
+ * never what they tested — no strategy, pair, period or
+ * result is stored for a session. There is therefore no
+ * backtest performance to compare with live performance,
+ * and this analysis invents none. What the stored record
+ * honestly supports is the research activity itself (how
+ * much, when, how recently) and how it lines up with live
+ * execution: for each closed live trade, whether a session
+ * was recorded in the 7 days up to and including the day
+ * the trade closed ("preparation"). That alignment is a
+ * description of the recorded routine — never evidence
+ * that backtesting caused any live result.
+ */
+export interface BacktestingResearchAnalysis {
+  status: AnalysisStatus;
+  /** Total sessions recorded, all time. */
+  totalSessions: number;
+  /** Days carrying at least one recorded session. */
+  activeDays: number;
+  /** First day with a recorded session (null when none). */
+  firstSessionDate: string | null;
+  /** Most recent day with a recorded session (null when none). */
+  lastSessionDate: string | null;
+  /** Sessions recorded in the 28 days up to and including today. */
+  recentSessions: number;
+  /** Distinct Monday-start weeks containing ≥1 session. */
+  activeWeeks: number;
+  /** All closed live trades the alignment ran over. */
+  liveTradesCount: number;
+  /** Closed trades with a session recorded in their preparation window. */
+  preparedTrades: number;
+  /**
+   * preparedTrades as a % of liveTradesCount (0–100).
+   * Null when there are no closed live trades.
+   */
+  preparationPct: number | null;
+  /** Weeks with any session or any closed trade, oldest first. */
+  weeks: ResearchWeek[];
+}
+
 /* -------------------------------------------------------- improvement plan */
 
 export interface ImprovementAction {
@@ -434,6 +497,7 @@ export interface IntelligenceOverview {
   recurring: RecurringAnalysis;
   conditions: ConditionsAnalysis;
   marketConditions: MarketConditionsAnalysis;
+  backtestingResearch: BacktestingResearchAnalysis;
   plan: ImprovementPlan;
   weeklyDigest: PeriodDigest;
   monthlyDigest: PeriodDigest;

@@ -11,6 +11,7 @@ import { mondayOfWeek, weekBounds } from "@/lib/reviews/reviews";
 import { getRiskRules, getTradingPlan } from "@/lib/risk/queries";
 import type { RiskEvent, RiskRules, TradingPlan } from "@/lib/risk/types";
 import {
+  analyzeBacktestingResearch,
   analyzeConditions,
   analyzeDiscipline,
   analyzeDrawdown,
@@ -23,6 +24,8 @@ import {
 } from "./analysis";
 import { analyzePatterns } from "./patterns";
 import type {
+  BacktestActivityDay,
+  BacktestingResearchAnalysis,
   ConditionsAnalysis,
   DisciplineAnalysis,
   DrawdownAnalysis,
@@ -294,6 +297,45 @@ export async function getMarketConditionsAnalysis(
   return analyzeMarketConditions(data.trades);
 }
 
+/**
+ * The trader's recorded backtesting activity: every
+ * `daily_activity` row (Task 26). Paged through in full
+ * like the trade reads — the research analysis covers the
+ * complete record, not a recent slice.
+ */
+export async function fetchBacktestActivity(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<BacktestActivityDay[]> {
+  const rows = await fetchAllRows<{ activity_date: string; backtesting_sessions: number }>(
+    (from, to) =>
+      supabase
+        .from("daily_activity")
+        .select("activity_date, backtesting_sessions")
+        .eq("user_id", userId)
+        .order("activity_date", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{
+        data: { activity_date: string; backtesting_sessions: number }[] | null;
+      }>,
+  );
+  return rows.map((r) => ({
+    date: String(r.activity_date).slice(0, 10),
+    sessions: r.backtesting_sessions ?? 0,
+  }));
+}
+
+export async function getBacktestingResearchAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+  today: string = new Date().toISOString().slice(0, 10),
+): Promise<BacktestingResearchAnalysis> {
+  const [data, activity] = await Promise.all([
+    getIntelligenceData(supabase, userId),
+    fetchBacktestActivity(supabase, userId),
+  ]);
+  return analyzeBacktestingResearch(data.trades, activity, today);
+}
+
 export async function getImprovementPlan(
   supabase: SupabaseClient,
   userId: string,
@@ -492,9 +534,10 @@ export async function getIntelligenceOverview(
     psychology,
     conditions,
   });
-  const [weeklyDigest, monthlyDigest] = await Promise.all([
+  const [weeklyDigest, monthlyDigest, activity] = await Promise.all([
     getWeeklyDigest(supabase, userId, today),
     getMonthlyDigest(supabase, userId, today),
+    fetchBacktestActivity(supabase, userId),
   ]);
   return {
     tradesCount: data.trades.length,
@@ -506,6 +549,7 @@ export async function getIntelligenceOverview(
     recurring,
     conditions,
     marketConditions,
+    backtestingResearch: analyzeBacktestingResearch(data.trades, activity, today),
     plan,
     // `today` is always a valid ISO date here, so the digest
     // builders cannot actually return null on this path.

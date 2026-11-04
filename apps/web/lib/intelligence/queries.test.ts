@@ -7,9 +7,11 @@ import {
   intelligenceTables,
 } from "@/lib/test-helpers/intelligence-fixture";
 import {
+  getBacktestingResearchAnalysis,
   getDrawdownAnalysis,
   getImprovementPlan,
   getIntelligenceData,
+  getIntelligenceOverview,
   getMarketConditionsAnalysis,
   getMonthlyDigest,
   getPatternAnalysis,
@@ -225,5 +227,84 @@ describe("getMarketConditionsAnalysis", () => {
       comparable: false,
     });
     for (const q of fake.queriesFor("trades")) assertScoped(q, "user_id", USER_A);
+  });
+});
+
+describe("getBacktestingResearchAnalysis", () => {
+  // The fixture's seven USER_A trades close Sep 8, 9, 10, 11,
+  // 12, 15 and 16. One recorded session day — Mon Sep 7, one
+  // session — prepares the five trades closing Sep 8–12 (the
+  // 7-day window ending on each close day reaches back to
+  // Sep 7); the Sep 15/16 closes fall outside it. USER_B's
+  // nine sessions on the same day must never leak in.
+  function researchTables() {
+    const tables = intelligenceTables();
+    tables.daily_activity = [
+      {
+        user_id: USER_A,
+        activity_date: "2026-09-07",
+        backtesting_sessions: 1,
+        journal_completed: false,
+        study_hours: 0,
+        trading_sessions_count: 0,
+      },
+      {
+        user_id: USER_B,
+        activity_date: "2026-09-07",
+        backtesting_sessions: 9,
+        journal_completed: false,
+        study_hours: 0,
+        trading_sessions_count: 0,
+      },
+    ];
+    return tables;
+  }
+
+  it("reads only the caller's recorded activity and aligns it with their trades", async () => {
+    const { client, fake } = fakeSupabase(researchTables());
+    const r = await getBacktestingResearchAnalysis(
+      client as SupabaseClient,
+      USER_A,
+      "2026-09-29",
+    );
+    expect(r.status).toBe("ok");
+    expect(r.totalSessions).toBe(1);
+    expect(r.activeDays).toBe(1);
+    expect(r.firstSessionDate).toBe("2026-09-07");
+    expect(r.lastSessionDate).toBe("2026-09-07");
+    expect(r.recentSessions).toBe(1); // Sep 7 is 22 days before Sep 29
+    expect(r.liveTradesCount).toBe(7);
+    expect(r.preparedTrades).toBe(5);
+    expect(r.preparationPct).toBeCloseTo(500 / 7, 4);
+    expect(r.weeks).toEqual([
+      { weekStart: "2026-09-07", sessions: 1, liveTrades: 5 },
+      { weekStart: "2026-09-14", sessions: 0, liveTrades: 2 },
+    ]);
+    for (const q of fake.queriesFor("daily_activity")) assertScoped(q, "user_id", USER_A);
+  });
+
+  it("is insufficient for a trader with no recorded sessions", async () => {
+    const { client } = fakeSupabase(intelligenceTables());
+    const r = await getBacktestingResearchAnalysis(
+      client as SupabaseClient,
+      USER_A,
+      "2026-09-29",
+    );
+    expect(r.status).toBe("insufficient_data");
+    expect(r.totalSessions).toBe(0);
+    expect(r.liveTradesCount).toBe(7);
+    expect(r.preparedTrades).toBe(0);
+  });
+
+  it("flows into the intelligence overview the Analytics page renders", async () => {
+    const { client } = fakeSupabase(researchTables());
+    const overview = await getIntelligenceOverview(
+      client as SupabaseClient,
+      USER_A,
+      "2026-09-29",
+    );
+    expect(overview.backtestingResearch.totalSessions).toBe(1);
+    expect(overview.backtestingResearch.preparedTrades).toBe(5);
+    expect(overview.backtestingResearch.liveTradesCount).toBe(7);
   });
 });

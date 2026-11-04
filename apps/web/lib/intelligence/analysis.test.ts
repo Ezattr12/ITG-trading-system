@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyzeBacktestingResearch,
   analyzeConditions,
   analyzeDiscipline,
   analyzeDrawdown,
@@ -10,7 +11,7 @@ import {
   buildImprovementPlan,
   type RiskContext,
 } from "./analysis";
-import type { IntelLesson, IntelTrade } from "./types";
+import type { BacktestActivityDay, IntelLesson, IntelTrade } from "./types";
 import type { RiskRules } from "@/lib/risk/types";
 
 /**
@@ -463,6 +464,105 @@ describe("analyzeMarketConditions", () => {
       unrecordedTrades: 0,
     });
     expect(empty.rows).toEqual([]);
+  });
+});
+
+describe("analyzeBacktestingResearch", () => {
+  const TODAY = "2026-09-29"; // a Tuesday; its week starts Mon 2026-09-28
+
+  it("is insufficient with no recorded sessions, whatever the trades", () => {
+    const r = analyzeBacktestingResearch([trade({}), trade({})], [], TODAY);
+    expect(r).toMatchObject({
+      status: "insufficient_data",
+      totalSessions: 0,
+      activeDays: 0,
+      firstSessionDate: null,
+      lastSessionDate: null,
+      recentSessions: 0,
+      activeWeeks: 0,
+      liveTradesCount: 2,
+      preparedTrades: 0,
+      preparationPct: 0,
+    });
+    // Weeks still report the live side honestly.
+    expect(r.weeks).toEqual([{ weekStart: "2026-08-31", sessions: 0, liveTrades: 2 }]);
+
+    const empty = analyzeBacktestingResearch([], [], TODAY);
+    expect(empty.status).toBe("insufficient_data");
+    expect(empty.preparationPct).toBeNull();
+    expect(empty.weeks).toEqual([]);
+  });
+
+  it("summarises the activity itself when no live trades exist yet", () => {
+    const activity: BacktestActivityDay[] = [
+      { date: "2026-09-03", sessions: 1 },
+      { date: "2026-09-01", sessions: 2 },
+      { date: "2026-09-05", sessions: 0 }, // a zero row is not activity
+    ];
+    const r = analyzeBacktestingResearch([], activity, TODAY);
+    expect(r).toMatchObject({
+      status: "ok",
+      totalSessions: 3,
+      activeDays: 2,
+      firstSessionDate: "2026-09-01",
+      lastSessionDate: "2026-09-03",
+      // Sep 1 is 28 days before today (outside the 28-day
+      // window); Sep 3 is 26 days before (inside).
+      recentSessions: 1,
+      // Both days fall in the week starting Mon 2026-08-31.
+      activeWeeks: 1,
+      liveTradesCount: 0,
+      preparedTrades: 0,
+      preparationPct: null,
+    });
+    expect(r.weeks).toEqual([
+      { weekStart: "2026-08-31", sessions: 3, liveTrades: 0 },
+    ]);
+  });
+
+  it("counts preparation only inside the 7-day window ending on the close day", () => {
+    const activity: BacktestActivityDay[] = [{ date: "2026-09-01", sessions: 1 }];
+    const trades = [
+      trade({ closedAt: "2026-08-31T10:00:00Z" }), // before the session — never counts
+      trade({ closedAt: "2026-09-01T10:00:00Z" }), // same day — counts
+      trade({ closedAt: "2026-09-07T10:00:00Z" }), // 6 days after — counts
+      trade({ closedAt: "2026-09-08T10:00:00Z" }), // 7 days after — outside
+    ];
+    const r = analyzeBacktestingResearch(trades, activity, TODAY);
+    expect(r.liveTradesCount).toBe(4);
+    expect(r.preparedTrades).toBe(2);
+    expect(r.preparationPct).toBe(50);
+  });
+
+  it("aligns sessions and live trades into Monday-start weeks", () => {
+    const activity: BacktestActivityDay[] = [
+      { date: "2026-09-06", sessions: 1 }, // Sunday → week of Mon 2026-08-31
+      { date: "2026-09-07", sessions: 3 }, // Monday → its own week
+    ];
+    const trades = [
+      trade({ closedAt: "2026-09-06T10:00:00Z" }),
+      trade({ closedAt: "2026-09-13T10:00:00Z" }), // Sunday → week of Mon 2026-09-07
+    ];
+    const r = analyzeBacktestingResearch(trades, activity, TODAY);
+    expect(r.activeWeeks).toBe(2);
+    expect(r.weeks).toEqual([
+      { weekStart: "2026-08-31", sessions: 1, liveTrades: 1 },
+      { weekStart: "2026-09-07", sessions: 3, liveTrades: 1 },
+    ]);
+    // Both trades closed within 7 days of a session.
+    expect(r.preparedTrades).toBe(2);
+  });
+
+  it("keeps future-dated rows in the totals but out of the last-28-days count", () => {
+    const activity: BacktestActivityDay[] = [
+      { date: "2026-09-02", sessions: 2 }, // 27 days before today — inside
+      { date: "2026-09-01", sessions: 5 }, // 28 days before — outside
+      { date: "2026-10-04", sessions: 7 }, // future — outside
+    ];
+    const r = analyzeBacktestingResearch([], activity, TODAY);
+    expect(r.totalSessions).toBe(14);
+    expect(r.recentSessions).toBe(2);
+    expect(r.lastSessionDate).toBe("2026-10-04");
   });
 });
 

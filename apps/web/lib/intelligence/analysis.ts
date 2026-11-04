@@ -10,6 +10,8 @@ import {
 } from "@/lib/analytics/analytics";
 import type { RiskEvent, RiskRules, TradingPlan } from "@/lib/risk/types";
 import type {
+  BacktestActivityDay,
+  BacktestingResearchAnalysis,
   ConditionsAnalysis,
   ConditionRow,
   DisciplineAnalysis,
@@ -23,6 +25,7 @@ import type {
   MarketConditionsAnalysis,
   PsychologyAnalysis,
   RecurringAnalysis,
+  ResearchWeek,
   RiskBehaviorAnalysis,
 } from "./types";
 
@@ -663,6 +666,97 @@ export function analyzeMarketConditions(
     recordedTrades,
     unrecordedTrades: trades.length - recordedTrades,
     rows,
+  };
+}
+
+/* ------------------------------------------------- backtesting research */
+
+/** Shift a YYYY-MM-DD date by whole days (UTC, DST-free). */
+function shiftDate(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Monday (YYYY-MM-DD) of the week containing a YYYY-MM-DD date. */
+function mondayOfDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  const day = d.getUTCDay() || 7; // Mon 1 … Sun 7
+  return shiftDate(date, -(day - 1));
+}
+
+/**
+ * Backtesting research (Task 26). Pure, over the trader's
+ * stored rows only: the `daily_activity` backtesting counts
+ * and their closed live trades.
+ *
+ * The record's limits shape the output (see the type's
+ * doc): a session stores no strategy, pair or result, so
+ * NO backtest-vs-live performance comparison is computed —
+ * there is nothing honest to compare. What is computed:
+ * the activity itself (totals, span, recency, active
+ * weeks), a per-week alignment of sessions against live
+ * trades closed, and preparation coverage — a closed trade
+ * counts as prepared when a session day falls in the
+ * 7-day window ending on its close date (the close day
+ * itself plus the 6 days before it). Sessions after a
+ * trade closed never count towards it.
+ */
+export function analyzeBacktestingResearch(
+  trades: readonly IntelTrade[],
+  activity: readonly BacktestActivityDay[],
+  today: string,
+): BacktestingResearchAnalysis {
+  const days = activity
+    .filter((d) => d.sessions > 0)
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const totalSessions = days.reduce((sum, d) => sum + d.sessions, 0);
+  const sessionDates = new Set(days.map((d) => d.date));
+
+  const recentSessions = days.reduce((sum, d) => {
+    const age = daysBetween(d.date, today);
+    return age >= 0 && age <= 27 ? sum + d.sessions : sum;
+  }, 0);
+
+  let preparedTrades = 0;
+  for (const t of trades) {
+    const closeDate = t.closedAt.slice(0, 10);
+    let prepared = false;
+    for (let back = 0; back <= 6 && !prepared; back += 1) {
+      prepared = sessionDates.has(shiftDate(closeDate, -back));
+    }
+    if (prepared) preparedTrades += 1;
+  }
+
+  const weekMap = new Map<string, ResearchWeek>();
+  const weekOf = (weekStart: string): ResearchWeek => {
+    let w = weekMap.get(weekStart);
+    if (!w) {
+      w = { weekStart, sessions: 0, liveTrades: 0 };
+      weekMap.set(weekStart, w);
+    }
+    return w;
+  };
+  for (const d of days) weekOf(mondayOfDate(d.date)).sessions += d.sessions;
+  for (const t of trades) weekOf(mondayOfDate(t.closedAt.slice(0, 10))).liveTrades += 1;
+  const weeks = [...weekMap.values()].sort((a, b) =>
+    a.weekStart < b.weekStart ? -1 : a.weekStart > b.weekStart ? 1 : 0,
+  );
+
+  return {
+    status: totalSessions > 0 ? "ok" : "insufficient_data",
+    totalSessions,
+    activeDays: days.length,
+    firstSessionDate: days.length > 0 ? days[0].date : null,
+    lastSessionDate: days.length > 0 ? days[days.length - 1].date : null,
+    recentSessions,
+    activeWeeks: new Set(days.map((d) => mondayOfDate(d.date))).size,
+    liveTradesCount: trades.length,
+    preparedTrades,
+    preparationPct:
+      trades.length > 0 ? (preparedTrades / trades.length) * 100 : null,
+    weeks,
   };
 }
 
