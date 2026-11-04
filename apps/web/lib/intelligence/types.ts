@@ -286,6 +286,15 @@ export interface PeriodDigest {
   psychology: PsychologyAnalysis;
   discipline: DisciplineAnalysis;
   recurring: RecurringAnalysis;
+  /**
+   * Within-period patterns (Task 21): the ONE pattern engine
+   * (`analyzePatterns`) run over the period slice alone, with
+   * the same materiality standard as the all-time "Your
+   * patterns" card — the period is the whole sample, so the
+   * baseline is the period's own win rate. Insufficient_data
+   * below 5 closed trades in the period, stated honestly.
+   */
+  patterns: PatternAnalysis;
   /** Top improvement actions computed from the period slice (≤3). */
   focus: ImprovementAction[];
   /** Coach findings: engine insights (week) or stored insights (month). */

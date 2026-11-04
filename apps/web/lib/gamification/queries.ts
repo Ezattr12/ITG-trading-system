@@ -23,8 +23,9 @@ import type {
  * and go through the service-role client, because those tables
  * have no client INSERT policy (migration 0008, append-only).
  *
- * Known limit (carried from Phases 3–5): scoring runs over at
- * most the 500 most recent closed trades.
+ * Task 21: scoring runs over the trader's complete closed
+ * history — the analytics bundle it inherits now fetches
+ * every closed trade (paginated), never a capped subset.
  */
 
 export async function getLevels(

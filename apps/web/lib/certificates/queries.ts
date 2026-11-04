@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRiskRules } from "@/lib/risk/queries";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { CertificateRow } from "./types";
 import {
   evaluateMonthlyEligibility,
@@ -15,8 +15,9 @@ import type { CertificateEligibility } from "./types";
  * enforces isolation: a trader can only ever read their own
  * certificates. No service-role client is used for reads.
  *
- * Known limit (carried from Phases 3–5): the month's inputs run
- * over at most the 500 most recent closed trades.
+ * Task 21: eligibility is computation, so the month's trades
+ * are fetched completely (fetchAllRows) — a month containing
+ * more than 500 closed trades now counts every one of them.
  */
 
 export async function getCertificates(
@@ -72,17 +73,7 @@ export async function getMonthlyCertificateInputs(
   );
   const end = endDate.toISOString().slice(0, 10);
 
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("id, pnl, status, opened_at, closed_at, sl, leverage")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .gte("closed_at", `${start}T00:00:00Z`)
-    .lt("closed_at", `${end}T00:00:00Z`)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as {
+  type MonthTrade = {
     id: string;
     pnl: number | null;
     status: string;
@@ -90,7 +81,19 @@ export async function getMonthlyCertificateInputs(
     closed_at: string | null;
     sl: number | null;
     leverage: number;
-  }[];
+  };
+  const trades = await fetchAllRows<MonthTrade>((from, to) =>
+    supabase
+      .from("trades")
+      .select("id, pnl, status, opened_at, closed_at, sl, leverage")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .gte("closed_at", `${start}T00:00:00Z`)
+      .lt("closed_at", `${end}T00:00:00Z`)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: MonthTrade[] | null }>,
+  );
 
   const tradeIds = trades.map((t) => t.id);
   const rules = await getRiskRules(supabase, userId);

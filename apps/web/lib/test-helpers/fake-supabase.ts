@@ -27,8 +27,11 @@ type Op =
   | { kind: "ilike"; col: string; pattern: string }
   | { kind: "gte"; col: string; value: string }
   | { kind: "lte"; col: string; value: string }
+  | { kind: "gt"; col: string; value: string }
+  | { kind: "lt"; col: string; value: string }
   | { kind: "order"; col: string; ascending: boolean }
-  | { kind: "limit"; n: number };
+  | { kind: "limit"; n: number }
+  | { kind: "range"; from: number; to: number };
 
 interface FakeWriteHooks {
   onUpsert?: (table: string, row: Row, conflictCols: string[]) => Row;
@@ -179,6 +182,21 @@ export class FakeQuery {
     return this;
   }
 
+  gt(col: string, value: string): this {
+    this.ops.push({ kind: "gt", col, value });
+    return this;
+  }
+
+  lt(col: string, value: string): this {
+    this.ops.push({ kind: "lt", col, value });
+    return this;
+  }
+
+  range(from: number, to: number): this {
+    this.ops.push({ kind: "range", from, to });
+    return this;
+  }
+
   order(col: string, opts?: { ascending?: boolean }): this {
     this.ops.push({ kind: "order", col, ascending: opts?.ascending ?? true });
     return this;
@@ -221,6 +239,12 @@ export class FakeQuery {
         case "lte":
           out = out.filter((r) => String(r[op.col] ?? "") <= op.value);
           break;
+        case "gt":
+          out = out.filter((r) => String(r[op.col] ?? "") > op.value);
+          break;
+        case "lt":
+          out = out.filter((r) => String(r[op.col] ?? "") < op.value);
+          break;
         case "order": {
           const { col, ascending } = op;
           out = [...out].sort((a, b) => {
@@ -236,6 +260,9 @@ export class FakeQuery {
         }
         case "limit":
           out = out.slice(0, op.n);
+          break;
+        case "range":
+          out = out.slice(op.from, op.to + 1);
           break;
       }
     }

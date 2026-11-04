@@ -15,13 +15,65 @@ import type {
  * a trader can only ever read their own trades. No service-role
  * client is used for reads.
  *
- * The list fetch is capped at 500 most recent trades (see the
- * list page): in-memory filters for psychology / outcome run
- * over that set. Phase 12 pushes those filters into the query
- * if a trader's journal grows past it.
+ * Two read shapes live here, deliberately separate (Task 21):
+ *
+ * - DISPLAY reads (the journal list below) are capped at
+ *   TRADE_LIST_FETCH_LIMIT most-recent rows. A page-size limit
+ *   is legitimate for a list a human scrolls.
+ *
+ * - COMPUTATION reads (analytics, reports, coach, risk,
+ *   discipline, certificates, intelligence, plan enforcement —
+ *   anything whose output is presented as a complete figure)
+ *   must NEVER be silently capped. They use fetchAllRows,
+ *   which pages through every matching row. Before Task 21
+ *   the display cap also bound those reads, so a journal past
+ *   500 trades silently understated its own statistics and
+ *   older report periods changed retroactively.
  */
 
 export const TRADE_LIST_FETCH_LIMIT = 500;
+
+/**
+ * Page size for fetchAllRows. 500 stays under PostgREST's
+ * per-request row ceiling, so every page request returns its
+ * full slice; the loop then walks the whole result set, 500
+ * rows per round-trip. A 10k-row journal costs 20 small
+ * queries instead of one unbounded one.
+ */
+export const FETCH_ALL_PAGE_SIZE = 500;
+
+/**
+ * Fetch EVERY row matching a query, paging with `.range()`.
+ *
+ * `buildPage` must apply the identical filters and ordering
+ * on every call and finish the chain with `.range(from, to)`;
+ * it is invoked once per page with the page's inclusive
+ * bounds. Rows come back concatenated in the query's order,
+ * exactly as one unbounded fetch would return them, and the
+ * loop stops at the first short page.
+ *
+ * Ordering caveat (documented, accepted): offset pagination
+ * over a non-unique sort key (e.g. closed_at) can in theory
+ * repeat or skip a row whose sort value ties exactly at a
+ * page boundary and is ordered differently between the two
+ * page queries. Every consumer aggregates or scans the full
+ * set with the same tolerance the single-fetch code already
+ * had for tie ordering, and keyset pagination is not
+ * expressible in the codebase's query pattern (no or-filters
+ * — see the note on isActiveJournalTrade below).
+ */
+export async function fetchAllRows<T>(
+  buildPage: (from: number, to: number) => PromiseLike<{ data: T[] | null }>,
+  pageSize: number = FETCH_ALL_PAGE_SIZE,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await buildPage(from, from + pageSize - 1);
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
 
 /**
  * Active-journal visibility (Delete Trade mandate): a removed

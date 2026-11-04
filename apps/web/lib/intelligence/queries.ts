@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calcRiskAmount } from "@itg/calc";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";
 import { getReportSummary } from "@/lib/reports/queries";
 import { periodBounds } from "@/lib/reports/reports";
@@ -8,7 +8,7 @@ import { getCoachWeekData } from "@/lib/coach/queries";
 import { generateCoachInsights } from "@/lib/coach/insights";
 import type { AiInsightRow } from "@/lib/coach/types";
 import { mondayOfWeek, weekBounds } from "@/lib/reviews/reviews";
-import { getRiskEvents, getRiskRules, getTradingPlan } from "@/lib/risk/queries";
+import { getRiskRules, getTradingPlan } from "@/lib/risk/queries";
 import type { RiskEvent, RiskRules, TradingPlan } from "@/lib/risk/types";
 import {
   analyzeConditions,
@@ -46,8 +46,11 @@ import type {
  * lib/analytics and lib/reports. No service-role client is
  * used for reads.
  *
- * Known limit (carried from Phases 3–5): intelligence runs
- * over at most the 500 most recent closed trades.
+ * Task 21: intelligence is computation, so its reads page
+ * through EVERY matching row (fetchAllRows) — analyses,
+ * patterns and digests cover the complete journal, and a
+ * report period's figures can no longer change retroactively
+ * as newer trades arrive.
  */
 
 export interface IntelligenceData {
@@ -78,18 +81,19 @@ export async function getIntelligenceData(
   // mapping consumes are selected — the analyzers downstream
   // read IntelTrade objects, never the raw rows, so the
   // returned values are unchanged.
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("id, pair, direction, session, strategy_id, setup_id, pnl, r_multiple, closed_at, opened_at, sl, market_condition, trade_reason, leverage, entry_price, position_size")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as TradeRow[];
+  const trades = await fetchAllRows<TradeRow>((from, to) =>
+    supabase
+      .from("trades")
+      .select("id, pair, direction, session, strategy_id, setup_id, pnl, r_multiple, closed_at, opened_at, sl, market_condition, trade_reason, leverage, entry_price, position_size")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: TradeRow[] | null }>,
+  );
   const tradeIds = trades.map((t) => t.id);
 
-  const [psychRes, strategiesRes, setupsRes, lessonsRes, rules, plan, profileRes, riskEvents] =
+  const [psychRes, strategiesRes, setupsRes, lessonRows, rules, plan, profileRes, riskEvents] =
     await Promise.all([
       tradeIds.length > 0
         ? supabase
@@ -109,13 +113,18 @@ export async function getIntelligenceData(
             .select("id, name")
             .in("id", trades.map((t) => t.setup_id).filter(Boolean) as string[])
         : Promise.resolve({ data: [] }),
-      supabase
-        .from("lessons")
-        .select("trade_id, text, is_repeated_mistake")
-        .eq("user_id", userId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(TRADE_LIST_FETCH_LIMIT),
+      fetchAllRows<{ trade_id: string | null; text: string; is_repeated_mistake: boolean }>(
+        (from, to) =>
+          supabase
+            .from("lessons")
+            .select("trade_id, text, is_repeated_mistake")
+            .eq("user_id", userId)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false })
+            .range(from, to) as unknown as PromiseLike<{
+              data: { trade_id: string | null; text: string; is_repeated_mistake: boolean }[] | null;
+            }>,
+      ),
       getRiskRules(supabase, userId),
       getTradingPlan(supabase, userId),
       supabase
@@ -123,7 +132,17 @@ export async function getIntelligenceData(
         .select("trading_capital")
         .eq("id", userId)
         .maybeSingle(),
-      getRiskEvents(supabase, userId, TRADE_LIST_FETCH_LIMIT),
+      // Risk events feed the risk-behaviour analysis (computation),
+      // so they are fetched completely too, not via the display
+      // helper's caller-supplied page size.
+      fetchAllRows<RiskEvent>((from, to) =>
+        supabase
+          .from("risk_events")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .range(from, to) as unknown as PromiseLike<{ data: RiskEvent[] | null }>,
+      ),
     ]);
 
   const psychByTrade = new Map(
@@ -140,11 +159,7 @@ export async function getIntelligenceData(
   const setupName = new Map(
     ((setupsRes.data ?? []) as { id: string; name: string }[]).map((s) => [s.id, s.name]),
   );
-  const lessons = ((lessonsRes.data ?? []) as {
-    trade_id: string | null;
-    text: string;
-    is_repeated_mistake: boolean;
-  }[]).map(
+  const lessons = lessonRows.map(
     (l): IntelLesson => ({
       tradeId: l.trade_id,
       text: l.text ?? "",
@@ -293,6 +308,7 @@ interface DigestAnalyses {
   psychology: PsychologyAnalysis;
   discipline: DisciplineAnalysis;
   recurring: RecurringAnalysis;
+  patterns: PatternAnalysis;
   focus: ImprovementPlan["actions"];
 }
 
@@ -323,6 +339,7 @@ function sliceAnalyses(
     psychology: analyzePsychology(slice),
     discipline: analyzeDiscipline(slice),
     recurring: analyzeRecurring(slice, sliceLessons),
+    patterns: analyzePatterns(slice, sliceLessons),
     focus: plan.status === "ok" ? plan.actions.slice(0, 3) : [],
   };
 }
@@ -345,6 +362,7 @@ async function buildDigest(
     psychology: analyzePsychology([]),
     discipline: analyzeDiscipline([]),
     recurring: analyzeRecurring([], []),
+    patterns: analyzePatterns([], []),
     focus: [],
   };
   if (summary.tradesCount === 0) {
@@ -502,6 +520,7 @@ function emptyDigest(
     psychology: analyzePsychology([]),
     discipline: analyzeDiscipline([]),
     recurring: analyzeRecurring([], []),
+    patterns: analyzePatterns([], []),
     focus: [],
     coachFindings: [],
   };

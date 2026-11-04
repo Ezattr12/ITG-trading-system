@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";
 import { getRiskRules } from "@/lib/risk/queries";
 import type {
@@ -19,9 +19,9 @@ import type { GoalMeasurementContext } from "./engine";
  * activity, events and notifications. No service-role client is
  * used for reads.
  *
- * Known limit (carried from Phases 3–5): measurement runs over at
- * most the 500 most recent trades. Phase 12 pushes aggregation
- * into the database if a journal grows past it.
+ * Task 21: measurement is computation, so the trade reads page
+ * through EVERY matching trade (fetchAllRows) — goal progress
+ * and journal recency are complete for any journal size.
  */
 
 export async function getGoals(
@@ -139,21 +139,27 @@ export async function getUnreadNotificationCount(
 
 /**
  * Last day the trader journaled a trade (psychology record or
- * lesson on a closed trade), from the 500 most recent trades.
- * Null when nothing has been journaled yet.
+ * lesson on a closed trade), over ALL closed trades (Task 21:
+ * fetchAllRows — the most recent journal day can sit anywhere
+ * in the journal's history ordering once the newest trades are
+ * unjournaled). Null when nothing has been journaled yet.
  */
 export async function getLastJournalDate(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from("trades")
-    .select("id, closed_at, opened_at")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (data ?? []) as { id: string; closed_at: string | null; opened_at: string }[];
+  const trades = await fetchAllRows<{ id: string; closed_at: string | null; opened_at: string }>(
+    (from, to) =>
+      supabase
+        .from("trades")
+        .select("id, closed_at, opened_at")
+        .eq("user_id", userId)
+        .eq("status", "closed")
+        .order("closed_at", { ascending: false })
+        .range(from, to) as unknown as PromiseLike<{
+          data: { id: string; closed_at: string | null; opened_at: string }[] | null;
+        }>,
+  );
   if (trades.length === 0) return null;
   const ids = trades.map((t) => t.id);
   const [psychRes, lessonsRes] = await Promise.all([
@@ -179,13 +185,18 @@ export async function getGoalMeasurementContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<GoalMeasurementContext> {
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("id, opened_at, closed_at, status, pnl, sl, leverage")
-    .eq("user_id", userId)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as (TradeRow & { sl: number | null; leverage: number | null })[];
+  const tradeRows = await fetchAllRows<TradeRow & { sl: number | null; leverage: number | null }>(
+    (from, to) =>
+      supabase
+        .from("trades")
+        .select("id, opened_at, closed_at, status, pnl, sl, leverage")
+        .eq("user_id", userId)
+        .order("closed_at", { ascending: false })
+        .range(from, to) as unknown as PromiseLike<{
+          data: (TradeRow & { sl: number | null; leverage: number | null })[] | null;
+        }>,
+  );
+  const trades = tradeRows;
   const ids = trades.map((t) => t.id);
   let journaledIds = new Set<string>();
   if (ids.length > 0) {

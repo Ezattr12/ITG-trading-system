@@ -91,6 +91,55 @@ function DigestCard({ digest }: { digest: PeriodDigest }) {
           {digest.drawdown.maxDrawdown > 0 ? (
             <StatRow label="Deepest fall from peak">{formatMoney(digest.drawdown.maxDrawdown)}</StatRow>
           ) : null}
+          {digest.patterns.status !== "ok" ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Patterns need at least 5 closed trades in the period — this period has{" "}
+              {digest.patterns.tradesCount}.
+            </p>
+          ) : digest.patterns.patterns.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No standout patterns this {digest.kind === "weekly" ? "week" : "month"} —
+              no group of 3 or more trades separated itself from the period&apos;s
+              overall results.
+            </p>
+          ) : (
+            <>
+              <h3 className="mt-4 text-sm font-semibold">
+                Patterns this {digest.kind === "weekly" ? "week" : "month"}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Measured against this period&apos;s own overall results, with the
+                same standard as Your patterns.
+              </p>
+              <ul className="mt-1">
+                {digest.patterns.patterns.slice(0, 4).map((p) => (
+                  <li
+                    key={`${p.kind}-${p.key}`}
+                    className="border-t border-border pt-2 mt-2 first:border-t-0 first:mt-1 first:pt-1"
+                  >
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                      <span className="capitalize">
+                        {p.kind === "repeated_mistake" ? `“${p.label}”` : p.label}
+                      </span>
+                      {p.direction === "edge" ? (
+                        <span className="itg2-chip itg2-chip-profit whitespace-nowrap">Edge</span>
+                      ) : p.direction === "drag" ? (
+                        <span className="itg2-chip itg2-chip-loss whitespace-nowrap">Drag</span>
+                      ) : (
+                        <span className="itg2-chip itg2-chip-warning whitespace-nowrap">Repeats</span>
+                      )}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {PATTERN_KIND_LABELS[p.kind]}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <PatternEvidence pattern={p} />
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {digest.coachFindings.length > 0 ? (
             <>
               <h3 className="mt-4 text-sm font-semibold">Coach findings</h3>

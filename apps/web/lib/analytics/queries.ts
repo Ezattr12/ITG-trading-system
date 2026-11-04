@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calcGoalProgress } from "@itg/calc";
 import type { TradeRow } from "@/lib/trades/types";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { AnalyticTrade, GoalProgressView, XpHistoryPoint } from "./types";
 import { aggregateXpHistory } from "../gamification/xp";
 import {
@@ -16,9 +16,9 @@ import type { LevelRow } from "../gamification/types";
  * a trader can only ever read their own trades, goals, XP and
  * activity. No service-role client is used for reads.
  *
- * Known limit (carried from Phase 3): analytics run over at most
- * the 500 most recent closed trades. Phase 12 pushes aggregation
- * into the database if a journal grows past that.
+ * Task 21: analytics are computation, so the trades read pages
+ * through EVERY closed trade (fetchAllRows) — the figures are
+ * complete for any journal size, never silently capped.
  */
 
 export interface AnalyticsBundle {
@@ -68,8 +68,8 @@ export async function getAnalyticsBundle(
   // concurrently instead of after it; and the trades read now
   // selects only the columns this bundle actually consumes
   // (the AnalyticTrade mapping reads exactly these fields) —
-  // up to 500 rows of wide text columns no longer cross the
-  // wire on every render. Returned values are unchanged.
+  // wide text columns no longer cross the wire on every
+  // render. Returned values are unchanged.
   const metaPromise = Promise.all([
     supabase
       .from("goals")
@@ -97,15 +97,17 @@ export async function getAnalyticsBundle(
       .order("activity_date", { ascending: false })
       .limit(90),
   ]);
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as TradeRow[];
+  const tradeRows = await fetchAllRows<TradeRow>((from, to) =>
+    supabase
+      .from("trades")
+      .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: TradeRow[] | null }>,
+  );
+  const trades = tradeRows;
 
   let analytics: AnalyticTrade[] = [];
   if (trades.length > 0) {

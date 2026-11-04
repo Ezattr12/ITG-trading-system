@@ -10,6 +10,7 @@ import {
 } from "@/lib/discipline/service";
 import { runPlanEnforcementForUser } from "@/lib/plan/service";
 import { getLastJournalDate } from "@/lib/discipline/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 /**
@@ -102,9 +103,6 @@ const EMPTY_USER_RESULT: UserBackgroundPassResult = {
   planEvents: 0,
   planNotifications: 0,
 };
-
-/** Upper bound on risk events notified per user per pass. */
-const RISK_EVENT_FETCH_LIMIT = 500;
 
 function todayString(now: Date): string {
   return now.toISOString().slice(0, 10);
@@ -252,13 +250,21 @@ async function notifyUnnotifiedRiskEvents(
   client: SupabaseClient,
   userId: string,
 ): Promise<number> {
-  const [eventsRes, existingRes] = await Promise.all([
-    client
-      .from("risk_events")
-      .select("id, severity, message")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(RISK_EVENT_FETCH_LIMIT),
+  // Task 21: the events read pages through ALL of the user's
+  // risk events (fetchAllRows). It previously stopped at the
+  // oldest 500, so once those were notified, later events
+  // could never notify at all.
+  const [events, existingRes] = await Promise.all([
+    fetchAllRows<{ id: string; severity: string; message: string }>((from, to) =>
+      client
+        .from("risk_events")
+        .select("id, severity, message")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{
+          data: { id: string; severity: string; message: string }[] | null;
+        }>,
+    ),
     client
       .from("notifications")
       .select("related_entity_id")
@@ -272,11 +278,6 @@ async function notifyUnnotifiedRiskEvents(
       .filter((id): id is string => typeof id === "string"),
   );
   let created = 0;
-  const events = (eventsRes.data ?? []) as {
-    id: string;
-    severity: string;
-    message: string;
-  }[];
   for (const event of events) {
     if (notified.has(event.id)) continue;
     const ok = await createNotification({

@@ -5,7 +5,7 @@ import { getTradingPlan } from "@/lib/risk/queries";
 import { utcDate } from "@/lib/risk/engine";
 import type { TradingPlan } from "@/lib/risk/types";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import { evaluateTradeAgainstPlan, planEventDay } from "./engine";
 import {
   PLAN_DAY_TERMS,
@@ -349,13 +349,19 @@ export async function runPlanEnforcementForUser(
     const plan = await getTradingPlan(client, userId);
     if (!plan) return counts;
     const capital = await getTradingCapital(client, userId);
-    const { data } = await client
-      .from("trades")
-      .select(TRADE_COLUMNS)
-      .eq("user_id", userId)
-      .order("opened_at", { ascending: true })
-      .limit(TRADE_LIST_FETCH_LIMIT);
-    const rows = ((data ?? []) as TradeRowShape[]).filter(
+    // Task 21: the pass re-judges the trader's trades, so it
+    // pages through ALL of them (fetchAllRows) — breaches on
+    // trades older than the newest 500 can no longer be
+    // silently skipped.
+    const allRows = await fetchAllRows<TradeRowShape>((from, to) =>
+      client
+        .from("trades")
+        .select(TRADE_COLUMNS)
+        .eq("user_id", userId)
+        .order("opened_at", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{ data: TradeRowShape[] | null }>,
+    );
+    const rows = allRows.filter(
       (r) => r.status !== "cancelled" && r.status !== "reversed",
     );
     const today = now.toISOString().slice(0, 10);

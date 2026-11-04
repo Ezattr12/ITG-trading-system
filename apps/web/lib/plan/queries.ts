@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { PlanEvent, PlanTerm } from "./types";
 
 /**
@@ -44,13 +45,18 @@ export async function getPlanEventSummary(
   days = 30,
 ): Promise<PlanEventSummary> {
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
-  const { data } = await supabase
-    .from("plan_events")
-    .select("term")
-    .eq("user_id", userId)
-    .gte("created_at", since)
-    .limit(500);
-  const rows = (data ?? []) as { term: PlanTerm }[];
+  // Task 21: the summary presents a complete count for the
+  // window, so it pages through every event in it (fetchAllRows)
+  // instead of silently stopping at 500.
+  const rows = await fetchAllRows<{ term: PlanTerm }>((from, to) =>
+    supabase
+      .from("plan_events")
+      .select("term")
+      .eq("user_id", userId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: { term: PlanTerm }[] | null }>,
+  );
   const byTerm: Partial<Record<PlanTerm, number>> = {};
   for (const row of rows) {
     byTerm[row.term] = (byTerm[row.term] ?? 0) + 1;

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { assertScoped, fakeSupabase } from "../test-helpers/fake-supabase";
-import { TRADE_LIST_FETCH_LIMIT } from "../trades/queries";
 import { getAnalyticsBundle } from "./queries";
 
 /**
@@ -79,7 +78,7 @@ describe("analytics bundle isolation", () => {
     }
   });
 
-  it("caps analytics at the 500 most recent closed trades", async () => {
+  it("returns EVERY closed trade past the old 500 cap (Task 21 figure integrity)", async () => {
     const many = Array.from({ length: 600 }, (_, i) => closedTrade(i, "user-a"));
     const { client, fake } = fakeSupabase({
       trades: many,
@@ -96,11 +95,20 @@ describe("analytics bundle isolation", () => {
 
     const bundle = await getAnalyticsBundle(client, "user-a");
 
-    expect(bundle.trades).toHaveLength(500);
-    const tradeQuery = fake.queriesFor("trades")[0]!;
+    // Before Task 21 this asserted 500 — the silent cap itself.
+    // Analytics are computation: all 600 trades, oldest included.
+    expect(bundle.trades).toHaveLength(600);
+    const tradeQueries = fake.queriesFor("trades");
+    expect(tradeQueries.length).toBeGreaterThanOrEqual(2);
     expect(
-      tradeQuery.ops.some((op) => op.kind === "limit" && op.n === TRADE_LIST_FETCH_LIMIT),
+      tradeQueries[0]!.ops.some((op) => op.kind === "range" && op.from === 0 && op.to === 499),
     ).toBe(true);
+    expect(
+      tradeQueries[1]!.ops.some((op) => op.kind === "range" && op.from === 500 && op.to === 999),
+    ).toBe(true);
+    expect(
+      tradeQueries.some((q) => q.ops.some((op) => op.kind === "limit")),
+    ).toBe(false);
     // Only closed trades with a P&L enter analytics.
     expect(bundle.trades.every((t) => t.pnl !== null)).toBe(true);
   });

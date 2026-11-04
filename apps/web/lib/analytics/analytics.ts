@@ -27,10 +27,9 @@ import type {
  * input returns nulls / zeroes, never invented values: callers
  * render honest empty states from those.
  *
- * Known limit (carried from Phase 3): analytics run over at most
- * the 500 most recent closed trades, because that is what
- * `queries.ts` fetches. Phase 12 pushes aggregation into the
- * database if a journal grows past it.
+ * Input completeness is the caller's contract: since Task 21
+ * `queries.ts` fetches EVERY closed trade (paginated), so
+ * these functions see the complete journal at any size.
  */
 
 function pnls(trades: readonly AnalyticTrade[]): number[] {

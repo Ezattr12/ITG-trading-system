@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { awardXp, refreshGamification } from "@/lib/gamification/service";
 import { createNotification } from "@/lib/discipline/service";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";
 import type { CoreFailure } from "@/lib/trades/service";
 import {
@@ -63,17 +63,22 @@ export async function saveWeeklyReviewCore(
   }
 
   // Week's real closed trades, for the stored aggregates.
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .gte("closed_at", `${bounds.start}T00:00:00Z`)
-    .lte("closed_at", `${bounds.end}T23:59:59Z`)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as TradeRow[];
+  // Task 21: the stored snapshot must be the week's complete
+  // figures, so the week's trades are fetched completely
+  // (fetchAllRows) — a week with >500 closed trades no longer
+  // stores understated aggregates.
+  const trades = await fetchAllRows<TradeRow>((from, to) =>
+    supabase
+      .from("trades")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .gte("closed_at", `${bounds.start}T00:00:00Z`)
+      .lte("closed_at", `${bounds.end}T23:59:59Z`)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: TradeRow[] | null }>,
+  );
   const tradeIds = trades.map((t) => t.id);
   let strategyName = new Map<string, string>();
   const journaledIds = new Set<string>();

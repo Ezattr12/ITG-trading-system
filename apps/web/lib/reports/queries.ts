@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";
 import type { AnalyticTrade } from "@/lib/analytics/types";
 import { buildReportSummary } from "./reports";
@@ -10,8 +10,10 @@ import type { ReportLesson, ReportSummary, ReportTrade, ReportType } from "./typ
  * these with the signed-in user's Supabase client, so RLS
  * enforces isolation. No service-role client is used for reads.
  *
- * Known limit (carried from Phases 3–5): a report runs over at
- * most the 500 most recent closed trades in the period.
+ * Task 21: a report's figures are presented as the period's
+ * complete totals, so the period's trades are fetched
+ * completely (fetchAllRows) — a period with more than 500
+ * closed trades no longer understates every figure in it.
  */
 export async function getReportSummary(
   supabase: SupabaseClient,
@@ -29,17 +31,18 @@ export async function getReportSummary(
     .is("deleted_at", null)
     .gte("created_at", `${input.periodStart}T00:00:00Z`)
     .lte("created_at", `${input.periodEnd}T23:59:59Z`);
-  const { data: tradeRows } = await supabase
-    .from("trades")
-    .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .gte("closed_at", `${input.periodStart}T00:00:00Z`)
-    .lte("closed_at", `${input.periodEnd}T23:59:59Z`)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const trades = (tradeRows ?? []) as TradeRow[];
+  const trades = await fetchAllRows<TradeRow>((from, to) =>
+    supabase
+      .from("trades")
+      .select("id, pair, direction, session, strategy_id, pnl, r_multiple, closed_at, opened_at, sl")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .gte("closed_at", `${input.periodStart}T00:00:00Z`)
+      .lte("closed_at", `${input.periodEnd}T23:59:59Z`)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: TradeRow[] | null }>,
+  );
   const tradeIds = trades.map((t) => t.id);
 
   let psychByTrade = new Map<

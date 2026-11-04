@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import type { TradeRow } from "@/lib/trades/types";
 import { buildDayContext, type DayContext } from "./engine";
 import type { RiskEvent, RiskRules, TradingPlan } from "./types";
@@ -60,20 +60,24 @@ export async function getRiskEvents(
 /**
  * Day context for the risk engine: today's trades (opened today)
  * plus recent closed trades for the consecutive-loss count.
- * Reuses the same 500-trade fetch cap as the trade list.
+ * Task 21: this is computation (it decides save-time verdicts),
+ * so it pages through every trade (fetchAllRows) — a streak or
+ * a day figure can no longer silently end at 500 rows.
  */
 export async function getRiskDayContext(
   supabase: SupabaseClient,
   userId: string,
   today: string,
 ): Promise<DayContext> {
-  const { data } = await supabase
-    .from("trades")
-    .select("pnl, status, closed_at, opened_at, sl, leverage, session, pair, strategy_id")
-    .eq("user_id", userId)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  const rows = (data ?? []) as {
+  const data = await fetchAllRows((from, to) =>
+    supabase
+      .from("trades")
+      .select("pnl, status, closed_at, opened_at, sl, leverage, session, pair, strategy_id")
+      .eq("user_id", userId)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: unknown[] | null }>,
+  );
+  const rows = data as {
     pnl: number | null;
     status: string;
     closed_at: string | null;
@@ -107,15 +111,17 @@ export async function getRecentClosedTrades(
     strategyName: string | null;
   }[]
 > {
-  const { data } = await supabase
-    .from("trades")
-    .select("pnl, status, closed_at, opened_at, sl, leverage, session, pair, strategy_id")
-    .eq("user_id", userId)
-    .eq("status", "closed")
-    .not("pnl", "is", null)
-    .order("closed_at", { ascending: false })
-    .limit(TRADE_LIST_FETCH_LIMIT);
-  return ((data ?? []) as TradeRow[]).map((r) => ({
+  const data = await fetchAllRows<TradeRow>((from, to) =>
+    supabase
+      .from("trades")
+      .select("pnl, status, closed_at, opened_at, sl, leverage, session, pair, strategy_id")
+      .eq("user_id", userId)
+      .eq("status", "closed")
+      .not("pnl", "is", null)
+      .order("closed_at", { ascending: false })
+      .range(from, to) as unknown as PromiseLike<{ data: TradeRow[] | null }>,
+  );
+  return data.map((r) => ({
     ...r,
     strategyName: null,
   }));

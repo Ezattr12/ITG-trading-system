@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calcCurrentStreak } from "@itg/calc";
-import { TRADE_LIST_FETCH_LIMIT } from "@/lib/trades/queries";
+import { fetchAllRows } from "@/lib/trades/queries";
 import { getReportSummary } from "@/lib/reports/queries";
 import type { ReportSummary } from "@/lib/reports/types";
 import { weekBounds } from "@/lib/reviews/reviews";
@@ -11,8 +11,9 @@ import type { AiInsightRow, CoachInsightType } from "./types";
  * these with the signed-in user's Supabase client, so RLS
  * enforces isolation. No service-role client is used for reads.
  *
- * Known limit (carried from Phases 3–5): a week's analysis runs
- * over at most the 500 most recent closed trades in the week.
+ * Task 21: coach evidence is computation, so its trade reads
+ * page through every matching row (fetchAllRows) — the streak
+ * below now runs over the trader's complete closed history.
  */
 
 export interface CoachWeekData {
@@ -34,7 +35,7 @@ export async function getCoachWeekData(
 ): Promise<CoachWeekData | null> {
   const bounds = weekBounds(weekStart);
   if (!bounds) return null;
-  const [summary, eventsRes, streakRes] = await Promise.all([
+  const [summary, eventsRes, streakRows] = await Promise.all([
     getReportSummary(supabase, userId, {
       type: "weekly",
       periodStart: bounds.start,
@@ -46,17 +47,19 @@ export async function getCoachWeekData(
       .eq("user_id", userId)
       .gte("created_at", `${bounds.start}T00:00:00Z`)
       .lte("created_at", `${bounds.end}T23:59:59Z`),
-    supabase
-      .from("trades")
-      .select("pnl")
-      .eq("user_id", userId)
-      .eq("status", "closed")
-      .not("pnl", "is", null)
-      .order("closed_at", { ascending: false })
-      .limit(TRADE_LIST_FETCH_LIMIT),
+    fetchAllRows<{ pnl: number | null }>((from, to) =>
+      supabase
+        .from("trades")
+        .select("pnl")
+        .eq("user_id", userId)
+        .eq("status", "closed")
+        .not("pnl", "is", null)
+        .order("closed_at", { ascending: false })
+        .range(from, to) as unknown as PromiseLike<{ data: { pnl: number | null }[] | null }>,
+    ),
   ]);
   const severities = ((eventsRes.data ?? []) as { severity: string }[]).map((e) => e.severity);
-  const pnls = ((streakRes.data ?? []) as { pnl: number | null }[])
+  const pnls = streakRows
     .map((t) => t.pnl)
     .filter((p): p is number => p !== null);
   return {
