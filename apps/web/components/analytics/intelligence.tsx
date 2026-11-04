@@ -282,9 +282,9 @@ function MarketConditionsCard({ conditions }: { conditions: MarketConditionsAnal
       <p className="itg2-eyebrow">Conditions</p>
       <h2 className="itg2-section-title mt-1">Market conditions</h2>
       <p className="mt-1 max-w-[720px] text-xs leading-relaxed text-muted-foreground">
-        Your results grouped by the market condition recorded on each trade. ITG has
-        no live market feed, so a condition here is always the label you recorded in
-        a trade&apos;s review — never a live market reading. Groups of 3 or more
+        Your results grouped by the market condition recorded on each trade. Market
+        data is never used to label your trades, so a condition here is always the
+        label you recorded in a trade&apos;s review — never a live market reading. Groups of 3 or more
         trades can be compared with your overall results: a condition stands out in
         Your patterns when its win rate differs from your overall win rate by at
         least 20 points, or when it accounts for at least half of your total

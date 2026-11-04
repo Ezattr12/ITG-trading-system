@@ -37,6 +37,8 @@ import {
 } from "@/components/analytics/charts";
 import { IntelligenceSection } from "@/components/analytics/intelligence";
 import { getIntelligenceOverview } from "@/lib/intelligence/queries";
+import { MarketDataCard } from "@/components/analytics/market-data";
+import { getMarketDataPanel } from "@/lib/market-data/service";
 import { Money, Pct } from "@/components/analytics/stat-card";
 
 /** KPI tone -> icon tile / status chip modifier (v2, the
@@ -151,7 +153,7 @@ export default async function AnalyticsPage({
   // intelligence read re-read the same trades/psychology/
   // strategies/lessons a second time, sequentially). They now
   // run concurrently; both results are unchanged.
-  const [bundle, intelligence] = await Promise.all([
+  const [bundle, intelligence, marketData] = await Promise.all([
     isSupabaseConfigured()
       ? getAnalyticsBundle(await createServerSupabaseClient(), user.id)
       : EMPTY_BUNDLE,
@@ -161,6 +163,11 @@ export default async function AnalyticsPage({
     isSupabaseConfigured()
       ? getIntelligenceOverview(await createServerSupabaseClient(), user.id)
       : null,
+    // Market data (Task 27): read-only external context via
+    // the market-data seam. It never throws and never blocks
+    // the page — an unconfigured or failing provider renders
+    // an honest panel state instead.
+    getMarketDataPanel(),
   ]);
   const summary = summarizeTrades(bundle.trades);
   const equity = buildEquityCurve(bundle.trades);
@@ -522,6 +529,10 @@ export default async function AnalyticsPage({
         </div>
 
         {intelligence ? <IntelligenceSection data={intelligence} /> : null}
+
+        <div className="mt-6">
+          <MarketDataCard data={marketData} />
+        </div>
     </AppShell>
   );
 }
