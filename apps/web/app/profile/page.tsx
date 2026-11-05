@@ -1,14 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Trophy, Check, ChevronDown } from "lucide-react";
+import { Pencil, ShieldCheck, Trophy, Check } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseNotConnectedMessage } from "@/lib/supabase/config";
 import { AppShell } from "@/components/app-shell";
-import { ActionForm } from "@/components/auth/action-form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { updateProfileAction } from "@/lib/auth/actions";
 import { displayOrNotProvided } from "@/lib/onboarding/completion";
 import {
   calcProfileCompletion,
@@ -25,7 +21,7 @@ import { getGamificationBundle } from "@/lib/gamification/queries";
 import { getRiskRules, getTradingPlan } from "@/lib/risk/queries";
 import { progressToNextLevel } from "@/lib/gamification/scoring";
 import { summarizeTrades } from "@/lib/analytics/analytics";
-import { AvatarUpload } from "@/components/profile/avatar-upload";
+import { AvatarDisplay } from "@/components/profile/avatar-display";
 import { LevelRing } from "@/components/profile/level-ring";
 import { CountUpXp } from "@/components/analytics/count-up";
 
@@ -54,25 +50,6 @@ const EMPTY_PROFILE_ROW: ProfileCompletionRow = {
 const COMPLETION_RING_RADIUS = 52;
 const COMPLETION_RING_CIRCUMFERENCE = 2 * Math.PI * COMPLETION_RING_RADIUS;
 
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="itg2-field space-y-2">
-      <Label htmlFor={htmlFor} className="itg2-label">
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
 function IdentityRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="itg2-row">
@@ -87,11 +64,15 @@ function IdentityRow({ label, value }: { label: string; value: string }) {
  * the v2 glass system in itg2.css, deep black / deep blue /
  * white, violet reserved for AI surfaces only).
  *
- * Identity first, settings second: a hero glass card (photo,
- * name, completeness badge, level ring, XP + level progress),
- * then key stats, Trading Identity, achievements, and the edit
- * form as a secondary section. Everything shown comes from
- * real stored data:
+ * Read-only overview (Profile UI/UX Correction, Ezat
+ * 2026-11-05): a hero glass card (display-only photo, name
+ * with the completeness badge beside it at 100%, level ring,
+ * XP + level progress), then key stats, Trading Identity,
+ * achievements and the completion panel. Editing lives on
+ * the dedicated /profile/edit page (Edit Profile button,
+ * top-right of the hero); this page renders no form fields
+ * and the hero photo is not a control. Everything shown
+ * comes from real stored data:
  * - Level: the existing multi-dimensional score
  *   (ten competency bands, spec §8 / Task 22) — the level of
  *   record. There is no XP-based "Level 7" ladder in this
@@ -194,36 +175,39 @@ export default async function ProfilePage() {
       <section className="itg2-hero motion-reveal mt-4 sm:mt-6" aria-label="Trader profile">
         <div className="itg2-hero-rings" aria-hidden="true" />
         <div className="itg2-hero-inner p-5 sm:p-7">
+        <div className="mb-4 flex justify-end">
+          <Link href="/profile/edit" className="itg2-btn-ghost">
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+            Edit Profile
+          </Link>
+        </div>
         <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:gap-8 sm:text-left">
-          <AvatarUpload
+          <AvatarDisplay
             avatarUrl={p?.avatar_url ?? null}
             name={p?.full_name ?? user.email ?? "Trader"}
-            configured={configured}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="itg2-page-title">{displayOrNotProvided(p?.full_name)}</h1>
+            <h1 className="itg2-page-title">
+              {displayOrNotProvided(p?.full_name)}
+              {completion.verified && (
+                <span className="itg2-verified ml-3 align-middle text-sm">
+                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                  ITG Verified Profile
+                </span>
+              )}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {p?.role === "admin" ? "Admin" : "Professional Trader"}
               {p?.country ? ` · ${p.country}` : ""}
             </p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              {completion.verified ? (
-                <span className="itg2-verified text-sm">
-                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                  ITG Verified Profile
-                </span>
-              ) : (
+            {!completion.verified && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <Link href="#profile-completion" className="itg2-chip itg2-chip-lg">
                   Profile {completion.percent}% complete
                   <span className="text-muted-foreground">· {completion.nextStep}</span>
                 </Link>
-              )}
-            </div>
-            <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground sm:mx-0">
-              {completion.verified
-                ? "Profile complete — this badge confirms your profile information is complete. It is not identity (KYC) verification."
-                : "The ITG Verified Profile badge activates when your profile information is complete. It is a completeness badge, not identity verification."}
-            </p>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-center gap-2">
             <LevelRing
@@ -335,7 +319,7 @@ export default async function ProfilePage() {
           <section className="motion-reveal itg2-card p-5 sm:p-6" aria-label="Trading identity">
             <div className="flex items-center justify-between gap-4">
               <h2 className="itg2-section-title">Trading Identity</h2>
-              <Link href="#edit-profile" className="itg2-link">
+              <Link href="/profile/edit" className="itg2-link">
                 Edit
               </Link>
             </div>
@@ -416,107 +400,6 @@ export default async function ProfilePage() {
             )}
           </section>
 
-          {/* Edit profile — secondary section, below the identity. */}
-          <section id="edit-profile" className="motion-reveal itg2-card itg2-card-flat scroll-mt-24 p-5 sm:p-6" aria-label="Edit profile">
-            <h2 className="itg2-section-title">Edit profile</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your identity above updates automatically when you save changes here.
-            </p>
-            <ActionForm action={updateProfileAction} submitLabel="Save profile" submitClassName="itg2-btn-primary itg2-btn-save">
-              <details open className="itg2-card itg2-card-flat mt-4 p-5 sm:p-6">
-                <summary className="itg2-details-summary">
-                  Personal Information
-                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Full name" htmlFor="fullName">
-                    <Input id="fullName" name="fullName" defaultValue={p?.full_name ?? ""} required className="itg2-input" />
-                  </Field>
-                  <Field label="Father's name" htmlFor="fatherName">
-                    <Input id="fatherName" name="fatherName" defaultValue={p?.father_name ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                  <Field label="Date of birth" htmlFor="dateOfBirth">
-                    <Input id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={p?.date_of_birth ?? ""} className="itg2-input" />
-                  </Field>
-                  <Field label="Country" htmlFor="country">
-                    <Input id="country" name="country" defaultValue={p?.country ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                </div>
-              </details>
-              <details className="itg2-card itg2-card-flat p-5 sm:p-6">
-                <summary className="itg2-details-summary">
-                  Trading Background
-                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Trading experience" htmlFor="tradingExperience">
-                    <Input id="tradingExperience" name="tradingExperience" defaultValue={p?.trading_experience ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                  <Field label="Trading education" htmlFor="tradingEducation">
-                    <Input id="tradingEducation" name="tradingEducation" defaultValue={p?.trading_education ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                  <Field label="Backtested trades" htmlFor="backtestedTrades">
-                    <Input id="backtestedTrades" name="backtestedTrades" type="number" min={0} defaultValue={p?.backtested_trades ?? 0} className="itg2-input" />
-                  </Field>
-                  <Field label="Real trades (approx.)" htmlFor="realTradesCount">
-                    <Input id="realTradesCount" name="realTradesCount" type="number" min={0} defaultValue={p?.real_trades_count ?? 0} className="itg2-input" />
-                  </Field>
-                </div>
-              </details>
-              <details open className="itg2-card itg2-card-flat p-5 sm:p-6">
-                <summary className="itg2-details-summary">
-                  Work & Trading
-                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Work status" htmlFor="employmentStatus">
-                    <select
-                      id="employmentStatus"
-                      name="employmentStatus"
-                      defaultValue={p?.employment_status ?? "not_provided"}
-                      className="itg2-select"
-                    >
-                      <option value="full_time">Full-time</option>
-                      <option value="part_time">Part-time</option>
-                      <option value="employed_other_job">Employed (other job)</option>
-                      <option value="unemployed">Unemployed</option>
-                      <option value="studying">Studying</option>
-                      <option value="not_provided">Prefer not to say</option>
-                    </select>
-                  </Field>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  A real work status is required for a complete profile — “Prefer not to say”
-                  leaves the profile incomplete. If you have another job, add your monthly
-                  income under Private Financial below.
-                </p>
-              </details>
-              <details className="itg2-card itg2-card-flat p-5 sm:p-6">
-                <summary className="itg2-details-summary">
-                  Private Financial
-                  <ChevronDown className="itg2-details-chevron h-4 w-4" aria-hidden="true" />
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Trading capital (private)" htmlFor="tradingCapital">
-                    <Input id="tradingCapital" name="tradingCapital" type="number" min={0} step="0.01" defaultValue={p?.trading_capital ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                  <Field label="Monthly income (private, if you have another job)" htmlFor="monthlyIncome">
-                    <Input id="monthlyIncome" name="monthlyIncome" type="number" min={0} step="0.01" defaultValue={p?.monthly_income ?? ""} placeholder="Not provided" className="itg2-input" />
-                  </Field>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Private — only you can see these values.
-                </p>
-              </details>
-              <input type="hidden" name="backtestingExperience" value={p?.backtesting_experience ? "true" : "false"} />
-              <input type="hidden" name="realTradingExperience" value={p?.real_trading_experience ? "true" : "false"} />
-              <input type="hidden" name="demoTrading" value={p?.demo_trading ? "true" : "false"} />
-              <input type="hidden" name="tradesRealMoney" value={p?.trades_real_money ? "true" : "false"} />
-              <p className="text-xs text-muted-foreground">
-                Experience checkboxes are edited in onboarding; the values above are carried over unchanged here.
-              </p>
-            </ActionForm>
-          </section>
         </div>
 
         <aside className="space-y-6">

@@ -376,7 +376,14 @@ export async function updateProfileAction(
   // profile service core (lib/profile/service.ts).
   const result = await updateProfileCore(supabase, user.id, parsed.data);
   if (!result.ok) return { ok: false, error: result.error };
-  return { ok: true, message: "Profile saved." };
+  // Profile UI/UX Correction (2026-11-05): the form lives on
+  // /profile/edit now. Refresh both routes and send the
+  // trader back to the read-only profile, where the saved
+  // values render immediately (ActionForm navigates on
+  // redirectTo). The write itself is unchanged.
+  revalidatePath("/profile");
+  revalidatePath("/profile/edit");
+  return { ok: true, message: "Profile saved.", redirectTo: "/profile" };
 }
 
 /**

@@ -11,6 +11,14 @@ import { avatarFileError } from "@/lib/profile/avatar-validation";
  * camera badge is the same blue -> cyan; violet is AI-only
  * in v2 and never appears here).
  *
+ * This control renders ONLY on the Edit Profile page
+ * (/profile/edit): the main Profile hero is read-only and
+ * shows AvatarDisplay instead (Profile UI/UX Correction,
+ * Ezat 2026-11-05). No instructional caption is rendered —
+ * the camera badge is the affordance, and the status line
+ * below speaks only while an upload is pending, failed or
+ * done.
+ *
  * Replaces the browser "Choose File / No file chosen" form with a
  * large circular avatar that is itself the control: tap it (camera
  * badge), pick an image, and the upload starts immediately.
@@ -114,7 +122,7 @@ export function AvatarUpload({
               : state.error
                 ? state.error
                 : configured
-                  ? "Tap the photo to change it"
+                  ? ""
                   : "Photo upload needs Supabase connected"}
       </p>
       {state.ok && state.message && (
