@@ -170,7 +170,11 @@ your own account, on the device:
    returns with FACTS / INFERENCES / RECOMMENDATIONS.
 7. Levels screen shows the 10-band ladder with
    Psychological Discipline at 63.6.
-8. Profile: completion shows 63% and NO verified badge.
+8. Profile: completion shows 100% and the ITG Verified
+   badge IS shown beside the name. (Corrected 2026-11-05:
+   an earlier draft of this checklist said 63% / no badge,
+   based on a stale Oct 30 record; the live row is 8/8
+   fields complete since 2026-11-01.)
 9. Kill and relaunch the app: session persists; no
    re-login loop.
 10. Airplane mode: the app degrades honestly (no fake

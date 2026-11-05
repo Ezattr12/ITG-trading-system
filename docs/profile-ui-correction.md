@@ -262,11 +262,13 @@ stripping `<!-- -->` before substring checks):
 
 **Known limitations / notes for the parent:** (a) the
 biography flag in §1 — Ezat's call whether to commission
-a real bio field separately; (b) Ezat's own account is at
-63% per the stored row, so on his phone the badge will
-correctly *disappear* until his profile reaches 100% —
-worth one line in the report so it doesn't read as a
-regression (his mandate screenshot predates the current
-stored state); (c) nothing else on any other page was
+a real bio field separately; (b) CORRECTED 2026-11-05:
+Ezat's own account is at **100%** per the live stored row
+(8/8 fields; the last three were filled 2026-11-01), so
+on his phone the badge correctly *shows* beside his name.
+An earlier version of this note (and the first completion
+report) said 63% — that was his stale Oct 30 state
+propagated from memory, and a correction was sent to Ezat
+directly; (c) nothing else on any other page was
 touched; mobile app untouched (it already has a separate
 Edit Profile screen and imports the same calculator).
