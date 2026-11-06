@@ -722,6 +722,16 @@ export default function ProfileScreen() {
         onPress={() => router.push("/(app)/notifications")}
       />
       <GhostButton label="Sign out" onPress={() => void signOut()} />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push("/(app)/delete-account")}
+        style={({ pressed }) => [
+          styles.deleteAccountButton,
+          pressed && { opacity: 0.75 },
+        ]}
+      >
+        <Text style={styles.deleteAccountText}>Delete account</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -794,6 +804,22 @@ function IdentityModule({
 }
 
 const styles = StyleSheet.create({
+  // Delete-account entry: same ghost-button box as the other
+  // Profile actions, painted in the loss-red family so the
+  // destructive destination reads as destructive.
+  deleteAccountButton: {
+    borderColor: tokens.loss,
+    borderWidth: 1,
+    borderRadius: tokens.radiusPill,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "rgba(255, 77, 114, 0.08)",
+  },
+  deleteAccountText: {
+    color: tokens.loss,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   heroRow: {
     flexDirection: "row",
     alignItems: "flex-start",

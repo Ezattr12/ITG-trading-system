@@ -61,6 +61,8 @@ export default function AppLayout() {
       <Tabs.Screen name="notifications" options={{ href: null, title: "Notifications" }} />
       {/* M2 correction pass — full-form profile editor, reached from Profile. */}
       <Tabs.Screen name="profile-edit" options={{ href: null, title: "Edit profile" }} />
+      {/* Play release — in-app account deletion, reached from Profile. */}
+      <Tabs.Screen name="delete-account" options={{ href: null, title: "Delete account" }} />
     </Tabs>
   );
 }

@@ -11,6 +11,7 @@ import type {
   EditTradeResponse,
   CreateGoalResponse,
   CreateTradeResponse,
+  DeleteAccountResponse,
   DeleteTradeReason,
   DeleteTradeResponse,
   GoalCreatePayload,
@@ -379,6 +380,26 @@ export async function uploadAvatar(asset: {
     throw new Error(message);
   }
   return (await res.json()) as AvatarUploadResponse;
+}
+
+/* ---------------- Account deletion (Play release) ---------------- */
+
+/**
+ * POST /api/mobile/account/delete — permanent account
+ * deletion. The body is exactly { password }: the caller
+ * re-proves ownership with their current password before
+ * anything is removed. A wrong password answers 403
+ * ("Password is incorrect.") and deletes nothing; success
+ * answers 200 { deleted: true }, after which the account —
+ * and the session authorising this call — no longer exists.
+ */
+export async function deleteAccount(
+  password: string,
+): Promise<DeleteAccountResponse> {
+  return apiFetch<DeleteAccountResponse>("/api/mobile/account/delete", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
 }
 
 /* ---------------- Phase 26 interactive coach ---------------- */

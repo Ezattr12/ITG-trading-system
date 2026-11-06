@@ -37,6 +37,7 @@ import { adminGate } from "@/lib/admin/access";
 const NAV: { href: string; label: string }[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/deletion-requests", label: "Deletion requests" },
   { href: "/admin/certificates", label: "Certificates" },
   { href: "/admin/achievements", label: "Achievements" },
   { href: "/admin/levels", label: "Levels" },

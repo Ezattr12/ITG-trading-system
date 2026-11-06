@@ -8,9 +8,19 @@ import { signInAction } from "@/lib/auth/actions";
 
 export const metadata = { title: "Log in — ITG TraderOS" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ account_deleted?: string }>;
+}) {
+  const params = await searchParams;
   return (
     <AuthCard title="Welcome back" subtitle="Log in to your trading journal.">
+      {params.account_deleted === "1" && (
+        <p role="status" className="itg2-notice itg2-notice-neutral mb-4">
+          Your account has been deleted.
+        </p>
+      )}
       <ActionForm action={signInAction} submitLabel="Log in" submitClassName="itg2-btn-primary itg2-btn-save">
         <div className="itg2-field space-y-2">
           <Label htmlFor="email" className="itg2-label">Email</Label>

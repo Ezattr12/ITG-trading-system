@@ -11,7 +11,9 @@ import { describe, expect, it } from "vitest";
  * Supabase project yet). They assert the structural invariants
  * every table must satisfy:
  *  - RLS is enabled;
- *  - at least one policy exists;
+ *  - at least one policy exists (one deliberate exception:
+ *    account_deletion_requests, migration 0023, is
+ *    service-role-only with zero policies — pinned below);
  *  - append-only / server-written tables have NO client
  *    insert/update/delete policy (a silent RLS rejection once hid
  *    a missing XP award in Phase 7 — the absence must be deliberate
@@ -57,9 +59,9 @@ function policies(sql: string): Policy[] {
 const sql = migrationSql();
 
 describe("RLS matrix (from migration files)", () => {
-  it("has 34 tables, all with RLS enabled", () => {
+  it("has 35 tables, all with RLS enabled", () => {
     const found = tables(sql);
-    expect(found).toHaveLength(34);
+    expect(found).toHaveLength(35);
     const enabled = rlsEnabled(sql);
     for (const table of found) {
       expect(enabled).toContain(table);
@@ -69,8 +71,20 @@ describe("RLS matrix (from migration files)", () => {
   it("gives every table at least one policy", () => {
     const found = policies(sql);
     for (const table of tables(sql)) {
+      // Deliberate exception (migration 0023):
+      // account_deletion_requests has ZERO policies by
+      // design — it names email addresses and is reachable
+      // only through the service role from gated server
+      // code. The next test pins the absence so it can
+      // never become accidental.
+      if (table === "account_deletion_requests") continue;
       expect(found.some((p) => p.table === table)).toBe(true);
     }
+  });
+
+  it("keeps account_deletion_requests service-role-only (zero policies, migration 0023)", () => {
+    const found = policies(sql).filter((p) => p.table === "account_deletion_requests");
+    expect(found).toEqual([]);
   });
 
   it("keeps append-only / server-written tables client-read-only", () => {
@@ -82,6 +96,7 @@ describe("RLS matrix (from migration files)", () => {
       "xp_transactions",
       "risk_events",
       "plan_events",
+      "account_deletion_requests",
       "level_assessments",
       "discipline_events",
       "certificates",

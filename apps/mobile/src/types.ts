@@ -190,6 +190,14 @@ export interface AvatarUploadResponse {
   avatar_url: string;
 }
 
+/**
+ * POST /api/mobile/account/delete → 200 `{ deleted: true }`.
+ * A wrong password answers 403 and deletes nothing.
+ */
+export interface DeleteAccountResponse {
+  deleted: true;
+}
+
 /** One earned achievement: `user_achievements` joined with its catalogue name. */
 export interface EarnedAchievementRow {
   unlocked_at: string;

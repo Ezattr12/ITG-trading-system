@@ -364,6 +364,45 @@ export function GhostButton({
   );
 }
 
+/**
+ * Destructive action button (account deletion) — loss-red
+ * family throughout, matching the semantic rule that red is
+ * loss / risk. Mirrors PrimaryButton's disabled + loading
+ * behaviour so a destructive submit is single-flight too.
+ */
+export function DangerButton({
+  label,
+  onPress,
+  disabled = false,
+  loading = false,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  /** Shows a spinner and blocks presses — double-submit protection. */
+  loading?: boolean;
+}) {
+  const blocked = disabled || loading;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={blocked}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.dangerButton,
+        pressed && { opacity: 0.85 },
+        blocked && { opacity: 0.45 },
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={tokens.loss} />
+      ) : (
+        <Text style={styles.dangerButtonText}>{label}</Text>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   auroraTop: {
     position: "absolute",
@@ -466,5 +505,18 @@ const styles = StyleSheet.create({
     color: tokens.textSecondary,
     fontSize: 14,
     fontWeight: "600",
+  },
+  dangerButton: {
+    backgroundColor: "rgba(255, 77, 114, 0.12)",
+    borderColor: tokens.loss,
+    borderWidth: 1,
+    borderRadius: tokens.radiusPill,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  dangerButtonText: {
+    color: tokens.loss,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

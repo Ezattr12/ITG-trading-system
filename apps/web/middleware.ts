@@ -19,7 +19,7 @@ import { updateSession } from "@/lib/supabase/middleware";
  * Onboarding completion is checked in the dashboard/onboarding
  * pages (it needs a DB read), not here.
  */
-const PUBLIC_PATHS = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/privacy", "/delete-account"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export async function middleware(request: NextRequest) {

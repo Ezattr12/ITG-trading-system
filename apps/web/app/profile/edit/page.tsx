@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "@/lib/auth/actions";
 import { AvatarUpload } from "@/components/profile/avatar-upload";
+import { DeleteOwnAccountForm } from "@/components/account/account-forms";
 
 export const metadata = { title: "Edit profile — ITG TraderOS" };
 
@@ -180,6 +181,26 @@ export default async function EditProfilePage() {
             Experience checkboxes are edited in onboarding; the values above are carried over unchanged here.
           </p>
         </ActionForm>
+      </section>
+
+      {/* Danger zone — permanent account deletion. The form
+          posts to deleteOwnAccountAction (lib/account): the
+          signed-in user only, password re-verified, the
+          literal DELETE typed, then the ONE deletion core
+          removes the account and the action redirects to
+          /login?account_deleted=1. */}
+      <section className="motion-reveal itg2-card mt-6 p-5 sm:p-6" aria-label="Delete account">
+        <h2 className="itg2-section-title">Delete account</h2>
+        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+          Deleting your account is permanent and cannot be undone — your profile, journal,
+          trades, reviews, goals, progress, certificates, uploaded photos and screenshots are
+          removed, along with your sign-in account. Security audit-log entries are retained
+          with the link to your account permanently removed, and backups taken before deletion
+          may contain your data until they are rotated out.
+        </p>
+        <div className="mt-4 max-w-md">
+          <DeleteOwnAccountForm />
+        </div>
       </section>
     </AppShell>
   );
